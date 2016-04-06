@@ -906,8 +906,41 @@ ParaTree::getGlobalIdx(uint32_t idx){
 	else{
 		return uint64_t(idx);
 	};
-	return m_globalNumOctants;
 };
+
+/*! Get the local index of an octant.
+ * \param[in] gidx Global index of target octant.
+ * \return Local index of octant.
+ */
+uint32_t
+ParaTree::getLocalIdx(uint64_t gidx){
+	if (m_rank){
+		return uint32_t(gidx - 1 - m_partitionRangeGlobalIdx[m_rank-1]);
+	}
+	else{
+		return uint32_t(gidx);
+	};
+};
+
+/*! Get the local index of a ghost octant.
+ * \param[in] gidx Global index of target octant.
+ * \return Local index of the ghost octant.
+ */
+uint32_t
+ParaTree::getGhostLocalIdx(uint64_t gidx){
+
+    uint32_t index;
+    typename u64vector::iterator findResult;
+    findResult = std::find(m_octree.m_globalIdxGhosts.begin(),m_octree.m_globalIdxGhosts.end(),gidx);
+    if(findResult != m_octree.m_globalIdxGhosts.end()){
+        index = std::distance(m_octree.m_globalIdxGhosts.begin(),findResult);
+    }
+    else{
+        index = std::numeric_limits<uint32_t>::max();
+    }
+    return index;
+};
+
 
 /*! Get the global index of a ghost octant.
  * \param[in] idx Local index of target ghost octant.
@@ -1715,6 +1748,14 @@ ParaTree::getIsGhost(Octant oct){
 	return oct.m_info[16];
 };
 
+/*! Get a map of elements sent to the other processes during load balance
+ * \return an unordered map associating rank to sent elements given by index extremes of a chunck
+ */
+const std::unordered_map<int,std::array<uint32_t,4> > &
+ParaTree::getSentIdx(){
+	return m_sentIdx;
+};
+
 // =================================================================================== //
 // PRIVATE GET/SET METHODS
 // =================================================================================== //
@@ -2209,14 +2250,14 @@ ParaTree::getMapping(uint32_t & idx, u32vector & mapper, bvector & isghost, ivec
 			rank[i] = m_rank;
 		}
 	}
-	else if (m_lastOp == "loadbalance"){
+	else if (m_lastOp == "loadbalance" || m_lastOp == "firstloadbalance"){
 		uint64_t gidx = getGlobalIdx(idx);
 		for (int iproc=0; iproc<m_nproc; ++iproc){
 			if (m_partitionRangeGlobalIdx0[iproc]>=gidx){
 				mapper[0] = gidx;
 				if (iproc > 0)
-					mapper[0] -= m_partitionRangeGlobalIdx0[iproc-1] - 1;
-				rank[0] = iproc;
+					mapper[0] -= m_partitionRangeGlobalIdx0[iproc-1] + 1;
+				rank[0] = (m_lastOp == "firstloadbalance" ? m_rank : iproc);
 				isghost[0] = false;
 				break;
 			}
@@ -2494,6 +2535,52 @@ ParaTree::findOwner(const uint64_t & morton) {
 	return p;
 }
 
+/** It finds the process owning the element definded by the global index passed as argument
+ * The global index can be computed using the methods getGlobalIdx or getGhostGlobalIdx.
+ * \param[in] global index of the element you want find the owner of
+ * \return Rank of the process owning the element
+ */
+int
+ParaTree::getOwnerRank(const uint64_t & globalIndex) {
+        int ownerRank = -1;
+        int nofsteps = m_nproc / 2;
+        if(globalIndex <= m_partitionRangeGlobalIdx[m_nproc / 2]){
+                //find backward
+                for(int j = nofsteps; j >= 0; --j){
+                        if(j==0){
+                                ownerRank = j;
+                                break;
+                        }
+                        else{
+                                if(globalIndex > m_partitionRangeGlobalIdx[j-1] && globalIndex <= m_partitionRangeGlobalIdx[j]){
+                                        ownerRank = j;
+                                        break;
+                                }
+
+                        }
+                }
+        }
+        else{
+                //find forward
+                if(m_nproc % 2)
+                        nofsteps -= 1;
+                for(int j = nofsteps; j < m_nproc; ++j){
+                        if(j == m_nproc - 1){
+                                ownerRank = j;
+                                break;
+                        }
+                        else{
+                                if(globalIndex > m_partitionRangeGlobalIdx[j-1] && globalIndex <= m_partitionRangeGlobalIdx[j]){
+                                        ownerRank = j;
+                                        break;
+                                }
+                        }
+                }
+        }
+        return ownerRank;
+
+}
+
 /** Compute the connectivity of octants and store the coordinates of nodes.
  */
 void
@@ -2569,27 +2656,6 @@ ParaTree::getNodeCoordinates(uint32_t inode){
 	return m_trans.mapCoordinates(m_octree.m_nodes[inode]);
 }
 
-/** Compute the connectivity of ghost octants and store the coordinates of nodes.
- */
-void
-ParaTree::computeGhostsConnectivity() {
-	m_octree.computeGhostsConnectivity();
-}
-
-/** Clear the connectivity of ghost octants.
- */
-void
-ParaTree::clearGhostsConnectivity() {
-	m_octree.clearGhostsConnectivity();
-}
-
-/** Update the connectivity of ghost octants.
- */
-void
-ParaTree::updateGhostsConnectivity() {
-	m_octree.updateGhostsConnectivity();
-}
-
 /** Get the connectivity of the ghost octants
  * \return Constant reference to connectivity matrix [nghostoctants*nnodes] with
  * the connectivity of each octant (4/8 indices of nodes for 2D/3D case).
@@ -2617,33 +2683,6 @@ ParaTree::getGhostConnectivity(uint32_t idx){
 const u32vector &
 ParaTree::getGhostConnectivity(Octant* oct){
 	return m_octree.m_ghostsConnectivity[getIdx(oct)];
-}
-
-/** Get the logical coordinates of the ghost nodes
- * \return Constant reference to nodes matrix [nghostnodes*3] with the coordinates
- * of the nodes.
- */
-const u32arr3vector &
-ParaTree::getGhostNodes(){
-	return m_octree.m_ghostsNodes;
-}
-
-/** Get the logical coordinates of a ghost node
- * \param[in] inode Local index of node
- * \return Constant reference to a vector with the coordinates of the node.
- */
-const u32array3 &
-ParaTree::getGhostNodeLogicalCoordinates(uint32_t inode){
-	return m_octree.m_ghostsNodes[inode];
-}
-
-/** Get the physical coordinates of a ghost node
- * \param[in] inode Local index of node
- * \return Vector with the coordinates of the node.
- */
-darray3
-ParaTree::getGhostNodeCoordinates(uint32_t inode){
-	return m_trans.mapCoordinates(m_octree.m_ghostsNodes[inode]);
 }
 
 #if BITPIT_ENABLE_MPI==1
@@ -2748,9 +2787,13 @@ ParaTree::loadBalance(uint8_t & level, dvector* weight){
 void
 ParaTree::privateLoadBalance(uint32_t* partition){
 
+	m_sentIdx.clear();
+    std::array<uint32_t,4> limits = {{0,0,0,0}};
+
 	m_lastOp = "loadbalance";
 	if(m_serial)
 	{
+	        m_lastOp = "firstloadbalance";
 		(*m_log) << " " << endl;
 		(*m_log) << " Initial Serial distribution : " << endl;
 		for(int ii=0; ii<m_nproc; ii++){
@@ -2763,6 +2806,13 @@ ParaTree::privateLoadBalance(uint32_t* partition){
 		LocalTree::octvector octantsCopy = m_octree.m_octants;
 		LocalTree::octvector::const_iterator first = octantsCopy.begin() + stride;
 		LocalTree::octvector::const_iterator last = first + partition[m_rank];
+
+        limits[1] = stride;
+        limits[2] = limits[1] + partition[m_rank];
+        limits[3] = m_octree.m_octants.size();
+        std::pair<int,std::array<uint32_t,4> > procLimits(m_rank,limits);
+        m_sentIdx.insert(procLimits);
+        
 		m_octree.m_octants.assign(first, last);
 		octvector(m_octree.m_octants).swap(m_octree.m_octants);
 
@@ -2872,6 +2922,12 @@ ParaTree::privateLoadBalance(uint32_t* partition){
 					int buffSize = nofElementsFromSuccessiveToPrevious * (int)ceil((double)m_global.m_octantBytes / (double)(CHAR_BIT/8));
 					sendBuffers[p] = CommBuffer(buffSize,'a',m_comm);
 					int pos = 0;
+
+					limits[0] = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1);
+					limits[1] = (uint32_t)lh + 1;
+					std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
+					m_sentIdx.insert(procLimits);
+
 					for(uint32_t i = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1); i <= (uint32_t)lh; ++i){
 						//PACK octants from 0 to lh in sendBuffer[p]
 						const Octant & octant = m_octree.m_octants[i];
@@ -2904,6 +2960,12 @@ ParaTree::privateLoadBalance(uint32_t* partition){
 					int buffSize = nofElementsFromSuccessiveToPrevious * (int)ceil((double)m_global.m_octantBytes / (double)(CHAR_BIT/8));
 					sendBuffers[p] = CommBuffer(buffSize,'a',m_comm);
 					int pos = 0;
+
+					limits[0] = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1);
+					limits[1] = (uint32_t)lh + 1;
+					std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
+					m_sentIdx.insert(procLimits);
+
 					for(uint32_t i = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1); i <= (uint32_t)lh; ++i){
 						//pack octants from lh - partition[p] to lh
 						const Octant & octant = m_octree.m_octants[i];
@@ -2945,6 +3007,12 @@ ParaTree::privateLoadBalance(uint32_t* partition){
 					int buffSize = nofElementsFromPreviousToSuccessive * (int)ceil((double)m_global.m_octantBytes / (double)(CHAR_BIT/8));
 					sendBuffers[p] = CommBuffer(buffSize,'a',m_comm);
 					int pos = 0;
+
+					limits[0] = ft;
+					limits[1] = ft + nofElementsFromPreviousToSuccessive;
+					std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
+					m_sentIdx.insert(procLimits);
+
 					for(uint32_t i = ft; i < ft + nofElementsFromPreviousToSuccessive; ++i){
 						//PACK octants from ft to octantsSize-1
 						const Octant & octant = m_octree.m_octants[i];
@@ -2977,6 +3045,12 @@ ParaTree::privateLoadBalance(uint32_t* partition){
 					sendBuffers[p] = CommBuffer(buffSize,'a',m_comm);
 					uint32_t endOctants = ft + nofElementsFromPreviousToSuccessive - 1;
 					int pos = 0;
+
+					limits[0] = ft;
+					limits[1] = endOctants + 1;
+					std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
+					m_sentIdx.insert(procLimits);
+
 					for(uint32_t i = ft; i <= endOctants; ++i ){
 						//PACK octants from ft to ft + partition[p] -1
 						const Octant & octant = m_octree.m_octants[i];
@@ -3180,6 +3254,7 @@ bool
 ParaTree::private_adapt_mapidx(bool mapflag) {
 	//TODO recoding for adapting with abs(marker) > 1
 
+	m_sentIdx.clear();
 	bool localDone = false;
 	uint32_t nocts = m_octree.getNumOctants();
 	vector<Octant >::iterator iter, iterend = m_octree.m_octants.end();
@@ -4284,14 +4359,13 @@ ParaTree::write(string filename) {
 		return;
 	}
 	int nofNodes = m_octree.m_nodes.size();
-	int nofGhostNodes = m_octree.m_ghostsNodes.size();
 	int nofOctants = m_octree.m_connectivity.size();
 	int nofGhosts = m_octree.m_ghostsConnectivity.size();
 	int nofAll = nofGhosts + nofOctants;
 	out << "<?xml version=\"1.0\"?>" << endl
 			<< "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">" << endl
 			<< "  <UnstructuredGrid>" << endl
-			<< "    <Piece NumberOfCells=\"" << m_octree.m_connectivity.size() + m_octree.m_ghostsConnectivity.size() << "\" NumberOfPoints=\"" << m_octree.m_nodes.size() + m_octree.m_ghostsNodes.size() << "\">" << endl;
+			<< "    <Piece NumberOfCells=\"" << m_octree.m_connectivity.size() + m_octree.m_ghostsConnectivity.size() << "\" NumberOfPoints=\"" << m_octree.m_nodes.size() << "\">" << endl;
 	out << "      <Points>" << endl
 			<< "        <DataArray type=\"Float64\" Name=\"Coordinates\" NumberOfComponents=\""<< 3 <<"\" format=\"ascii\">" << endl
 			<< "          " << std::fixed;
@@ -4301,16 +4375,6 @@ ParaTree::write(string filename) {
 			if (j==0) out << std::setprecision(6) << m_trans.mapX(m_octree.m_nodes[i][j]) << " ";
 			if (j==1) out << std::setprecision(6) << m_trans.mapY(m_octree.m_nodes[i][j]) << " ";
 			if (j==2) out << std::setprecision(6) << m_trans.mapZ(m_octree.m_nodes[i][j]) << " ";
-		}
-		if((i+1)%4==0 && i!=nofNodes-1)
-			out << endl << "          ";
-	}
-	for(int i = 0; i < nofGhostNodes; i++)
-	{
-		for(int j = 0; j < 3; ++j){
-			if (j==0) out << std::setprecision(6) << m_trans.mapX(m_octree.m_ghostsNodes[i][j]) << " ";
-			if (j==1) out << std::setprecision(6) << m_trans.mapY(m_octree.m_ghostsNodes[i][j]) << " ";
-			if (j==2) out << std::setprecision(6) << m_trans.mapZ(m_octree.m_ghostsNodes[i][j]) << " ";
 		}
 		if((i+1)%4==0 && i!=nofNodes-1)
 			out << endl << "          ";

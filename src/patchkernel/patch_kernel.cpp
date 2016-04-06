@@ -26,6 +26,9 @@
 #include <typeinfo>
 #include <unordered_map>
 #include <unordered_set>
+#if BITPIT_ENABLE_MPI==1
+#	include <mpi.h>
+#endif
 
 #include "bitpit_SA.hpp"
 
@@ -197,7 +200,7 @@ const std::vector<Adaption::Info> PatchKernel::update(bool trackAdaption)
 const std::vector<Adaption::Info> PatchKernel::updateAdaption(bool trackAdaption)
 {
 	std::vector<Adaption::Info> adaptionInfo;
-	if (!isAdaptionDirty()) {
+	if (!isAdaptionDirty(true)) {
 		return adaptionInfo;
 	}
 
@@ -221,7 +224,9 @@ void PatchKernel::markCellForRefinement(const long &id)
 {
 	bool updated = _markCellForRefinement(id);
 
-	setAdaptionDirty(updated);
+	if (updated) {
+		setAdaptionDirty(true);
+	}
 }
 
 /*!
@@ -233,7 +238,9 @@ void PatchKernel::markCellForCoarsening(const long &id)
 {
 	bool updated = _markCellForCoarsening(id);
 
-	setAdaptionDirty(updated);
+	if (updated) {
+		setAdaptionDirty(true);
+	}
 }
 
 /*!
@@ -246,7 +253,9 @@ void PatchKernel::enableCellBalancing(const long &id, bool enabled)
 {
 	bool updated = _enableCellBalancing(id, enabled);
 
-	setAdaptionDirty(updated);
+	if (updated) {
+		setAdaptionDirty(true);
+	}
 }
 
 /*!
@@ -420,9 +429,19 @@ void PatchKernel::setAdaptionDirty(bool dirty)
 	\return This method returns true to indicate the patch needs to update
 	its data strucutres. Otherwise, it returns false.
 */
-bool PatchKernel::isAdaptionDirty() const
+bool PatchKernel::isAdaptionDirty(bool global) const
 {
-	return m_adaptionDirty;
+	bool isDirty = m_adaptionDirty;
+#if BITPIT_ENABLE_MPI==1
+	if (global && isCommunicatorSet()) {
+		const auto &communicator = getCommunicator();
+		MPI_Allreduce(&m_adaptionDirty, &isDirty, 1, MPI_C_BOOL, MPI_LOR, communicator);
+	}
+#else
+	BITPIT_UNUSED(global);
+#endif
+
+	return isDirty;
 }
 
 
@@ -432,9 +451,9 @@ bool PatchKernel::isAdaptionDirty() const
 	\return This method returns true to indicate the patch needs to update
 	its data strucutres. Otherwise, it returns false.
 */
-bool PatchKernel::isDirty() const
+bool PatchKernel::isDirty(bool global) const
 {
-	return (isAdaptionDirty() || isBoundingBoxDirty());
+	return (isAdaptionDirty(global) || isBoundingBoxDirty(global));
 }
 
 /*!
@@ -1428,7 +1447,9 @@ bool PatchKernel::deleteCell(const long &id, bool updateNeighs, bool delayed)
 	m_cellIdGenerator.trashId(id);
 	if (isInternal) {
 		m_nInternals--;
-		if (id == m_lastInternalId) {
+		if (m_nInternals == 0) {
+			m_lastInternalId = Element::NULL_ID;
+		} else if (id == m_lastInternalId) {
 			m_lastInternalId = m_cells.getSizeMarker(m_nInternals - 1, Element::NULL_ID);
 		}
 	} else {
@@ -1530,7 +1551,11 @@ PatchKernel::CellIterator PatchKernel::moveInternal2Ghost(const long &id)
 
 	// Update the last internal and first ghost markers
 	m_firstGhostId = id;
-	m_lastInternalId = m_cells.getSizeMarker(m_nInternals - 1, Element::NULL_ID);
+	if (m_nInternals == 0) {
+		m_lastInternalId = Element::NULL_ID;
+	} else {
+		m_lastInternalId = m_cells.getSizeMarker(m_nInternals - 1, Element::NULL_ID);
+	}
 
 	// Return the iterator to the new position
 	return iterator;
@@ -2756,9 +2781,19 @@ void PatchKernel::setBoundingBoxFrozen(bool frozen)
 
 	\result Returns true if the bounding box is dirty, false otherwise.
 */
-bool PatchKernel::isBoundingBoxDirty() const
+bool PatchKernel::isBoundingBoxDirty(bool global) const
 {
-	return m_boxDirty;
+	bool isDirty = m_boxDirty;
+#if BITPIT_ENABLE_MPI==1
+	if (global && isCommunicatorSet()) {
+		const auto &communicator = getCommunicator();
+		MPI_Allreduce(&m_boxDirty, &isDirty, 1, MPI_C_BOOL, MPI_LOR, communicator);
+	}
+#else
+	BITPIT_UNUSED(global);
+#endif
+
+	return isDirty;
 }
 
 /*!

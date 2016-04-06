@@ -32,12 +32,16 @@ namespace bitpit {
 struct Adaption
 {
 	enum Type {
-		TYPE_UNKNOWN = -1,
+		TYPE_UNKNOWN  = -2,
+		TYPE_NONE     = -1,
 		TYPE_CREATION = 0,
 		TYPE_DELETION,
 		TYPE_REFINEMENT,
 		TYPE_COARSENING,
-		TYPE_RENUMBERING
+		TYPE_RENUMBERING,
+		TYPE_PARTITION_SEND,
+		TYPE_PARTITION_RECV,
+		TYPE_PARTITION_NOTICE
 	};
 
 	enum Entity {
@@ -49,12 +53,13 @@ struct Adaption
 	struct Info
 	{
 		Info()
-			: type(TYPE_UNKNOWN), entity(ENTITY_UNKNOWN)
+			: type(TYPE_UNKNOWN), entity(ENTITY_UNKNOWN), rank(-1)
 		{
 		}
 
 		Type type;
 		Entity entity;
+		int rank;
 		std::vector<unsigned long> previous;
 		std::vector<unsigned long> current;
 	};

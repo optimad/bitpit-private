@@ -29,6 +29,7 @@
 #include <deque>
 #include <cstddef>
 #include <vector>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "bitpit_PABLO.hpp"
@@ -94,8 +95,19 @@ protected:
 	void _setTol(double tolerance);
 	void _resetTol();
 
+#if BITPIT_ENABLE_MPI==1
+	const std::vector<Adaption::Info> _balancePartition(bool trackChanges);
+#endif
+
 private:
 	typedef std::bitset<72> OctantHash;
+
+	enum TreeOperation {
+		OP_INITIALIZATION,
+		OP_ADAPTION_MAPPED,
+		OP_ADAPTION_UNMAPPED,
+		OP_LOAD_BALANCE
+	};
 
 	struct FaceInfo {
 		FaceInfo() : id(Element::NULL_ID), face(-1) {};
@@ -134,6 +146,8 @@ private:
 	std::vector<double> m_tree_area;
 	std::vector<double> m_tree_volume;
 
+	TreeOperation m_lastTreeOperation;
+
 	std::vector<std::array<double, 3> > m_normals;
 
 	void initializeTreeGeometry();
@@ -159,6 +173,12 @@ private:
 	                 std::vector<std::vector<long>> &interfaces,
 	                 std::vector<std::vector<bool>> &interfacesOwner);
 	void deleteCell(long id);
+
+	const std::vector<Adaption::Info> sync(bool trackChanges);
+
+#if BITPIT_ENABLE_MPI==1
+	void rebuildGhostExchangeData(std::unordered_map<int, std::vector<uint32_t>> ghostTreeIds);
+#endif
 };
 
 }

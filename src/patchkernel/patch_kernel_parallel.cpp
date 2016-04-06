@@ -54,10 +54,14 @@ namespace bitpit {
 */
 void PatchKernel::setCommunicator(MPI_Comm communicator)
 {
-	// Free previous communicator
-	if (m_communicator != MPI_COMM_NULL) {
-		MPI_Comm_free(&m_communicator);
-		m_communicator = MPI_COMM_NULL;
+	// Communication can be set just once
+	if (isCommunicatorSet()) {
+		throw std::runtime_error ("Patch communicator can be set just once");
+	}
+
+	// The communicator has to be valid
+	if (communicator == MPI_COMM_NULL) {
+		throw std::runtime_error ("Patch communicator is not valid");
 	}
 
 	// Creat a copy of the user-specified communicator
@@ -65,29 +69,25 @@ void PatchKernel::setCommunicator(MPI_Comm communicator)
 	// No library routine should use MPI_COMM_WORLD as the communicator;
 	// instead, a duplicate of a user-specified communicator should always
 	// be used.
-	if (communicator != MPI_COMM_NULL) {
-		MPI_Comm_dup(communicator, &m_communicator);
-	}
+	MPI_Comm_dup(communicator, &m_communicator);
 
 	// Get MPI information
-	if (m_communicator) {
-		MPI_Comm_size(m_communicator, &m_nProcessors);
-		MPI_Comm_rank(m_communicator, &m_rank);
-	} else {
-		m_rank        = 0;
-		m_nProcessors = 1;
-	}
+	MPI_Comm_size(m_communicator, &m_nProcessors);
+	MPI_Comm_rank(m_communicator, &m_rank);
 
 	// Set parallel data for the VTK output
 	setParallel(m_nProcessors, m_rank);
 }
 
 /*!
-	Unsets the MPI communicator to be used for parallel communications.
+	Checks if the communicator to be used for parallel communications has
+	already been set.
+
+	\result Returns true if the communicator has been set, false otherwise.
 */
-void PatchKernel::unsetCommunicator()
+bool PatchKernel::isCommunicatorSet() const
 {
-	setCommunicator(MPI_COMM_NULL);
+	return (getCommunicator() != MPI_COMM_NULL);
 }
 
 /*!
@@ -121,12 +121,49 @@ int PatchKernel::getProcessorCount() const
 }
 
 /*!
-	Partitions the patch.
+	Partitions the patch among the processors. Each cell will be assigned
+	to a specific processor according to the specified input.
+
+	\param communicator is the communicator that will be used
+	\param cellRanks are the ranks of the cells after the partitioning
+	\param trackChanges if set to true, the changes to the patche will be
+	tracked
+	\result Returns a vector of Adaption::Info that can be used to track
+	the changes done during the partitioning.
+*/
+const std::vector<Adaption::Info> PatchKernel::partition(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges)
+{
+	setCommunicator(communicator);
+
+	partition(cellRanks, trackChanges);
+}
+
+/*!
+	Partitions the patch among the processors. Each cell will be assigned
+	to a specific processor according to the specified input.
 
 	\param cellRanks are the ranks of the cells after the partitioning.
+	\param trackChanges if set to true, the changes to the patche will be
+	tracked
+	\result Returns a vector of Adaption::Info that can be used to track
+	the changes done during the partitioning.
 */
-void PatchKernel::partition(const std::vector<int> &cellRanks)
+const std::vector<Adaption::Info> PatchKernel::partition(const std::vector<int> &cellRanks, bool trackChanges)
 {
+	std::vector<Adaption::Info> adaptionData;
+
+	// Communicator has to be set
+	if (!isCommunicatorSet()) {
+		throw std::runtime_error ("There is no communicator set for the patch.");
+	}
+
+	// Check if the patch allow custom partition
+	if (!isExpert()) {
+		log::cout() << "The patch does not allow custom partition" << std::endl;
+
+		return adaptionData;
+	}
+
 	// Build the send map
 	std::unordered_map<int, std::vector<long>> sendMap;
 
@@ -183,8 +220,171 @@ void PatchKernel::partition(const std::vector<int> &cellRanks)
 			cellList = &emptyCellList;
 		}
 
-		sendCells(srcRank, dstRank, *cellList);
+		Adaption::Info adaptionInfo = sendCells(srcRank, dstRank, *cellList);
+		if (trackChanges && adaptionInfo.type != Adaption::TYPE_NONE) {
+			adaptionData.push_back(std::move(adaptionInfo));
+		}
 	}
+
+	return adaptionData;
+}
+
+/*!
+	Partitions the patch among the processors. The partitioning is done using
+	a criteria that tries to balance the load among the processors.
+
+	\param communicator is the communicator that will be used
+	\param cellRanks are the ranks of the cells after the partitioning
+	\param trackChanges if set to true, the changes to the patche will be
+	tracked
+	\result Returns a vector of Adaption::Info that can be used to track
+	the changes done during the partitioning.
+*/
+const std::vector<Adaption::Info> PatchKernel::partition(MPI_Comm communicator, bool trackChanges)
+{
+	setCommunicator(communicator);
+
+	return partition(trackChanges);
+}
+
+/*!
+	Partitions the patch among the processors. The partitioning is done using
+	a criteria that tries to balance the load among the processors.
+
+	\param trackChanges if set to true, the changes to the patche will be
+	tracked
+	\result Returns a vector of Adaption::Info that can be used to track
+	the changes done during the partition.
+*/
+const std::vector<Adaption::Info> PatchKernel::partition(bool trackChanges)
+{
+	return balancePartition(trackChanges);
+}
+
+/*!
+	Tries to balance the computational load among the processors redistributing
+	the cells among the processors.
+
+	\result Returns a vector of Adaption::Info that can be used to track
+	the changes done during the partitioning.
+*/
+const std::vector<Adaption::Info> PatchKernel::balancePartition(bool trackChanges)
+{
+	// Communicator has to be set
+	if (!isCommunicatorSet()) {
+		throw std::runtime_error ("There is no communicator set for the patch.");
+	}
+
+	// Balance patch
+	const std::vector<Adaption::Info> adaptionData = _balancePartition(trackChanges);
+
+	// Update the bouding box
+	updateBoundingBox();
+
+	// Done
+	return adaptionData;
+}
+
+/*!
+	Internal function that tries to balance the computational load among the
+	processors moving redistributing the cells among the processors.
+
+	\result Returns a vector of Adaption::Info that can be used to track
+	the changes done during the update.
+*/
+const std::vector<Adaption::Info> PatchKernel::_balancePartition(bool trackChanges)
+{
+	BITPIT_UNUSED(trackChanges);
+
+	log::cout() << "The patch does not implement a algortihm for balacing the partition" << std::endl;
+
+	return std::vector<Adaption::Info>();
+}
+
+/*!
+	Reset the ghost information needed for data exchange.
+*/
+void PatchKernel::resetGhostExchangeData()
+{
+	m_ghost2id.clear();
+}
+
+/*!
+	Reset the ghost information needed for data exchange for the specified rank.
+
+	\param rank is the rank for which the information will be reset
+*/
+void PatchKernel::resetGhostExchangeData(short rank)
+{
+	m_ghost2id.at(rank).clear();
+}
+
+/*!
+	Sets the ghost information needed for data exchange.
+
+	\param ghostInfo are the information that will be set
+*/
+void PatchKernel::setGhostExchangeData(const std::unordered_map<short, std::unordered_map<long, long>> &ghostInfo)
+{
+	m_ghost2id = std::unordered_map<short, std::unordered_map<long, long>>(ghostInfo);
+}
+
+/*!
+	Sets the ghost information needed for data exchange for the specified rank.
+
+	\param rankGhostInfo are the information that will be set for the specified
+	rank
+*/
+void PatchKernel::setGhostExchangeData(short rank, const std::unordered_map<long, long> &rankGhostInfo)
+{
+	m_ghost2id.at(rank) = std::unordered_map<long, long>(rankGhostInfo);
+}
+
+/*!
+	Gets a reference to the ghost information needed for data exchange.
+
+	\result A reference to the ghost information needed for data exchange.
+*/
+std::unordered_map<short, std::unordered_map<long, long>> & PatchKernel::getGhostExchangeData()
+{
+	return m_ghost2id;
+}
+
+/*!
+	Gets a constant reference to the ghost information needed for data exchange.
+
+	\result A constant reference to the ghost information needed for data
+	exchange.
+*/
+const std::unordered_map<short, std::unordered_map<long, long>> & PatchKernel::getGhostExchangeData() const
+{
+	return m_ghost2id;
+}
+
+/*!
+	Gets a reference to the ghost information needed for data exchange for
+	the specified rank.
+
+	\param rank is the rank for which the information will be retreived
+	\result A reference to the ghost information needed for data exchange for
+	the specified rank.
+*/
+std::unordered_map<long, long> & PatchKernel::getGhostExchangeData(short rank)
+{
+	m_ghost2id.at(rank);
+}
+
+/*!
+	Gets a constant reference to the ghost information needed for data
+	exchange for the specified rank.
+
+	\param rank is the rank for which the information will be retreived
+	\result A constant reference to the ghost information needed for data
+	exchange for the specified rank.
+*/
+const std::unordered_map<long, long> & PatchKernel::getGhostExchangeData(short rank) const
+{
+	m_ghost2id.at(rank);
 }
 
 /*!
@@ -197,12 +397,14 @@ void PatchKernel::partition(const std::vector<int> &cellRanks)
     \param[in] rcv_rank receiver rank
     \param[in] cell_list list of cells to be moved
  */
-void PatchKernel::sendCells(const unsigned short &snd_rank, const unsigned short &rcv_rank, const vector< long > &cell_list)
+Adaption::Info PatchKernel::sendCells(const unsigned short &snd_rank, const unsigned short &rcv_rank, const vector< long > &cell_list)
 {
 
 // ========================================================================== //
 // SCOPE VARIABLES                                                            //
 // ========================================================================== //
+
+Adaption::Info adaptionInfo;
 
 // Debug variables
 /*DEBUG*/stringstream                           out_name;
@@ -510,6 +712,11 @@ if (m_rank == snd_rank)
         // Initialize communication buffer ---------------------------------- //
         OBinaryStream           com_buff( buff_size );
 
+        // Initialize adaption info ----------------------------------------- //
+        adaptionInfo.entity = Adaption::ENTITY_CELL;
+        adaptionInfo.type   = Adaption::TYPE_PARTITION_SEND;
+        adaptionInfo.rank   = rcv_rank;
+
         // Fill communication buffer ---------------------------------------- //
         com_buff << n_cells;
         e = cell_list.cend();
@@ -578,6 +785,9 @@ if (m_rank == snd_rank)
 // /*DEUBG*/       cell_->display(out, 6);
 // /*DEUBG*/   }
 
+			// Update adpation info
+			adaptionInfo.previous.push_back(cell_->getId());
+
             // Restore original connectivity
             for (j = 0; j < n_vertices; ++j) {
                 cell_->setVertex(j, connect_[j]);
@@ -617,14 +827,14 @@ if (m_rank == snd_rank)
         // Receive new IDs
         MPI_Recv( feedback.get_buffer(), buff_size, MPI_CHAR, rcv_rank, 7, m_communicator, MPI_STATUS_IGNORE );
 
-        // Update ghost cells
+        // Fill adaption info and update ghost cells
         notification << n_cells;
         e = cell_list.cend();
         for ( i = cell_list.cbegin(); i != e; ++i ) {
             feedback >> neigh_idx;
             if ( sender_ghost_new_ids.count(*i) > 0 ) {
                 sender_ghost_new_ids[*i] = neigh_idx;
-            }
+			}
             //m_ghost2id[rcv_rank][neigh_idx] = *i;
             notification << *i << neigh_idx;
         } //next i
@@ -980,6 +1190,11 @@ if (m_rank == rcv_rank)
         // Extract cells from communication buffer
         com_buff >> n_cells;
 
+        // Initialize adaption info
+        adaptionInfo.entity = Adaption::ENTITY_CELL;
+        adaptionInfo.type   = Adaption::TYPE_PARTITION_RECV;
+        adaptionInfo.rank   = snd_rank;
+
         // Initialize communication buffer for feedback
         feedback_size = n_cells * sizeof(long);
         OBinaryStream                           feedback( feedback_size );
@@ -1025,6 +1240,7 @@ if (m_rank == rcv_rank)
 // /*DEBUG*/       out << "    (adding new cell), remapped as:" << endl;
                 it = addCell( move(cell), generateCellId() );
                 feedback << long( it->getId() );
+                adaptionInfo.current.push_back( it->getId() );
 // /*DEBUG*/       it->display(out, 6);
                 c_local_mapping[ cell_count ] = it->getId();
                 ++cell_count;
@@ -1302,6 +1518,11 @@ if ( (m_rank != snd_rank) && (m_rank != rcv_rank) )
 /*DEBUG*/t0 = high_resolution_clock::now();
     if (waiting) {
 
+        // Initialize adaption info
+        adaptionInfo.entity = Adaption::ENTITY_CELL;
+        adaptionInfo.type   = Adaption::TYPE_PARTITION_NOTICE;
+        adaptionInfo.rank   = snd_rank;
+
         // Receive buffer size
         MPI_Recv(&buff_size, 1, MPI_LONG, snd_rank, 8 + m_rank, m_communicator, MPI_STATUS_IGNORE);
 
@@ -1327,6 +1548,8 @@ if ( (m_rank != snd_rank) && (m_rank != rcv_rank) )
                     my_cell_idx = m_ghost2id[snd_rank][cell_idx];
                     m_ghost2id[snd_rank].erase( cell_idx );
                     m_ghost2id[rcv_rank][ new_cell_idx ] = my_cell_idx;
+
+                    adaptionInfo.current.push_back(my_cell_idx);
                 }
             } //next i
         }
@@ -1355,7 +1578,7 @@ if ( (m_rank != snd_rank) && (m_rank != rcv_rank) )
 /*DEBUG*/    out.close();
 /*DEBUG*/}
 
-return; }
+return adaptionInfo; }
 
 /*!
 	@}

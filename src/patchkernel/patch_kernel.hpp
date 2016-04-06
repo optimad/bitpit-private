@@ -104,7 +104,7 @@ public:
 	void markCellForCoarsening(const long &id);
 	void enableCellBalancing(const long &id, bool enabled);
 
-	bool isDirty() const;
+	bool isDirty(bool global = false) const;
 	bool isExpert() const;
 
 	int getId() const;
@@ -219,14 +219,14 @@ public:
         virtual void updateAdjacencies(const std::vector<long>&) = 0;
 
 	void getBoundingBox(std::array<double, 3> &minPoint, std::array<double, 3> &maxPoint);
-	bool isBoundingBoxDirty() const;
+	bool isBoundingBoxDirty(bool global = false) const;
 	void updateBoundingBox(bool forcedUpdated = false);
 	void addPointToBoundingBox(const std::array<double, 3> &point);
 	void removePointFromBoundingBox(const std::array<double, 3> &point, bool delayedBoxUpdate = false);
 
 	std::unordered_map<long, long> binSortVertex(int nBins = 128);
 
-	bool isAdaptionDirty() const;
+	bool isAdaptionDirty(bool global = false) const;
 	const std::vector<Adaption::Info> updateAdaption(bool trackAdaption = true);
 
 	virtual void translate(std::array<double, 3> translation);
@@ -255,13 +255,23 @@ public:
 
 #if BITPIT_ENABLE_MPI==1
 	void setCommunicator(MPI_Comm communicator);
-	void unsetCommunicator();
+	bool isCommunicatorSet() const;
 	const MPI_Comm & getCommunicator() const;
 	int getRank() const;
 	int getProcessorCount() const;
 
-	void partition(const std::vector<int> &cellRanks);
-        void sendCells(const unsigned short &, const unsigned short &, const std::vector<long> &);
+	std::unordered_map<short, std::unordered_map<long, long>> & getGhostExchangeData();
+	const std::unordered_map<short, std::unordered_map<long, long>> & getGhostExchangeData() const;
+	std::unordered_map<long, long> & getGhostExchangeData(short rank);
+	const std::unordered_map<long, long> & getGhostExchangeData(short rank) const;
+
+	const std::vector<Adaption::Info> partition(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges);
+	const std::vector<Adaption::Info> partition(const std::vector<int> &cellRanks, bool trackChanges);
+	const std::vector<Adaption::Info> partition(MPI_Comm communicator, bool trackChanges);
+	const std::vector<Adaption::Info> partition(bool trackChanges);
+	const std::vector<Adaption::Info> balancePartition(bool trackChanges);
+
+	Adaption::Info sendCells(const unsigned short &, const unsigned short &, const std::vector<long> &);
 #endif
 
 protected:
@@ -302,6 +312,16 @@ protected:
 
 	void setAdaptionDirty(bool dirty);
 	void setExpert(bool expert);
+
+#if BITPIT_ENABLE_MPI==1
+	void resetGhostExchangeData();
+	void resetGhostExchangeData(short rank);
+
+	void setGhostExchangeData(const std::unordered_map<short, std::unordered_map<long, long>> &ghostInfo);
+	void setGhostExchangeData(short rank, const std::unordered_map<long, long> &rankGhostInfo);
+
+	virtual const std::vector<Adaption::Info> _balancePartition(bool trackChanges);
+#endif
 
 private:
 	double DEFAULT_TOLERANCE = 1e-14;

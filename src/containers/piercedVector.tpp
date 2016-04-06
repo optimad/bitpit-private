@@ -1049,9 +1049,50 @@ std::size_t PiercedVector<value_t, id_t>::size() const
 			otherwise it returns false.
 */
 template<typename value_t, typename id_t>
-bool PiercedVector<value_t, id_t>::exists(id_t id)
+bool PiercedVector<value_t, id_t>::exists(id_t id) const
 {
 	return (m_pos.count(id) != 0);
+}
+
+/*!
+	Returns a constant iterator to the first element with the specified id.
+	If no such element is found, the function returns a constant iterator
+	referring to the past-the-end element of the container.
+
+	\param id the id to look for
+	\result Returns a constant iterator to the first element with the
+	specified id. If no such element is found, the function returns a
+	constant iterator referring to the past-the-end element of the
+	container.
+*/
+template<typename value_t, typename id_t>
+typename PiercedVector<value_t, id_t>::const_iterator PiercedVector<value_t, id_t>::find(id_t id) const
+{
+	if (!exists(id)) {
+		return cend();
+	}
+
+	return getConstIterator(id);
+}
+
+/*!
+	Returns an iterator to the first element with the specified id.
+	If no such element is found, the function returns a constant iterator
+	referring to the past-the-end element of the container.
+
+	\param id the id to look for
+	\result Returns an iterator to the first element with the specified id.
+	If no such element is found, the function returns an iterator referring
+	to the past-the-end element of the container.
+*/
+template<typename value_t, typename id_t>
+typename PiercedVector<value_t, id_t>::iterator PiercedVector<value_t, id_t>::find(id_t id)
+{
+	if (!exists(id)) {
+		return end();
+	}
+
+	return getIterator(id);
 }
 
 /*!
@@ -1153,12 +1194,12 @@ id_t PiercedVector<value_t, id_t>::getSizeMarker(const size_t &targetSize, const
 	// size is equal to the size minus one we return the last element,
 	// if the target size is greater or equal the current container size
 	// we return the fallback value.
-	if (targetSize == 0) {
+	if (targetSize >= size()) {
+		return fallback;
+	} else if (targetSize == 0) {
 		return m_ids[m_first_pos];
 	} else if (targetSize == (size() - 1)) {
 		return m_ids[m_last_pos];
-	} else if (targetSize >= size() || targetSize <= 0) {
-		return fallback;
 	}
 
 	// Sort the holes
