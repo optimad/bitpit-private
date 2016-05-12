@@ -2327,15 +2327,11 @@ ParaTree::adaptGlobalRefine(bool mapper_flag) {
 		}
 
 		if (m_octree.getNumOctants() > nocts)
-			localDone = true;
+			globalDone = true;
 		(*m_log) << " Number of octants after Refine	:	" + to_string(static_cast<unsigned long long>(m_octree.getNumOctants())) << endl;
 		nocts = m_octree.getNumOctants();
 		updateAdapt();
 
-#if BITPIT_ENABLE_MPI==1
-		MPI_Barrier(m_comm);
-		m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
-#endif
 		(*m_log) << " " << endl;
 		(*m_log) << "---------------------------------------------" << endl;
 #if BITPIT_ENABLE_MPI==1
@@ -2363,7 +2359,11 @@ ParaTree::adaptGlobalRefine(bool mapper_flag) {
 		(*m_log) << " Number of octants after Refine	:	" + to_string(static_cast<unsigned long long>(m_globalNumOctants)) << endl;
 		nocts = m_octree.getNumOctants();
 
-		m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		if (m_serial) {
+			globalDone = localDone;
+		} else {
+			m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		}
 		(*m_log) << " " << endl;
 		(*m_log) << "---------------------------------------------" << endl;
 	}
@@ -2431,15 +2431,11 @@ ParaTree::adaptGlobalCoarse(bool mapper_flag) {
 		}
 
 		if (m_octree.getNumOctants() < nocts){
-			localDone = true;
+			globalDone = true;
 		}
 		nocts = m_octree.getNumOctants();
 
 		(*m_log) << " Number of octants after Coarse	:	" + to_string(static_cast<unsigned long long>(nocts)) << endl;
-#if BITPIT_ENABLE_MPI==1
-		MPI_Barrier(m_comm);
-		m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
-#endif
 		(*m_log) << " " << endl;
 		(*m_log) << "---------------------------------------------" << endl;
 #if BITPIT_ENABLE_MPI==1
@@ -2478,7 +2474,11 @@ ParaTree::adaptGlobalCoarse(bool mapper_flag) {
 		}
 		nocts = m_octree.getNumOctants();
 
-		m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		if (m_serial) {
+			globalDone = localDone;
+		} else {
+			m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		}
 		(*m_log) << " Number of octants after Coarse	:	" + to_string(static_cast<unsigned long long>(m_globalNumOctants)) << endl;
 		(*m_log) << " " << endl;
 		(*m_log) << "---------------------------------------------" << endl;
@@ -3290,7 +3290,7 @@ ParaTree::private_adapt_mapidx(bool mapflag) {
 		// Refine
 		while(m_octree.refine(m_mapIdx));
 		if (m_octree.getNumOctants() > nocts)
-			localDone = true;
+			globalDone = true;
 		(*m_log) << " Number of octants after Refine	:	" + to_string(static_cast<unsigned long long>(m_octree.getNumOctants())) << endl;
 		nocts = m_octree.getNumOctants();
 		updateAdapt();
@@ -3299,15 +3299,11 @@ ParaTree::private_adapt_mapidx(bool mapflag) {
 		while(m_octree.coarse(m_mapIdx));
 		updateAfterCoarse(m_mapIdx);
 		if (m_octree.getNumOctants() < nocts){
-			localDone = true;
+			globalDone = true;
 		}
 		nocts = m_octree.getNumOctants();
 
 		(*m_log) << " Number of octants after Coarse	:	" + to_string(static_cast<unsigned long long>(nocts)) << endl;
-#if BITPIT_ENABLE_MPI==1
-		MPI_Barrier(m_comm);
-		m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
-#endif
 		(*m_log) << " " << endl;
 		(*m_log) << "---------------------------------------------" << endl;
 #if BITPIT_ENABLE_MPI==1
@@ -3342,7 +3338,11 @@ ParaTree::private_adapt_mapidx(bool mapflag) {
 		}
 		nocts = m_octree.getNumOctants();
 
-		m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		if (m_serial) {
+			globalDone = localDone;
+		} else {
+			m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		}
 		(*m_log) << " Number of octants after Coarse	:	" + to_string(static_cast<unsigned long long>(m_globalNumOctants)) << endl;
 		(*m_log) << " " << endl;
 		(*m_log) << "---------------------------------------------" << endl;
@@ -4238,7 +4238,11 @@ ParaTree::balance21(bool const first){
 		localDone = m_octree.localBalance(true);
 		commMarker();
 		m_octree.preBalance21(false);
-		m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		if (m_serial) {
+			globalDone = localDone;
+		} else {
+			m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		}
 
 		while(globalDone){
 			iteration++;
@@ -4247,7 +4251,11 @@ ParaTree::balance21(bool const first){
 			localDone = m_octree.localBalance(false);
 			commMarker();
 			m_octree.preBalance21(false);
-			m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+			if (m_serial) {
+				globalDone = localDone;
+			} else {
+				m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+			}
 		}
 
 		commMarker();
@@ -4266,7 +4274,11 @@ ParaTree::balance21(bool const first){
 		localDone = m_octree.localBalanceAll(true);
 		commMarker();
 		m_octree.preBalance21(false);
-		m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		if (m_serial) {
+			globalDone = localDone;
+		} else {
+			m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+		}
 
 		while(globalDone){
 			iteration++;
@@ -4274,7 +4286,11 @@ ParaTree::balance21(bool const first){
 			localDone = m_octree.localBalanceAll(false);
 			commMarker();
 			m_octree.preBalance21(false);
-			m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+			if (m_serial) {
+				globalDone = localDone;
+			} else {
+				m_errorFlag = MPI_Allreduce(&localDone,&globalDone,1,MPI_C_BOOL,MPI_LOR,m_comm);
+			}
 		}
 
 		commMarker();
