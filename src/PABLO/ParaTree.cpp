@@ -2375,7 +2375,7 @@ ParaTree::adaptGlobalRefine(bool mapper_flag) {
 		}
 
 		if (m_octree.getNumOctants() > nocts)
-			globalDone = true;
+			localDone = true;
 		(*m_log) << " Number of octants after Refine	:	" + to_string(static_cast<unsigned long long>(m_octree.getNumOctants())) << endl;
 		nocts = m_octree.getNumOctants();
 		updateAdapt();
@@ -2479,7 +2479,7 @@ ParaTree::adaptGlobalCoarse(bool mapper_flag) {
 		}
 
 		if (m_octree.getNumOctants() < nocts){
-			globalDone = true;
+			localDone = true;
 		}
 		nocts = m_octree.getNumOctants();
 
@@ -3338,7 +3338,7 @@ ParaTree::private_adapt_mapidx(bool mapflag) {
 		// Refine
 		while(m_octree.refine(m_mapIdx));
 		if (m_octree.getNumOctants() > nocts)
-			globalDone = true;
+			localDone = true;
 		(*m_log) << " Number of octants after Refine	:	" + to_string(static_cast<unsigned long long>(m_octree.getNumOctants())) << endl;
 		nocts = m_octree.getNumOctants();
 		updateAdapt();
@@ -3347,7 +3347,7 @@ ParaTree::private_adapt_mapidx(bool mapflag) {
 		while(m_octree.coarse(m_mapIdx));
 		updateAfterCoarse(m_mapIdx);
 		if (m_octree.getNumOctants() < nocts){
-			globalDone = true;
+			localDone = true;
 		}
 		nocts = m_octree.getNumOctants();
 
