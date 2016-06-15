@@ -238,7 +238,7 @@ void LevelSetSegmentation::lsFromSimplex( LevelSetKernel *visitee, const double 
 
                     if( d<value ) {
                         if (lsInfoItr == lsInfo.end()) {
-                            lsInfoItr = lsInfo.reclaim(id) ;
+                            lsInfoItr = lsInfo.reclaimBack(id) ;
                         }
 
                         value   = d ;
@@ -523,7 +523,7 @@ void LevelSetSegmentation::associateSimplexToCell( LevelSetCartesian *visitee, c
                     if( m_seg.exists(I) ){
                         m_seg[I].m_segments.insert(i) ;
                     } else {
-                        data = m_seg.reclaim(I) ;
+                        data = m_seg.reclaimBack(I) ;
                         data->m_segments.insert(i);
                     };
 
@@ -664,7 +664,7 @@ void LevelSetSegmentation::updateSimplexToCell( LevelSetOctree *visitee, const s
             if( info.entity == adaption::Entity::ENTITY_CELL){ //check if changes on cells
                 for ( auto & child : info.current){ // forall new elements
 
-                    PiercedVector<SegInfo>::iterator seg =  m_seg.reclaim(child) ;
+                    PiercedVector<SegInfo>::iterator seg =  m_seg.reclaimBack(child) ;
                     seg->m_checked = false ;
                     seg->m_segments.clear() ;
 
@@ -837,7 +837,7 @@ void LevelSetSegmentation::readCommunicationBuffer( const std::vector<long> &rec
         // Assign the data of the element
         PiercedVector<SegInfo>::iterator segItr ;
         if( !m_seg.exists(id)){
-            segItr = m_seg.reclaim(id) ;
+            segItr = m_seg.reclaimBack(id) ;
         } else {
             segItr = m_seg.getIterator(id) ;
         }

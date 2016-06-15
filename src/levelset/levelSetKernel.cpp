@@ -372,7 +372,7 @@ void LevelSetKernel::propagateSign( std::unordered_map<int,LevelSetObject*> visi
             // is different from the default sign.
             infoItr = m_ls.find(id) ;
             if( infoItr == m_ls.end() && seedSign != levelSetDefaults::SIGN ){
-                infoItr = m_ls.reclaim(id) ;
+                infoItr = m_ls.reclaimBack(id) ;
             }
 
             // Update the value
@@ -795,7 +795,7 @@ void LevelSetKernel::readCommunicationBuffer( const std::vector<long> &recvList,
         // Assign the data of the element
         PiercedVector<LSInfo>::iterator infoItr ;
         if( !m_ls.exists(id)){
-            infoItr = m_ls.reclaim(id) ;
+            infoItr = m_ls.reclaimBack(id) ;
         } else {
             infoItr = m_ls.getIterator(id) ;
         }
