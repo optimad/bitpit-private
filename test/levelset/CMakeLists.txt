@@ -60,7 +60,7 @@ add_custom_target(clean-tests-levelset COMMAND ${CMAKE_MAKE_PROGRAM} clean WORKI
 
 add_custom_command(
     TARGET "test_levelset_00002" PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/data/cube1.stl" "${CMAKE_CURRENT_BINARY_DIR}/data/cube1.stl"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/data/cube.stl" "${CMAKE_CURRENT_BINARY_DIR}/data/cube.stl"
 )
 
 add_custom_command(
