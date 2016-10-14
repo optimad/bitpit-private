@@ -245,6 +245,11 @@ public:
 
 	void flushData(std::fstream &stream, std::string name, VTKFormat format );
 
+	void renumberVerticesID(long offset = 0);
+	void renumberCellsID(long offset = 0);
+	void renumberInterfacesID(long offset = 0);
+	void renumberPatchID(long offV, long offC, long offI);
+	
 #if BITPIT_ENABLE_MPI==1
 	virtual void setCommunicator(MPI_Comm communicator);
 	void freeCommunicator();
@@ -465,6 +470,8 @@ private:
 	void setDimension(int dimension);
 
 	std::array<double, 3> evalElementCentroid(const Element &element);
+
+	void checkAndSortID(long idOr, std::unordered_map<long, std::pair<long, bool> > & mapRenum, std::vector<long> & sortedID);
 };
 
 }

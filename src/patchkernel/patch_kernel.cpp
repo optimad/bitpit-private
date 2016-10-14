@@ -3709,6 +3709,179 @@ void PatchKernel::flushData(std::fstream &stream, std::string name, VTKFormat fo
 	}
 }
 
+
+/*!
+ *  Internal utility, calling itself recursively, to find the right positioning
+ *  of a given ID and its dependendancies(if any), w.r.t. a renumbering map in input. 
+ *  The ID and its eventual dependent IDs are stored in a in/out vector
+ *
+ *  @param[in]		idOr original id of the element
+ *  @param[in]		mapRenum map having original ids as key and as argument a pair 
+ *  reporting the new id and a boolean true/false to mark if an id is already visited in the map
+ *  @param[in,out]	sortedID list of sorted ids 
+ */
+void checkAndSortID(long idOr, std::unordered_map<long, std::pair<long, bool> > & mapRenum, std::vector<long> & sortedID);
+{
+		if(mapRenum.count(idOr) == 0)	return;
+		if(mapRenum[idOr].second)		return;
+		
+		long check = mapRenum[idOr].first;
+		
+		if(mapRenum.count(check) > 0){
+			checkAndSortID(check, mapRenum, sortedID);
+		}
+		
+		sortedID.push_back(idOr);
+		mapRenum[idOR].second = true;
+	return;
+}	
+
+/*!
+ *  Renumbering Vertices ID consecutively, starting from a given offset.
+ *  It adjusts coherently the vertex connectivity held by Cells, if exists.
+ *
+ *  @param[in]		offset starting id 
+ */
+void renumberVerticesID(long offset);
+{
+	
+	std::unordered_map<long, std::pair<long, bool> > map;
+	std::vector<long>	sortedID;
+	
+	sortedID.reserve(getVertexCount());
+	
+	//going to create renumbering map
+	long counter = offset;
+	for(auto &vert : getVertices()){
+		map[vert.getId()]= std::make_pair(counter, false); 
+		++counter;
+	}
+	
+	//sorting IDs in order to avoid conflict in renumbering
+	for(auto & emap : map){
+		checkAndSortID(emap->first, map, sortedID);
+	}
+	
+	//renumbering
+	for(auto & id: sortedID){
+		auto & vert = getVertex(id);
+		vert.setId(map[id].first);
+	}
+	
+	//propagate info to vertex-cell connectivity
+	int vCount;
+	for(auto &cell: getCells()){
+		
+		vCount = cell.getVertexCount();
+		long * conn = cell.getConnect();
+		
+		for(int j=0; j<vCount; ++j){
+			conn[j] = map[conn[j]].first;
+		}
+	}
+}	
+
+/*!
+ *  Renumbering Cells ID consecutively, starting from a given offset.
+ *  It adjusts coherently the cell-cell connectivity held by Cells, and 
+ *  owner/neigh structure of The Interface, if any of them exists.
+ *
+ *  @param[in]		offset starting id 
+ */
+void renumberCellsID(long offset);
+{
+	std::unordered_map<long, std::pair<long, bool> > map;
+	std::vector<long>	sortedID;
+	
+	sortedID.reserve(getCellCount());
+	
+	//going to create renumbering map
+	long counter = offset;
+	for(auto &cell : getCells()){
+		map[cell.getId()]= std::make_pair(counter, false); 
+		++counter;
+	}
+	
+	//sorting IDs in order to avoid conflict in renumbering
+	for(auto & emap : map){
+		checkAndSortID(emap->first, map, sortedID);
+	}
+	
+	//renumbering
+	for(auto & id: sortedID){
+		auto & cell = getCell(id);
+		cell.setId(map[id].first);
+	}
+	
+	//propagate info to cell-cell connectivity
+	int cCount;
+	for(auto &cell: getCells()){
+	 ??
+	}
+	
+	//propagate info to interface cell-connectivity
+	int iCount;
+	for(auto &cell: getInterfaces()){
+		??
+	}
+	
+}	
+
+/*!
+ *  Renumbering Interfaces ID consecutively, starting from a given offset.
+ *  It adjusts coherently the interface ids held by Cells.
+ *
+ *  @param[in]		offset starting id 
+ */
+void renumberInterfacesID(long offset);
+{
+	std::unordered_map<long, std::pair<long, bool> > map;
+	std::vector<long>	sortedID;
+	
+	sortedID.reserve(getInterfaceCount());
+	
+	//going to create renumbering map
+	long counter = offset;
+	for(auto &interf : getInterfaces()){
+		map[interf.getId()]= std::make_pair(counter, false); 
+		++counter;
+	}
+	
+	//sorting IDs in order to avoid conflict in renumbering
+	for(auto & emap : map){
+		checkAndSortID(emap->first, map, sortedID);
+	}
+	
+	//renumbering
+	for(auto & id: sortedID){
+		auto & interf = getInterface(id);
+		interf.setId(map[id].first);
+	}
+	
+	//propagate info to cell-interface connectivity
+	int cCount;
+	for(auto &cell: getCells()){
+		??
+	}
+	
+}	
+
+/*!
+ *  Renumbering Vertices, Cells and Interfaces ID consecutively, starting from 
+ *  given offsets. It adjusts coherently the mutual dependent substructure.
+ *
+ *  @param[in]		offV starting id for Vertices
+ *  @param[in]		offC starting id for Cells
+ *  @param[in]		offI starting id for Interfaces
+ */
+void renumberPatchID(long offV, long offC, long offI);
+{
+	renumberVerticesID(offV);
+	renumberCellsID(offC);
+	renumberInterfacesID(offI);
+}	
+
+
 /*!
 	@}
 */
