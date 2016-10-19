@@ -3766,6 +3766,9 @@ void PatchKernel::renumberVerticesID(long offset)
 	for(auto & id: sortedID){
 		auto & vert = getVertex(id);
 		vert.setId(map[id].first);
+		if(id != map[id].first){
+			getVertices().updateId(id,map[id].first);
+		}	
 	}
 	
 	//propagate info to vertex-cell connectivity
@@ -3811,6 +3814,10 @@ void PatchKernel::renumberCellsID(long offset)
 	for(auto & id: sortedID){
 		auto & cell = getCell(id);
 		cell.setId(map[id].first);
+		if(id != map[id].first){
+			getCells().updateId(id,map[id].first);
+		}	
+		
 	}
 	
 	//propagate info to cell-cell connectivity
@@ -3880,6 +3887,10 @@ void PatchKernel::renumberInterfacesID(long offset)
 	for(auto & id: sortedID){
 		auto & interf = getInterface(id);
 		interf.setId(map[id].first);
+		if(id != map[id].first){
+			getInterfaces().updateId(id,map[id].first);
+		}	
+		
 	}
 	
 	//propagate info to cell-interface connectivity
