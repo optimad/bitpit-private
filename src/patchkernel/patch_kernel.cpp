@@ -3720,7 +3720,7 @@ void PatchKernel::flushData(std::fstream &stream, std::string name, VTKFormat fo
  *  reporting the new id and a boolean true/false to mark if an id is already visited in the map
  *  @param[in,out]	sortedID list of sorted ids 
  */
-void checkAndSortID(long idOr, std::unordered_map<long, std::pair<long, bool> > & mapRenum, std::vector<long> & sortedID);
+void PatchKernel::checkAndSortID(long idOr, std::unordered_map<long, std::pair<long, bool> > & mapRenum, std::vector<long> & sortedID)
 {
 		if(mapRenum.count(idOr) == 0)	return;
 		if(mapRenum[idOr].second)		return;
@@ -3732,7 +3732,7 @@ void checkAndSortID(long idOr, std::unordered_map<long, std::pair<long, bool> > 
 		}
 		
 		sortedID.push_back(idOr);
-		mapRenum[idOR].second = true;
+		mapRenum[idOr].second = true;
 	return;
 }	
 
@@ -3742,7 +3742,7 @@ void checkAndSortID(long idOr, std::unordered_map<long, std::pair<long, bool> > 
  *
  *  @param[in]		offset starting id 
  */
-void renumberVerticesID(long offset);
+void PatchKernel::renumberVerticesID(long offset)
 {
 	
 	std::unordered_map<long, std::pair<long, bool> > map;
@@ -3759,7 +3759,7 @@ void renumberVerticesID(long offset);
 	
 	//sorting IDs in order to avoid conflict in renumbering
 	for(auto & emap : map){
-		checkAndSortID(emap->first, map, sortedID);
+		checkAndSortID(emap.first, map, sortedID);
 	}
 	
 	//renumbering
@@ -3788,7 +3788,7 @@ void renumberVerticesID(long offset);
  *
  *  @param[in]		offset starting id 
  */
-void renumberCellsID(long offset);
+void PatchKernel::renumberCellsID(long offset)
 {
 	std::unordered_map<long, std::pair<long, bool> > map;
 	std::vector<long>	sortedID;
@@ -3804,7 +3804,7 @@ void renumberCellsID(long offset);
 	
 	//sorting IDs in order to avoid conflict in renumbering
 	for(auto & emap : map){
-		checkAndSortID(emap->first, map, sortedID);
+		checkAndSortID(emap.first, map, sortedID);
 	}
 	
 	//renumbering
@@ -3819,17 +3819,17 @@ void renumberCellsID(long offset);
 		int nFaces = cell.getFaceCount();
 		int nAdj;
 		long oldAdj;
-		const long newAdj;
+		long newAdj;
 		
 		for(int iF=0; iF<nFaces; ++iF){
 			
-			nAdj = getAdjacencyCount(iF);
+			nAdj = cell.getAdjacencyCount(iF);
 			
 			for(int iAdj=0; iAdj<nAdj; ++iAdj){
 				
 				newAdj = -1;
 				oldAdj = cell.getAdjacency(iF, iAdj);
-				if(oldAdj != -1)	newAdj = map[oldAdj];
+				if(oldAdj != -1)	newAdj = map[oldAdj].first;
 				cell.setAdjacency(iF, iAdj, newAdj);
 			}	
 		}
@@ -3843,8 +3843,8 @@ void renumberCellsID(long offset);
 		ownerface = interface.getOwnerFace();
 		neighface = interface.getNeighFace();
 		
-		owner = map[interface.getOwner()];
-		neigh = map[interface.getNeigh()];
+		owner = map[interface.getOwner()].first;
+		neigh = map[interface.getNeigh()].first;
 		
 		interface.setOwner(owner, ownerface);
 		interface.setNeigh(neigh, neighface);
@@ -3857,7 +3857,7 @@ void renumberCellsID(long offset);
  *
  *  @param[in]		offset starting id 
  */
-void renumberInterfacesID(long offset);
+void PatchKernel::renumberInterfacesID(long offset)
 {
 	std::unordered_map<long, std::pair<long, bool> > map;
 	std::vector<long>	sortedID;
@@ -3873,7 +3873,7 @@ void renumberInterfacesID(long offset);
 	
 	//sorting IDs in order to avoid conflict in renumbering
 	for(auto & emap : map){
-		checkAndSortID(emap->first, map, sortedID);
+		checkAndSortID(emap.first, map, sortedID);
 	}
 	
 	//renumbering
@@ -3886,19 +3886,19 @@ void renumberInterfacesID(long offset);
 	for(auto &cell: getCells()){
 		
 		int nFaces = cell.getFaceCount();
-		int nInterfaces;
+		int nInterf;
 		long oldInterf;
-		const long newInterf;
+		long newInterf;
 		
 		for(int iF=0; iF<nFaces; ++iF){
 			
-			nInterf = getInterfaceCount(iF);
+			nInterf = cell.getInterfaceCount(iF);
 			
 			for(int iInterf=0; iInterf<nInterf; ++iInterf){
 				
 				newInterf = -1;
 				oldInterf = cell.getInterface(iF, iInterf);
-				if(oldInterf != -1)	newInterf = map[oldInterf];
+				if(oldInterf != -1)	newInterf = map[oldInterf].first;
 				cell.setInterface(iF, iInterf, newInterf);
 			}	
 		}
@@ -3913,7 +3913,7 @@ void renumberInterfacesID(long offset);
  *  @param[in]		offC starting id for Cells
  *  @param[in]		offI starting id for Interfaces
  */
-void renumberPatch(long offV, long offC, long offI);
+void PatchKernel::renumberPatch(long offV, long offC, long offI)
 {
 	renumberVerticesID(offV);
 	renumberCellsID(offC);
