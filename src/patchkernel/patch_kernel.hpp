@@ -248,7 +248,7 @@ public:
 	void renumberVerticesID(long offset = 0);
 	void renumberCellsID(long offset = 0);
 	void renumberInterfacesID(long offset = 0);
-	void renumberPatchID(long offV, long offC, long offI);
+	void renumberPatch(long offV, long offC, long offI);
 	
 #if BITPIT_ENABLE_MPI==1
 	virtual void setCommunicator(MPI_Comm communicator);

@@ -3814,17 +3814,41 @@ void renumberCellsID(long offset);
 	}
 	
 	//propagate info to cell-cell connectivity
-	int cCount;
 	for(auto &cell: getCells()){
-	 ??
+	 
+		int nFaces = cell.getFaceCount();
+		int nAdj;
+		long oldAdj;
+		const long newAdj;
+		
+		for(int iF=0; iF<nFaces; ++iF){
+			
+			nAdj = getAdjacencyCount(iF);
+			
+			for(int iAdj=0; iAdj<nAdj; ++iAdj){
+				
+				newAdj = -1;
+				oldAdj = cell.getAdjacency(iF, iAdj);
+				if(oldAdj != -1)	newAdj = map[oldAdj];
+				cell.setAdjacency(iF, iAdj, newAdj);
+			}	
+		}
 	}
 	
 	//propagate info to interface cell-connectivity
-	int iCount;
-	for(auto &cell: getInterfaces()){
-		??
+	long owner, neigh;
+	int ownerface, neighface;
+	for(auto &interface: getInterfaces()){
+		
+		ownerface = interface.getOwnerFace();
+		neighface = interface.getNeighFace();
+		
+		owner = map[interface.getOwner()];
+		neigh = map[interface.getNeigh()];
+		
+		interface.setOwner(owner, ownerface);
+		interface.setNeigh(neigh, neighface);
 	}
-	
 }	
 
 /*!
@@ -3859,11 +3883,26 @@ void renumberInterfacesID(long offset);
 	}
 	
 	//propagate info to cell-interface connectivity
-	int cCount;
 	for(auto &cell: getCells()){
-		??
+		
+		int nFaces = cell.getFaceCount();
+		int nInterfaces;
+		long oldInterf;
+		const long newInterf;
+		
+		for(int iF=0; iF<nFaces; ++iF){
+			
+			nInterf = getInterfaceCount(iF);
+			
+			for(int iInterf=0; iInterf<nInterf; ++iInterf){
+				
+				newInterf = -1;
+				oldInterf = cell.getInterface(iF, iInterf);
+				if(oldInterf != -1)	newInterf = map[oldInterf];
+				cell.setInterface(iF, iInterf, newInterf);
+			}	
+		}
 	}
-	
 }	
 
 /*!
@@ -3874,7 +3913,7 @@ void renumberInterfacesID(long offset);
  *  @param[in]		offC starting id for Cells
  *  @param[in]		offI starting id for Interfaces
  */
-void renumberPatchID(long offV, long offC, long offI);
+void renumberPatch(long offV, long offC, long offI);
 {
 	renumberVerticesID(offV);
 	renumberCellsID(offC);
