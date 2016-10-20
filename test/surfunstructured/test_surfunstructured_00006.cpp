@@ -249,9 +249,9 @@ int subtest_001()
 	std::vector<long> newCellID = mesh.getCells().getIds(true);
 	std::vector<long> newInterfaceID = mesh.getInterfaces().getIds(true);
 	
-	std::cout<<newVertexID<<std::endl;
-	std::cout<<newCellID<<std::endl;
-	std::cout<<newInterfaceID<<std::endl;
+// 	std::cout<<newVertexID<<std::endl;
+// 	std::cout<<newCellID<<std::endl;
+// 	std::cout<<newInterfaceID<<std::endl;
 	
 	bool check;
 	
