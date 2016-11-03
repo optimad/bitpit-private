@@ -331,11 +331,12 @@ void VolCartesian::setDiscretization(const std::array<int, 3> &nCells)
 	}
 	log::cout() << "  - Total interface count: " << m_nInterfaces << "\n";
 
+	// Cell volume
+	initializeCellVolume();
+
 	// Interface area
 	initializeInterfaceArea();
 
-	// Cell volume
-	initializeCellVolume();
 
 	// Create cells, vertices and interfaces
 	if (getMemoryMode() == MemoryMode::MEMORY_NORMAL) {
@@ -793,7 +794,7 @@ void VolCartesian::addInterfacesDirection(const int &direction)
 				Cell &owner = m_cells[ownerId];
 
 				int ownerFace = 2 * direction;
-				if (counters[direction] == 0) {
+				if (counters[direction] == interfaceCount1D[direction] - 1) {
 					ownerFace++;
 				}
 
@@ -805,7 +806,7 @@ void VolCartesian::addInterfacesDirection(const int &direction)
 				if (counters[direction] != 0 && counters[direction] != interfaceCount1D[direction] - 1) {
 					Cell &neigh = m_cells[neighId];
 
-					int neighFace = 2 * direction + 1;
+					int neighFace = 2 * direction +1;
 
 					interface.setNeigh(neigh.getId(), neighFace);
 					neigh.setInterface(neighFace, 0, interface.getId());
@@ -1602,9 +1603,9 @@ void VolCartesian::scale(std::array<double, 3> scaling)
 		m_cellSpacings[n] *= scaling[n];
 	}
 
-	initializeInterfaceArea();
-
 	initializeCellVolume();
+
+	initializeInterfaceArea();
 
 	setBoundingBox(m_minCoords, m_maxCoords);
 
