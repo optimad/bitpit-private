@@ -26,6 +26,7 @@
 
 #include <cmath>
 #include <limits>
+#include <stack>
 
 #include "surface_kernel.hpp"
 
@@ -693,6 +694,270 @@ std::array<double, 3> SurfaceKernel::evalLimitedVertexNormal(const long &id, con
     normal = normal/norm2(normal);
 
     return(normal);
+}
+
+/*!
+ * Adjust the orientation of all facets according to the orientation of the first facet stored
+ * The routine checks whether the surface is orientable;
+ * if the surface is not orientable FALSE is returned (with some normals flipped until the orientablity condition has been violated),
+ * otherwise TRUE is returned (with all facet orientations coherent with the reference facet).
+ *
+ * \return TRUE if orientable, FALSE otherwise
+ */
+bool SurfaceKernel::adjustOrientation()
+{
+    long id = getCells().begin()->getId();
+    return adjustOrientation(id);
+}
+
+/*!
+ * Adjust the orientation of all facets according to the orientation of a given facet.
+ * The routine checks whether the surface is orientable;
+ * if the surface is not orientable FALSE is returned (with some normals flipped until the orientablity condition has been violated),
+ * otherwise TRUE is returned (with all facet orientations coherent with the reference facet).
+ *
+ * \param[in] seed id of reference facet
+ * \param[in] flipSeed if seed should be flipped
+ * \return TRUE if orientable, FALSE otherwise
+ */
+bool SurfaceKernel::adjustOrientation(const long &seed, const bool &flipSeed)
+{
+
+    auto &cellList = getCells();
+
+    assert(cellList.exists(seed));
+
+    if(flipSeed){
+        flipCellOrientation(seed);
+    }
+
+    std::stack<long> toVisit;
+    std::unordered_set<long> visited;
+
+    toVisit.push(seed);
+
+    while(!toVisit.empty()){
+        long cellId = toVisit.top();
+        toVisit.pop();
+
+        const auto& cell = getCell(cellId);
+
+        visited.insert(cellId);
+
+        const long* adjacencyIds = cell.getAdjacencies();
+        const long* interfaceIds = cell.getInterfaces();
+        int interfaceCount = cell.getInterfaceCount();
+
+        for(int i=0; i<interfaceCount; ++i){
+            const long neighId = adjacencyIds[i];
+
+            if( neighId <0){
+                continue;
+            }
+
+            bool already = visited.count(neighId)!=0 ;
+
+            if(!sameOrientation(interfaceIds[i])){
+                if(already){
+                    return false;
+                } else {
+                    flipCellOrientation(neighId);
+                }
+            }
+
+            if(!already){
+                toVisit.push(neighId);
+            }
+
+        }
+    }
+
+    return true;
+}
+
+/*!
+ * Check if two elements sharing an interface have same orientation.
+ * Two elements have the same orientation, if the two cell connectivity
+ * vectors cycle through the common interface with opposite order. 
+ *
+ * \param[in] id id of interface
+ */
+bool SurfaceKernel::sameOrientationAtInterface(const long &id)
+{
+    const auto &face= getInterface(id);
+
+    if(face.isBorder()){
+        return true;
+    }
+
+    const long ownerId= face.getOwner(); 
+    const auto &owner= getCell(ownerId);
+
+    const long neighId= face.getNeigh(); 
+    const auto &neigh= getCell(neighId);
+
+    if( face.getType() == ElementInfo::Type::VERTEX ){
+        const long* ownerConnect = owner.getConnect() ;
+        const long* neighConnect = neigh.getConnect() ;
+
+        if( ownerConnect[0] == neighConnect[0] || ownerConnect[1] == neighConnect[1] ){
+            return false;
+        }
+
+    } else if (face.getType() == ElementInfo::Type::LINE) {
+        const int ownerFace= face.getOwnerFace();
+        std::vector<long> ownerConnect = owner.getFaceConnect(ownerFace);
+
+        const int neighFace= face.getNeighFace();
+        std::vector<long> neighConnect = neigh.getFaceConnect(neighFace);
+
+        if( ownerConnect[0] != neighConnect[1] || ownerConnect[1] != neighConnect[0] ){
+            return false;
+        }
+
+
+    } else {
+        throw std::runtime_error ("Type of element not supported in SurfaceKernel");
+
+    }
+
+    return true;
+}
+
+/*!
+ * Flips the orientation of an element
+ *
+ * \param[in] id id of element to be flipped
+ */
+void SurfaceKernel::flipCellOrientation(const long &id)
+{
+
+    int top, end;
+    auto &cell = getCell(id);
+
+    //
+    // In order to flip the orientation of cell,
+    // the connectivity will be inverted
+    //
+    int nCellVertices = cell.getVertexCount();
+    const long *cellConnect = cell.getConnect();
+    std::unique_ptr<long[]> newCellConnect = std::unique_ptr<long[]>(new long[nCellVertices]);
+
+    for (int j = 0; j < nCellVertices; ++j) {
+        newCellConnect[j] = cellConnect[j] ;
+    }
+
+    top=0;
+    end= nCellVertices-1;
+    for (int j = 0; j < (int) std::floor(nCellVertices/2); ++j) {
+        std::swap( newCellConnect[top], newCellConnect[end]);
+        ++top;
+        --end;
+    }
+
+
+    //
+    // The numbering of the adjacencies and interfaces must be 
+    // changed according the new connectivity. This implies that
+    // all numbering must be inverted, but the last entry of the
+    // adjacencies and interfaces. Since both adjacencies and
+    // interfaces are grouped by faces, in a second step each
+    // ordering within a face must be inverted
+    //
+    int faceCount = cell.getFaceCount();
+    std::vector<std::vector<long>> newAdjacency, newInterface;
+    newAdjacency.resize(faceCount);
+    newInterface.resize(faceCount);
+
+    // Copy original ordering in newAdjacency and newInterface
+    //
+    for( int f=0; f<faceCount; ++f){
+        std::vector<long> &locAdj =newAdjacency[f];
+        std::vector<long> &locInt =newInterface[f];
+
+        int nCellAdjacencies = cell.getAdjacencyCount(f);
+        locAdj.resize(nCellAdjacencies);
+        locInt.resize(nCellAdjacencies);
+        const long *adjacency = cell.getAdjacencies(f);
+        const long *interface = cell.getInterfaces(f);
+
+        for (int j = 0; j < nCellAdjacencies; ++j) {
+            locAdj[j] = adjacency[j] ;
+            locInt[j] = interface[j] ;
+        }
+
+    }
+
+    // 
+    // Invert entire face based ordering but tha last entry
+    //
+    top=0;
+    end= faceCount-2;
+    for (int f = 0; f < std::max( 1, (int) std::floor((faceCount-1)/2) ); ++f) {
+        std::swap( newAdjacency[top], newAdjacency[end]);
+        std::swap( newInterface[top], newInterface[end]);
+        ++top;
+        --end;
+    }
+
+    // 
+    // Invert all enties within one face
+    //
+    for (int f = 0; f < faceCount; ++f) {
+        std::vector<long> &locAdj =newAdjacency[f];
+        std::vector<long> &locInt =newInterface[f];
+        int nFaceAdjacencies = locAdj.size();
+
+        top=0;
+        end=nFaceAdjacencies-1;
+        for( int j=0; j<(int) std::floor(nFaceAdjacencies/2); ++j){
+            std::swap(locAdj[top], locAdj[end]);
+            std::swap(locInt[top], locInt[end]);
+            ++top;
+            --end;
+        }
+    }
+
+    cell.setConnect(std::move(newCellConnect)) ;
+
+    if( newAdjacency[0].size()!=0){
+        cell.setAdjacencies(newAdjacency) ;
+    }
+
+    if( newInterface[0].size()!=0){
+
+        cell.setInterfaces(newInterface);
+      
+
+        //
+        // For the interfaces, we need to correct either
+        // ownerFace or neighFace, respectivly.
+        //
+        const long* intPtr = cell.getInterfaces(); 
+        int interfaceCount = cell.getInterfaceCount();
+        for( int i=0; i<interfaceCount; ++i){
+            long interfaceId = intPtr[i];
+            if(interfaceId<0){
+                continue;
+            }
+
+            Interface &interface=getInterface(interfaceId);
+            long owner = interface.getOwner();
+            if(owner==id){
+                int ownerFace = interface.getOwnerFace();
+                if(ownerFace!=faceCount-1){
+                    ownerFace = faceCount-2-ownerFace;
+                    interface.setOwner(id,ownerFace);
+                }
+            } else {
+                int neighFace = interface.getNeighFace();
+                if(neighFace!=faceCount-1){
+                    neighFace = faceCount-2-neighFace;
+                    interface.setNeigh(id,neighFace);
+                }
+            }
+        }
+    }
 }
 
 /*!
