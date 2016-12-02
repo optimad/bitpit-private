@@ -28,6 +28,11 @@
 #include <limits>
 #include <stack>
 
+#if BITPIT_ENABLE_MPI==1
+#include <mpi.h>
+#include <communications.hpp>
+#endif
+
 #include "surface_kernel.hpp"
 
 namespace bitpit {
@@ -696,8 +701,9 @@ std::array<double, 3> SurfaceKernel::evalLimitedVertexNormal(const long &id, con
     return(normal);
 }
 
+
 /*!
- * Adjust the orientation of all facets according to the orientation of the first facet stored
+ * Adjust the orientation of all facets of the local partition according to the orientation of the first facet stored
  * The routine checks whether the surface is orientable;
  * if the surface is not orientable FALSE is returned (with some normals flipped until the orientablity condition has been violated),
  * otherwise TRUE is returned (with all facet orientations coherent with the reference facet).
@@ -706,73 +712,172 @@ std::array<double, 3> SurfaceKernel::evalLimitedVertexNormal(const long &id, con
  */
 bool SurfaceKernel::adjustOrientation()
 {
-    long id = getCells().begin()->getId();
+    long id(Element::NULL_ID);
+
+#if BITPIT_ENABLE_MPI==1
+    if(getRank()==0){
+        id = getCells().begin()->getId();
+    }
+#else
+    id = getCells().begin()->getId();
+#endif
+
     return adjustOrientation(id);
+
 }
 
+
 /*!
- * Adjust the orientation of all facets according to the orientation of a given facet.
+ * Adjust the orientation of all facets of the local partition according to the orientation of a given facet.
  * The routine checks whether the surface is orientable;
  * if the surface is not orientable FALSE is returned (with some normals flipped until the orientablity condition has been violated),
  * otherwise TRUE is returned (with all facet orientations coherent with the reference facet).
  *
- * \param[in] seed id of reference facet
+ * \param[in] seed id of reference facet; 
+ * for parallel computaions, if a partition does not know how to orient its facets, 
+ * Element::NULL_ID should be passed for these partitions
  * \param[in] flipSeed if seed should be flipped
  * \return TRUE if orientable, FALSE otherwise
  */
 bool SurfaceKernel::adjustOrientation(const long &seed, const bool &flipSeed)
 {
 
-    auto &cellList = getCells();
-
-    assert(cellList.exists(seed));
-
-    if(flipSeed){
-        flipCellOrientation(seed);
-    }
+    bool newSeeds(true);
+    bool orientable, localOrientable;
 
     std::stack<long> toVisit;
     std::unordered_set<long> visited;
 
-    toVisit.push(seed);
+    if( seed != Element::NULL_ID ){
+        toVisit.push(seed);
 
-    while(!toVisit.empty()){
-        long cellId = toVisit.top();
-        toVisit.pop();
-
-        const auto& cell = getCell(cellId);
-
-        visited.insert(cellId);
-
-        const long* adjacencyIds = cell.getAdjacencies();
-        const long* interfaceIds = cell.getInterfaces();
-        int interfaceCount = cell.getInterfaceCount();
-
-        for(int i=0; i<interfaceCount; ++i){
-            const long neighId = adjacencyIds[i];
-
-            if( neighId <0){
-                continue;
-            }
-
-            bool already = visited.count(neighId)!=0 ;
-
-            if(!sameOrientation(interfaceIds[i])){
-                if(already){
-                    return false;
-                } else {
-                    flipCellOrientation(neighId);
-                }
-            }
-
-            if(!already){
-                toVisit.push(neighId);
-            }
-
+        if(flipSeed){
+            flipCellOrientation(seed);
         }
     }
 
-    return true;
+#if BITPIT_ENABLE_MPI==1
+    DataCommunicator ghostComm(getCommunicator());
+
+    for( auto &entry : getGhostExchangeSources()  ){
+        ghostComm.setSend(entry.first, entry.second.size()*sizeof(bool));
+    }
+
+    for( auto &entry : getGhostExchangeTargets()  ){
+        ghostComm.setRecv(entry.first, entry.second.size()*sizeof(bool));
+    }
+
+    unordered_map<long,bool> flipped;
+    for( auto const &cell : getCells()){
+        long cellId = cell.getId();
+        flipped.insert({{cellId,false}});
+    }
+#endif
+
+    while(newSeeds){
+
+        localOrientable=true;
+
+#if BITPIT_ENABLE_MPI==1
+        for( auto &entry : flipped){
+            entry.second=false;
+        }
+#endif
+
+        while( !toVisit.empty() && localOrientable){
+            long cellId = toVisit.top();
+            toVisit.pop();
+
+            const auto& cell = getCell(cellId);
+
+            visited.insert(cellId);
+
+            const long* adjacencyIds = cell.getAdjacencies();
+            const long* interfaceIds = cell.getInterfaces();
+            int interfaceCount = cell.getInterfaceCount();
+
+            for(int i=0; i<interfaceCount; ++i){
+                const long neighId = adjacencyIds[i];
+
+                if( neighId <0){
+                    continue;
+                }
+
+#if BITPIT_ENABLE_MPI==1
+                const auto &neighCell= getCell(neighId);
+                if(!neighCell.isInterior()){
+                    continue;
+                }
+#endif
+
+                bool already = visited.count(neighId)!=0 ;
+                bool sameOrient = sameOrientationAtInterface(interfaceIds[i]);
+
+                if(already){
+                    localOrientable = localOrientable && sameOrient;
+
+                } else{
+                    if(!sameOrient){
+                        flipCellOrientation(neighId);
+
+#if BITPIT_ENABLE_MPI==1
+                        flipped.at(neighId)=true;
+#endif
+                    }
+
+                    toVisit.push(neighId);
+                }
+            }
+        }
+
+        newSeeds=false;
+        orientable=localOrientable;
+
+#if BITPIT_ENABLE_MPI==1
+        MPI_Allreduce(&localOrientable,&orientable,1,MPI_C_BOOL,MPI_LAND,getCommunicator());
+
+        if(!orientable){
+            continue;
+        }
+
+        ghostComm.startAllRecvs();
+
+        for( auto &entry : getGhostExchangeSources()  ){
+            int rank = entry.first;
+            SendBuffer &buffer = ghostComm.getSendBuffer(rank);
+            for( long cellId : entry.second){
+                buffer << flipped.at(cellId);
+            }
+            ghostComm.startSend(rank);
+        }
+
+        int nPendingRecvs = ghostComm.getRecvCount();
+
+        while (nPendingRecvs != 0) {
+            bool ghostFlipped;
+            int rank = ghostComm.waitAnyRecv();
+            RecvBuffer buffer = ghostComm.getRecvBuffer(rank);
+
+            for( long cellId : getGhostExchangeTargets(rank)  ){
+                buffer >> ghostFlipped;
+                if(ghostFlipped){
+                    toVisit.push(cellId);
+                    flipCellOrientation(cellId);
+                }
+            }
+
+            --nPendingRecvs;
+        }
+
+
+        ghostComm.waitAllSends();
+
+        bool localNewSeeds(toVisit.size()!=0) ;
+        MPI_Allreduce(&localNewSeeds,&newSeeds,1,MPI_C_BOOL,MPI_LOR,getCommunicator());
+#endif
+    }
+
+    return orientable;
 }
 
 /*!
