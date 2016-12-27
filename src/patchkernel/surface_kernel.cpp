@@ -710,7 +710,7 @@ std::array<double, 3> SurfaceKernel::evalLimitedVertexNormal(const long &id, con
  *
  * \return TRUE if orientable, FALSE otherwise
  */
-bool SurfaceKernel::adjustOrientation()
+bool SurfaceKernel::adjustCellOrientation()
 {
     long id(Element::NULL_ID);
 
@@ -722,7 +722,7 @@ bool SurfaceKernel::adjustOrientation()
     id = getCells().begin()->getId();
 #endif
 
-    return adjustOrientation(id);
+    return adjustCellOrientation(id);
 
 }
 
@@ -736,10 +736,10 @@ bool SurfaceKernel::adjustOrientation()
  * \param[in] seed id of reference facet; 
  * for parallel computaions, if a partition does not know how to orient its facets, 
  * Element::NULL_ID should be passed for these partitions
- * \param[in] flipSeed if seed should be flipped
+ * \param[in] invert if the orientation should be inverted with respect to the reference facet
  * \return TRUE if orientable, FALSE otherwise
  */
-bool SurfaceKernel::adjustOrientation(const long &seed, const bool &flipSeed)
+bool SurfaceKernel::adjustCellOrientation(const long &seed, const bool &invert)
 {
 
     bool newSeeds(true);
@@ -751,7 +751,7 @@ bool SurfaceKernel::adjustOrientation(const long &seed, const bool &flipSeed)
     if( seed != Element::NULL_ID ){
         toVisit.push(seed);
 
-        if(flipSeed){
+        if(invert){
             flipCellOrientation(seed);
         }
     }

@@ -61,8 +61,8 @@ public:
 
         bool sameOrientationAtInterface(const long&);
 
-        bool adjustOrientation();
-        bool adjustOrientation(const long&, const bool& flipSeed=false);
+        bool adjustCellOrientation();
+        bool adjustCellOrientation(const long&, const bool& invert=false);
         void flipCellOrientation();
         void flipCellOrientation(const long&);
 
@@ -82,7 +82,6 @@ protected:
 	SurfaceKernel(const int &patch_dim, const int &space_dim, bool expert);
 	SurfaceKernel(const int &id, const int &patch_dim, const int &space_dim, bool expert);
 
-        
 };
 
 }
