@@ -59,6 +59,13 @@ public:
         virtual std::array<double, 3> evalLimitedVertexNormal(const long&, const int&, const double&) const;
         double evalCellSize(const long &id) const;
 
+        bool sameOrientationAtInterface(const long&);
+
+        bool adjustCellOrientation();
+        bool adjustCellOrientation(const long&, const bool& invert=false);
+        void flipCellOrientation();
+        void flipCellOrientation(const long&);
+
         void displayQualityStats(ostream&, unsigned int padding = 0) const;
         std::vector<double> computeHistogram(eval_f_, std::vector<double>&, long&, int n_int = 8, unsigned short mask = SELECT_ALL) const;
 
@@ -74,7 +81,7 @@ protected:
 	SurfaceKernel(bool expert);
 	SurfaceKernel(const int &patch_dim, const int &space_dim, bool expert);
 	SurfaceKernel(const int &id, const int &patch_dim, const int &space_dim, bool expert);
-        
+
 };
 
 }
