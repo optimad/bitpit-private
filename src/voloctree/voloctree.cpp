@@ -1901,10 +1901,42 @@ std::vector<long> VolOctree::_findCellEdgeNeighs(const long &id, const int &edge
 	int codimension = getDimension() - 1;
 	neighs = findCellCodimensionNeighs(id, edge, codimension, blackList);
 
-	// Add face neighbours
+	// Get the id of the vertex
+	const Cell &cell = getCell(id);
+	std::vector<long> vertexIds = cell.getEdgeConnect(edge);
+
+	// Get the face neighbours
+	//
+	// Get all face neighbours and select the ones that contains the edge
+	// for which the neighbours are requested. If the three is balanced, for
+	// each face, there can only be one face neighbour that shares the edge:
+	// if is the one that share one of the vertices of the edge. If the tree
+	// is not balanced, there can be multiple face neighbours that share the
+	// edge. Since the search for those neighbours will require geometric
+	// comparisons, searches for edge neighbours on unbalanced octants are
+	// not supported.
 	for (int face : m_octantLocalFacesOnEdge[edge]) {
-		for (auto &neigh : _findCellFaceNeighs(id, face, blackList)) {
-			utils::addToOrderedVector<long>(neigh, neighs);
+		bool neighFound = false;
+		for (auto &neighId : _findCellFaceNeighs(id, face, blackList)) {
+			const Cell &neigh = getCell(neighId);
+			const long *neighConnect = neigh.getConnect();
+			for (int k = 0; k < m_cellTypeInfo->nVertices; ++k) {
+				if (neighConnect[k] == vertexIds[0] || neighConnect[k] == vertexIds[1]) {
+					int cellLevel  = getCellLevel(id);
+					int neighLevel = getCellLevel(neighId);
+					if (std::abs(cellLevel - neighLevel) >= 2) {
+						throw std::runtime_error ("Searches for edge neighbours on unbalanced trees are not supported");
+					}
+
+					utils::addToOrderedVector<long>(neighId, neighs);
+					neighFound = true;
+					break;
+				}
+			}
+
+			if (neighFound) {
+				break;
+			}
 		}
 	}
 
