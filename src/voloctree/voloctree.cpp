@@ -1927,17 +1927,49 @@ std::vector<long> VolOctree::_findCellVertexNeighs(const long &id, const int &ve
 	int codimension = getDimension();
 	neighs = findCellCodimensionNeighs(id, vertex, codimension, blackList);
 
-	// Add edge neighbours or face neighbours
-	if (isThreeDimensional()) {
-		for (int edge : m_octantLocalEdgesOnVertex[vertex]) {
-			for (auto &neigh : _findCellEdgeNeighs(id, edge, blackList)) {
-				utils::addToOrderedVector<long>(neigh, neighs);
+	// Get the id of the vertex
+	const Cell &cell = getCell(id);
+	long vertexId = cell.getConnect()[vertex];
+
+	// Get the face neighbours
+	//
+	// Get all face neighbours and select the ones that contains the vertex
+	// for which the neighbours are requested. For each face, there can be
+	// only one face neighbour that shares the vertex.
+	for (int face : m_octantLocalFacesOnVertex[vertex]) {
+		bool neighFound = false;
+		for (long neighId : _findCellFaceNeighs(id, face, blackList)) {
+			const Cell &neigh = getCell(neighId);
+			const long *neighConnect = neigh.getConnect();
+			for (int k = 0; k < m_cellTypeInfo->nVertices; ++k) {
+				if (neighConnect[k] == vertexId) {
+					utils::addToOrderedVector<long>(neighId, neighs);
+					neighFound = true;
+					break;
+				}
+			}
+
+			if (neighFound) {
+				break;
 			}
 		}
-	} else {
-		for (int face : m_octantLocalFacesOnVertex[vertex]) {
-			for (auto &neigh : _findCellFaceNeighs(id, face, blackList)) {
-				utils::addToOrderedVector<long>(neigh, neighs);
+	}
+
+	// Get the edge neighbours
+	//
+	// Get all edge neighbours and select the ones that contains the vertex
+	// for which the neighbours are requested.
+	if (isThreeDimensional()) {
+		for (int edge : m_octantLocalEdgesOnVertex[vertex]) {
+			for (auto &neighId : _findCellEdgeNeighs(id, edge, blackList)) {
+				const Cell &neigh = getCell(neighId);
+				const long *neighConnect = neigh.getConnect();
+				for (int k = 0; k < m_cellTypeInfo->nVertices; ++k) {
+					if (neighConnect[k] == vertexId) {
+						utils::addToOrderedVector<long>(neighId, neighs);
+						break;
+					}
+				}
 			}
 		}
 	}
