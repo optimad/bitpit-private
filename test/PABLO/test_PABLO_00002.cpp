@@ -44,10 +44,10 @@ void test01() {
 #endif
 	log::manager().initialize(log::SEPARATE, false, nproc, rank);
 	log::cout() << fileVerbosity(log::NORMAL);
-	log::cout() << consoleVerbosity(log::QUIET);
+	log::cout() << consoleVerbosity(log::NORMAL);
 
 	/**<Instantation of a 2D para_tree object.*/
-    ParaTree pablo(2);
+    ParaTree pablo(3);
 
     /**<Compute the connectivity and write the para_tree.*/
     pablo.computeConnectivity();
@@ -78,7 +78,7 @@ void test01() {
     double radius = 0.4;
 
     /**<Simple adapt() nref1 times in the lower area of domain.*/
-    int nref1 = 6;
+    int nref1 = 1;
     for (int iter=0; iter<nref1; iter++){
         nocts = pablo.getNumOctants();
         for (unsigned int i=0; i<nocts; i++){
@@ -100,39 +100,43 @@ void test01() {
         pablo.write("Pablo002_iter"+to_string(static_cast<unsigned long long>(iter+2)));
     }
 
+    Octant* oct1 = pablo.getOctant(35);
+    Octant* oct2 = pablo.getOctant(24);
+    bool checkEdge = pablo.isEdgeOnOctant(oct1,4,oct2);
+    log::cout() << "checkEdge = " << checkEdge << std::endl;
 
-    /**<While adapt() nref2 times in the upper area of domain.
-     * (Useful if you work with center of octants) */
-    int nref2 = 5;
-    int iter = 0;
-    bool done = true;
-    while(iter<=nref2){
-        done = true;
-        while(done)
-        {
-            nocts = pablo.getNumOctants();
-            for (unsigned int i=0; i<nocts; i++){
-                /**<Compute center of the octant (index use).*/
-                array<double,3> center = pablo.getCenter(i);
-                double x = center[0];
-                double y = center[1];
-                if ((pow((x-xc),2.0)+pow((y-yc),2.0) < pow(radius,2.0)) &&
-                        (y>yc) && iter<=nref2 && pablo.getLevel(i)<=iter+1){
-
-                    /**<Set refinement marker=1 for octants inside a circle.*/
-                    pablo.setMarker(i, 1);
-                }
-            }
-            done = pablo.adapt();
-            pablo.updateConnectivity();
-            pablo.write("Pablo002_iter"+to_string(static_cast<unsigned long long>(iter+nref1+2)));
-        }
-        iter++;
-    }
-    /**<Globally refine one level, update the connectivity and write the para_tree.*/
-    pablo.adaptGlobalRefine();
-    pablo.updateConnectivity();
-    pablo.write("Pablo002_iter"+to_string(static_cast<unsigned long long>(iter+nref1+3)));
+//    /**<While adapt() nref2 times in the upper area of domain.
+//     * (Useful if you work with center of octants) */
+//    int nref2 = 5;
+//    int iter = 0;
+//    bool done = true;
+//    while(iter<=nref2){
+//        done = true;
+//        while(done)
+//        {
+//            nocts = pablo.getNumOctants();
+//            for (unsigned int i=0; i<nocts; i++){
+//                /**<Compute center of the octant (index use).*/
+//                array<double,3> center = pablo.getCenter(i);
+//                double x = center[0];
+//                double y = center[1];
+//                if ((pow((x-xc),2.0)+pow((y-yc),2.0) < pow(radius,2.0)) &&
+//                        (y>yc) && iter<=nref2 && pablo.getLevel(i)<=iter+1){
+//
+//                    /**<Set refinement marker=1 for octants inside a circle.*/
+//                    pablo.setMarker(i, 1);
+//                }
+//            }
+//            done = pablo.adapt();
+//            pablo.updateConnectivity();
+//            pablo.write("Pablo002_iter"+to_string(static_cast<unsigned long long>(iter+nref1+2)));
+//        }
+//        iter++;
+//    }
+//    /**<Globally refine one level, update the connectivity and write the para_tree.*/
+//    pablo.adaptGlobalRefine();
+//    pablo.updateConnectivity();
+//    pablo.write("Pablo002_iter"+to_string(static_cast<unsigned long long>(iter+nref1+3)));
 
     return ;
 }
