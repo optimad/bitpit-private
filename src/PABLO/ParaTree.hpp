@@ -408,6 +408,7 @@ namespace bitpit {
         uint32_t 	getPointOwnerIdx(darray3 point, bool & isghost) const;
         void 		getMapping(uint32_t & idx, u32vector & mapper, bvector & isghost) const;
         void 		getMapping(uint32_t & idx, u32vector & mapper, bvector & isghost, ivector & rank) const;
+        bool        isEdgeOnOctant(const Octant* oct1, uint8_t edge, const Octant* oct2) const;
 
         // =================================================================================== //
         // OTHER PARATREE BASED METHODS												    	   //

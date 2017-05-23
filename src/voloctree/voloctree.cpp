@@ -373,13 +373,7 @@ double VolOctree::evalCellVolume(const long &id) const
 std::array<double, 3> VolOctree::evalCellCentroid(const long &id) const
 {
 	OctantInfo octantInfo = getCellOctant(id);
-
-	const Octant *octant;
-	if (octantInfo.internal) {
-		octant = m_tree->getOctant(octantInfo.id);
-	} else {
-		octant = m_tree->getGhostOctant(octantInfo.id);
-	}
+	const Octant *octant = getOctantPointer(octantInfo);
 
 	return m_tree->getCenter(octant);
 }
@@ -1934,10 +1928,42 @@ std::vector<long> VolOctree::_findCellEdgeNeighs(const long &id, const int &edge
 	int codimension = getDimension() - 1;
 	neighs = findCellCodimensionNeighs(id, edge, codimension, blackList);
 
-	// Add face neighbours
+	// Get the id of the vertex
+	const Cell &cell = getCell(id);
+	std::vector<long> vertexIds = cell.getEdgeConnect(edge);
+
+	// Get the face neighbours
+	//
+	// Get all face neighbours and select the ones that contains the edge
+	// for which the neighbours are requested. If the three is balanced, for
+	// each face, there can only be one face neighbour that shares the edge:
+	// if is the one that share one of the vertices of the edge. If the tree
+	// is not balanced, there can be multiple face neighbours that share the
+	// edge. Since the search for those neighbours will require geometric
+	// comparisons, searches for edge neighbours on unbalanced octants are
+	// not supported.
 	for (int face : m_octantLocalFacesOnEdge[edge]) {
-		for (auto &neigh : _findCellFaceNeighs(id, face, blackList)) {
-			utils::addToOrderedVector<long>(neigh, neighs);
+		bool neighFound = false;
+		for (auto &neighId : _findCellFaceNeighs(id, face, blackList)) {
+			const Cell &neigh = getCell(neighId);
+			const long *neighConnect = neigh.getConnect();
+			for (int k = 0; k < m_cellTypeInfo->nVertices; ++k) {
+				if (neighConnect[k] == vertexIds[0] || neighConnect[k] == vertexIds[1]) {
+					int cellLevel  = getCellLevel(id);
+					int neighLevel = getCellLevel(neighId);
+					if (std::abs(cellLevel - neighLevel) >= 2) {
+						throw std::runtime_error ("Searches for edge neighbours on unbalanced trees are not supported");
+					}
+
+					utils::addToOrderedVector<long>(neighId, neighs);
+					neighFound = true;
+					break;
+				}
+			}
+
+			if (neighFound) {
+				break;
+			}
 		}
 	}
 
@@ -1960,17 +1986,60 @@ std::vector<long> VolOctree::_findCellVertexNeighs(const long &id, const int &ve
 	int codimension = getDimension();
 	neighs = findCellCodimensionNeighs(id, vertex, codimension, blackList);
 
-	// Add edge neighbours or face neighbours
+	// Get the id of the vertex
+	const Cell &cell = getCell(id);
+	long vertexId = cell.getConnect()[vertex];
+
+	// Get the edge and face neighbours
+	//
+	// Get all face and edge neighbours and select the ones that contains the
+	// vertex for which the neighbours are requested. On un-balanced trees
+	// the vertex can be inside the face/edge of the neighbour (hanging nodes).
+	// To correctly consider these neighbours, the following logic can be
+	// used:
+	//   - if a face/edge neighbour has the same level or a lower level than
+	//     the current cell, then it cenrtainlty is also a vertex neighbour;
+	//   - if a face/edge neighbour has a higher level than the current cell,
+	//     it is necessary to check if the neighbour actually contains the
+	//     vertex.
+	//
+	// NOTE: in three dimension the function "_findCellEdgeNeighs" will return
+	// both edge and face neighbours.
+	int cellLevel = getCellLevel(id);
 	if (isThreeDimensional()) {
 		for (int edge : m_octantLocalEdgesOnVertex[vertex]) {
-			for (auto &neigh : _findCellEdgeNeighs(id, edge, blackList)) {
-				utils::addToOrderedVector<long>(neigh, neighs);
+			for (long &neighId : _findCellEdgeNeighs(id, edge, blackList)) {
+				int neighLevel = getCellLevel(neighId);
+				if (neighLevel <= cellLevel) {
+					utils::addToOrderedVector<long>(neighId, neighs);
+				} else {
+					const Cell &neigh = getCell(neighId);
+					const long *neighConnect = neigh.getConnect();
+					for (int k = 0; k < m_cellTypeInfo->nVertices; ++k) {
+						if (neighConnect[k] == vertexId) {
+							utils::addToOrderedVector<long>(neighId, neighs);
+							break;
+						}
+					}
+				}
 			}
 		}
 	} else {
 		for (int face : m_octantLocalFacesOnVertex[vertex]) {
-			for (auto &neigh : _findCellFaceNeighs(id, face, blackList)) {
-				utils::addToOrderedVector<long>(neigh, neighs);
+			for (long &neighId : _findCellFaceNeighs(id, face, blackList)) {
+				int neighLevel = getCellLevel(neighId);
+				if (neighLevel <= cellLevel) {
+					utils::addToOrderedVector<long>(neighId, neighs);
+				} else {
+					const Cell &neigh = getCell(neighId);
+					const long *neighConnect = neigh.getConnect();
+					for (int k = 0; k < m_cellTypeInfo->nVertices; ++k) {
+						if (neighConnect[k] == vertexId) {
+							utils::addToOrderedVector<long>(neighId, neighs);
+							break;
+						}
+					}
+				}
 			}
 		}
 	}

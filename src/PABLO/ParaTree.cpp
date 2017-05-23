@@ -2957,6 +2957,82 @@ namespace bitpit {
         }
     };
 
+    /** Check if an octant share an edge or a portion of an edge with another octant
+     * \param[in] idx1 Index of octant owning the edge
+     * \param[in] edge Local index of the edge in idx1 octant
+     * \param[in] idx2 Index of octant to be checked if it owns a portion of the edge
+     */
+    bool
+    ParaTree::isEdgeOnOctant(const Octant* oct1, uint8_t edge, const Octant* oct2) const {
+        uint8_t parallelEdges[3];
+        uint8_t edgeNode1[2],edgeNode2[2];
+        m_global.getEdgeNode(edge,edgeNode1);
+        u32array3 node10 = oct1->getNode(edgeNode1[0]);
+        u32array3 node11 = oct1->getNode(edgeNode1[1]);
+        u32array3 node20,node21;
+        m_global.getParallelEdges(edge,parallelEdges);
+
+        //check if edges are aligned
+        bool areAligned;
+        uint8_t edge2,nonZeroDirection = 3;
+        for(int i = 0; i < 3; ++i){
+            areAligned = true;
+            m_global.getEdgeNode(parallelEdges[i],edgeNode2);
+            node20 = oct2->getNode(edgeNode2[0]);
+            node21 = oct2->getNode(edgeNode2[1]);
+
+            int zeroCounter20 = 0;
+            for(int j = 0; j < 3; ++j){
+                if(node20[j] == node10[j] && node20[j] == node11[j]) ++zeroCounter20;
+                else nonZeroDirection = j;
+            }
+            if(zeroCounter20 <= 1)
+                areAligned = false;
+
+            int zeroCounter21 = 0;
+            for(int j = 0; j < 3; ++j){
+                if(node21[j] == node10[j] && node21[j] == node11[j]) ++zeroCounter21;
+                else nonZeroDirection = j;
+            }
+            if(zeroCounter21 <= 1)
+                areAligned = false;
+
+            if(areAligned){
+                edge2 = parallelEdges[i];
+                i = 3; //loop exit
+            }
+        }
+
+        if(areAligned == false)
+            return false;
+
+        //edge2 has aligned nodes with edge nodes
+        uint8_t level1 = oct1->getLevel();
+        uint8_t level2 = oct2->getLevel();
+        if(level1 >= level2){
+            u32array3 max = node20, min=node21;
+            if(node21[nonZeroDirection] > node20[nonZeroDirection]){
+                max = node21;
+                min = node20;
+            }
+            if(node10[nonZeroDirection] <= max[nonZeroDirection] && node10[nonZeroDirection] >= min[nonZeroDirection])
+                return true;
+            else
+                return false;
+        }
+        else{
+            u32array3 max = node10, min=node11;
+            if(node11[nonZeroDirection] > node10[nonZeroDirection]){
+                max = node11;
+                min = node10;
+            }
+            if(node20[nonZeroDirection] <= max[nonZeroDirection] && node20[nonZeroDirection] >= min[nonZeroDirection])
+                return true;
+            else
+                return false;
+        }
+    };
+
     // =================================================================================== //
     // OTHER PARATREE BASED METHODS												    			   //
     // =================================================================================== //
