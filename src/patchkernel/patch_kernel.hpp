@@ -166,6 +166,15 @@ public:
 	};
 
 	/*!
+		Spawn status
+	*/
+	enum SpawnStatus {
+		SPAWN_UNNEEDED = -1,
+		SPAWN_NEEDED,
+		SPAWN_DONE
+	};
+
+	/*!
 		Adaption status
 	*/
 	enum AdaptionStatus {
@@ -186,6 +195,9 @@ public:
 	bool reserveInterfaces(size_t nInterfaces);
 
 	std::vector<adaption::Info> update(bool trackAdaption = true, bool squeezeStorage = false);
+
+	SpawnStatus getSpawnStatus() const;
+	std::vector<adaption::Info> spawn(bool trackSpawn);
 
 	void markCellForRefinement(const long &id);
 	void markCellForCoarsening(const long &id);
@@ -440,6 +452,9 @@ protected:
 	void dumpInterfaces(std::ostream &stream);
 	void restoreInterfaces(std::istream &stream);
 
+	void setSpawnStatus(SpawnStatus status);
+	virtual std::vector<adaption::Info> _spawn(bool trackAdaption);
+
 	virtual std::vector<adaption::Info> _updateAdaption(bool trackAdaption) = 0;
 
 	void setAdaptionStatus(AdaptionStatus status);
@@ -503,6 +518,8 @@ private:
 	std::array<int, 3> m_boxMinCounter;
 	std::array<int, 3> m_boxMaxCounter;
 
+	SpawnStatus m_spawnStatus;
+
 	AdaptionStatus m_adaptionStatus;
 
 	bool m_expert;
@@ -546,6 +563,8 @@ private:
 	void setId(int id);
 
 	std::array<double, 3> evalElementCentroid(const Element &element) const;
+
+	void mergeAdaptionInfo(std::vector<adaption::Info> &&source, std::vector<adaption::Info> &destination);
 };
 
 }
