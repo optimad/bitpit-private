@@ -997,6 +997,7 @@ const std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool ge
 			// Adaption info for the deleted interfaces
 			std::size_t adaptionInfoId = adaptionData.create(adaption::TYPE_DELETION, adaption::ENTITY_INTERFACE, currentRank);
 			adaption::Info &adaptionInfo = adaptionData[adaptionInfoId];
+			adaptionInfo.previous.reserve(removedInterfaces.size());
 			for (const long &interfaceId : removedInterfaces) {
 				adaptionInfo.previous.emplace_back();
 				long &deletedInterfaceId = adaptionInfo.previous.back();
@@ -1099,6 +1100,7 @@ const std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool ge
 			// Adaption info
 			std::size_t infoId = adaptionData.create(adaption::TYPE_CREATION, adaption::ENTITY_INTERFACE, currentRank);
 			adaption::Info &adaptionInfo = adaptionData[infoId];
+			adaptionInfo.current.reserve(createdInterfaces.size());
 			for (const long &interfaceId : createdInterfaces) {
 				adaptionInfo.current.emplace_back();
 				long &createdInterfaceId = adaptionInfo.current.back();
