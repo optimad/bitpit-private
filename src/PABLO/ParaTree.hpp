@@ -445,11 +445,11 @@ namespace bitpit {
 #if BITPIT_ENABLE_MPI==1
         void 		loadBalance(dvector* weight = NULL);
         void 		loadBalance(uint8_t & level, dvector* weight = NULL);
-        std::pair<uint32_t,uint32_t> virtualLoadBalance(dvector* weight = NULL);
-        std::pair<uint32_t,uint32_t> virtualLoadBalance(uint8_t & level, dvector* weight = NULL);
+        std::array<uint32_t, 4> virtualLoadBalance(dvector *weight = nullptr);
+        std::array<uint32_t, 4> virtualLoadBalance(uint8_t level, dvector *weight = nullptr);
     private:
         void 		privateLoadBalance(uint32_t* partition);
-        std::pair<uint32_t,uint32_t>        privateVirtualLoadBalance(uint32_t* partition);
+        std::array<uint32_t, 4> privateVirtualLoadBalance(uint32_t* partition);
 #endif
     public:
         double		levelToSize(uint8_t & level);
