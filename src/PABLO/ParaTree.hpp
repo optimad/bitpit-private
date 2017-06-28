@@ -95,7 +95,9 @@ namespace bitpit {
             OP_ADAPT_MAPPED,
             OP_ADAPT_UNMAPPED,
             OP_LOADBALANCE_FIRST,
-            OP_LOADBALANCE
+            OP_LOADBALANCE,
+            OP_VIRTUALLOADBALANCE,
+            OP_VIRTUALLOADBALANCE_FIRST
         };
 
     private:
@@ -443,8 +445,11 @@ namespace bitpit {
 #if BITPIT_ENABLE_MPI==1
         void 		loadBalance(dvector* weight = NULL);
         void 		loadBalance(uint8_t & level, dvector* weight = NULL);
+        std::pair<uint32_t,uint32_t> virtualLoadBalance(dvector* weight = NULL);
+        std::pair<uint32_t,uint32_t> virtualLoadBalance(uint8_t & level, dvector* weight = NULL);
     private:
         void 		privateLoadBalance(uint32_t* partition);
+        std::pair<uint32_t,uint32_t>        privateVirtualLoadBalance(uint32_t* partition);
 #endif
     public:
         double		levelToSize(uint8_t & level);

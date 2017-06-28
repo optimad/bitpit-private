@@ -3774,6 +3774,84 @@ namespace bitpit {
 
     };
 
+    /** Compute the end of the head section and the beginning of the tail section of octants vector (with user defined weights) used during the load balance.
+     * The head will be sent to predecessor processes during loadBalance, while the tail will be sent to the successor processes.
+     * If no head or no tail for a process are built from new partition, these two limits are set to UINT_MAX. The same for serial runs.
+     * If PABLO is serial when this method is called these two limits have the same meaning but no octants will be really sent to other processes.
+     * ATTENTION: these information are valid until the call to the analogous loadbalance method if no modification have been done on the grid and on the weights in case.
+     * \param[in] weight Pointer to a vector of weights of the local octants (weight=NULL is uniform distribution).
+     * \return A pair containing the two limits.
+     */
+    std::pair<uint32_t,uint32_t>
+    ParaTree::virtualLoadBalance(dvector* weight){
+
+        std::pair<uint32_t,uint32_t> limits;
+        m_lastOp = OP_VIRTUALLOADBALANCE;
+        if (m_nproc>1){
+
+            uint32_t* partition = new uint32_t [m_nproc];
+            if (weight == NULL)
+                computePartition(partition);
+            else
+                computePartition(partition, weight);
+
+            weight = NULL;
+
+            limits = privateVirtualLoadBalance(partition);
+
+            delete [] partition;
+            partition = NULL;
+
+        }
+        else{
+            limits.first = UINT_MAX;
+            limits.second = UINT_MAX;
+        }
+        //Write info on log
+        (*m_log) << "---------------------------------------------" << endl;
+        (*m_log) << "VIRTUAL LOAD BALANCE DONE" << endl;
+        (*m_log) << "---------------------------------------------" << endl;
+
+        return limits;
+    }
+
+    /** Evaluate the end of the head section and the beginning of the tail section of octants vector (with user defined weights) used during the load balance.
+     * The families of octants of a desired level are retained compact on the same process.
+     * The head will be sent to predecessor processes during loadBalance, while the tail will be sent to the successor processes.
+     * If no head or no tail for a process are built from new partition, these two limits are set to UINT_MAX. The same for serial runs.
+     * If PABLO is serial when this method is called these two limits have the same meaning but no octants will be really sent to other processes.
+     * ATTENTION: these information are valid until the call to the analogous loadbalance method if no modification have been done on the grid and on the weights in case.
+     * \param[in] weight Pointer to a vector of weights of the local octants (weight=NULL is uniform distribution).
+     * \return A pair containing the two limits.
+     */
+    std::pair<uint32_t,uint32_t>
+    ParaTree::virtualLoadBalance(uint8_t & level, dvector* weight){
+
+        std::pair<uint32_t,uint32_t> limits;
+        m_lastOp = OP_VIRTUALLOADBALANCE;
+        if (m_nproc>1){
+
+            uint32_t* partition = new uint32_t [m_nproc];
+            computePartition(partition, level, weight);
+
+            limits = privateVirtualLoadBalance(partition);
+
+            delete [] partition;
+            partition = NULL;
+
+        }
+        else{
+            limits.first = UINT_MAX;
+            limits.second = UINT_MAX;
+        }
+        //Write info on log
+        (*m_log) << "---------------------------------------------" << endl;
+        (*m_log) << "VIRTUAL LOAD BALANCE DONE" << endl;
+        (*m_log) << "---------------------------------------------" << endl;
+
+        return limits;
+    }
+
     /** Distribute Load-Balancing the octants of the whole tree over
      * the processes of the job following a given partition distribution.
      * Until loadBalance is not called for the first time the mesh is serial.
@@ -4206,6 +4284,86 @@ namespace bitpit {
                 setPboundGhosts();
             }
     };
+
+    /** Given a partition, evaluate the end of the head section and the beginning of the tail section of octants vector (with user defined weights) used during the load balance.
+     * The families of octants of a desired level are retained compact on the same process.
+     * The head will be sent to predecessor processes during loadBalance, while the tail will be sent to the successor processes.
+     * If no head or no tail for a process are built from new partition, these two limits are set to UINT_MAX. The same for serial runs.
+     * If PABLO is serial when this method is called these two limits have the same meaning but no octants will be really sent to other processes.
+     * ATTENTION: these information are valid until the call to the analogous loadbalance method if no modification have been done on the grid and on the weights in case.
+     * \param[in] weight Pointer to a vector of weights of the local octants (weight=NULL is uniform distribution).
+     * \return A pair containing the two limits.
+     */
+    std::pair<uint32_t,uint32_t>
+    ParaTree::privateVirtualLoadBalance(uint32_t* partition){
+        std::pair<uint32_t,uint32_t> limits;
+
+        if(m_serial)
+        {
+            m_lastOp = OP_VIRTUALLOADBALANCE_FIRST;
+            (*m_log) << " " << endl;
+            (*m_log) << " Initial Serial distribution : " << endl;
+            for(int ii=0; ii<m_nproc; ii++){
+                (*m_log) << " Octants for proc  "+ to_string(static_cast<unsigned long long>(ii))+" :   " + to_string(static_cast<unsigned long long>(m_partitionRangeGlobalIdx[ii]+1)) << endl;
+            }
+
+            uint32_t stride = 0;
+            for(int i = 0; i < m_rank; ++i)
+                stride += partition[i];
+
+            limits.first = stride-1;
+            limits.second = limits.first + partition[m_rank] + 1;
+        }
+        else
+        {
+            //compute new partition range globalidx
+            uint64_t* newPartitionRangeGlobalidx = new uint64_t[m_nproc];
+            for(int p = 0; p < m_nproc; ++p){
+                newPartitionRangeGlobalidx[p] = 0;
+                for(int pp = 0; pp <= p; ++pp)
+                    newPartitionRangeGlobalidx[p] += (uint64_t)partition[pp];
+                --newPartitionRangeGlobalidx[p];
+            }
+
+            //find resident octants local offset lastHead(lh) and firstTail(ft)
+            int32_t lh,ft;
+            if(m_rank == 0)
+                lh = -1;
+            else{
+                lh = (int32_t)(newPartitionRangeGlobalidx[m_rank-1] + 1 - m_partitionRangeGlobalIdx[m_rank-1] - 1 - 1);
+            }
+            if(lh < 0)
+                lh = - 1;
+            else if(lh > (int32_t)(getNumOctants() - 1))
+                lh = getNumOctants() - 1;
+
+            if(m_rank == m_nproc - 1)
+                ft = getNumOctants();
+            else if(m_rank == 0)
+                ft = (int32_t)(newPartitionRangeGlobalidx[m_rank] + 1);
+            else{
+                ft = (int32_t)(newPartitionRangeGlobalidx[m_rank] - m_partitionRangeGlobalIdx[m_rank -1]);
+            }
+            if(ft > (int32_t)(getNumOctants() - 1))
+                ft = getNumOctants();
+            else if(ft < 0)
+                ft = 0;
+
+            //compute size Head and size Tail
+            uint32_t headSize = (uint32_t)(lh + 1);
+            uint32_t tailSize = (uint32_t)(getNumOctants() - ft);
+            if(headSize == 0)
+                limits.first = UINT_MAX;
+            else
+                limits.first = lh;
+            if(tailSize == 0)
+                limits.second = UINT_MAX;
+            else
+                limits.second = ft;
+        }
+
+        return limits;
+    }
 
 #endif
 
