@@ -448,10 +448,13 @@ namespace bitpit {
 
         std::unordered_map<int, std::array<uint32_t, 2>> evalLoadBalanceSendRanges(dvector *weights);
         std::unordered_map<int, std::array<uint32_t, 2>> evalLoadBalanceSendRanges(uint8_t level, dvector *weights);
+        std::unordered_map<int, std::array<uint32_t, 2>> evalLoadBalanceRecvRanges(dvector *weights);
+        std::unordered_map<int, std::array<uint32_t, 2>> evalLoadBalanceRecvRanges(uint8_t level, dvector *weights);
     private:
         void 		privateLoadBalance(uint32_t* partition);
 
         std::unordered_map<int, std::array<uint32_t, 2>> evalLoadBalanceSendRanges(const uint32_t *updatedPartition);
+        std::unordered_map<int, std::array<uint32_t, 2>> evalLoadBalanceRecvRanges(const uint32_t *updatedPartition);
 
         std::unordered_map<int, std::array<uint64_t, 2>> evalPartitionIntersections(const uint32_t *schema_A, int rank_A, const uint32_t *schema_B);
 #endif

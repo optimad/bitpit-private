@@ -3889,6 +3889,123 @@ namespace bitpit {
     }
 
     /**
+     * Evaluate the elements of the current partition that will be received
+     * from other processors after the load balance.
+     *
+     * \param[in] weights are the weights of the local octants (if a null
+     * pointer is given a uniform distribution is used)
+     * \return The range of local ids that will be received from other
+     * processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceRecvRanges(dvector *weights){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
+
+        // If there is only one processor no octants can be received
+        if (m_nproc == 1) {
+            return sendRanges;
+        }
+
+        // Compute updated partition
+        std::vector<uint32_t> updatedPartition(m_nproc);
+        if (weights) {
+            computePartition(updatedPartition.data(), weights);
+        } else {
+            computePartition(updatedPartition.data());
+        }
+
+        // Evaluate send ranges
+        return evalLoadBalanceRecvRanges(updatedPartition.data());
+    }
+
+    /**
+     * Evaluate the elements of the current partition that will be received
+     * from other processors after the load balance.
+     *
+     * The families of octants of a desired level are retained compact on the
+     * same process.
+     *
+     * \param[in] level is the level of the families that will be retained
+     * compact on the same process
+     * \param[in] weights are the weights of the local octants (if a null
+     * pointer is given a uniform distribution is used)
+     * \return The range of local ids that will be received from other
+     * processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceRecvRanges(uint8_t level, dvector *weights){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
+
+        // If there is only one processor no octants can be received
+        if (m_nproc == 1) {
+            return sendRanges;
+        }
+
+        // Compute updated partition
+        std::vector<uint32_t> updatedPartition(m_nproc);
+        computePartition(updatedPartition.data(), level, weights);
+
+        // Evaluate receive ranges
+        return evalLoadBalanceRecvRanges(updatedPartition.data());
+    }
+
+    /**
+     * Evaluate the elements of the current partition that will be received
+     * from other processors after the load balance.
+     *
+     * \param[in] updatePartition is the pointer to the updated pattition
+     * \return The range of local ids that will be received from other
+     * processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceRecvRanges(const uint32_t *updatedPartition){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> recvRanges;
+
+        // If there is only one processor no octants can be received
+        if (m_nproc == 1) {
+            return recvRanges;
+        }
+
+        // Compute current partition schema
+        std::vector<uint32_t> currentPartition(m_nproc, 0);
+        if (!m_serial) {
+            currentPartition[0] = m_partitionRangeGlobalIdx[0] + 1;
+            for (int i = 1; i < m_nproc; ++i) {
+                currentPartition[i] = m_partitionRangeGlobalIdx[i] - m_partitionRangeGlobalIdx[i - 1];
+            }
+        } else {
+            currentPartition[m_rank] = getNumOctants();
+        }
+
+        // Get the intersections
+        std::unordered_map<int, std::array<uint64_t, 2>> globalIntersections = evalPartitionIntersections(currentPartition.data(), m_rank, updatedPartition);
+
+        // Evaluate the receive local indexes
+        uint64_t offset = 0;
+        for (int i = 0; i < m_rank; ++i) {
+            offset = updatedPartition[i];
+        }
+
+        for (const auto &intersectionEntry : globalIntersections) {
+            int rank = intersectionEntry.first;
+            if (rank == m_rank) {
+                continue;
+            }
+
+            const std::array<uint64_t, 2> &intersection = intersectionEntry.second;
+
+            std::array<uint32_t, 2> &recvRange = recvRanges[rank];
+            recvRange[0] = intersection[0] - offset;
+            recvRange[1] = intersection[1] - offset;
+        }
+
+        return recvRanges;
+    }
+
+    /**
      * Compute the intersections of the specified partition defined whithin
      * the partition schema A with all the partitions defined whithin the
      * partition schema B.
