@@ -3986,7 +3986,7 @@ namespace bitpit {
         // Evaluate the receive local indexes
         uint64_t offset = 0;
         for (int i = 0; i < m_rank; ++i) {
-            offset = updatedPartition[i];
+            offset += updatedPartition[i];
         }
 
         for (const auto &intersectionEntry : globalIntersections) {
