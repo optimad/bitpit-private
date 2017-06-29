@@ -415,7 +415,6 @@ public:
 	std::vector<adaption::Info> partition(const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
 	std::vector<adaption::Info> partition(MPI_Comm communicator, bool trackChanges, bool squeezeStorage = false);
 	std::vector<adaption::Info> partition(bool trackChanges, bool squeezeStorage = false);
-	std::vector<adaption::Info> balancePartition(bool trackChanges, bool squeezeStorage = false);
 	bool isPartitioned() const;
 
 	adaption::Info sendCells(const int &sendRank, const int &recvRank, const std::vector<long> &cellsToSend);
@@ -486,7 +485,7 @@ protected:
 	void addPointToBoundingBox(const std::array<double, 3> &point);
 	void removePointFromBoundingBox(const std::array<double, 3> &point, bool delayedBoxUpdate = false);
 #if BITPIT_ENABLE_MPI==1
-	virtual std::vector<adaption::Info> _balancePartition(bool trackChanges);
+	virtual std::vector<adaption::Info> _partition(bool trackChanges);
 
 	void setPartitioned(bool partitioned);
 
