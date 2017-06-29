@@ -411,11 +411,18 @@ public:
 	std::vector<long> & getGhostExchangeSources(int rank);
 	const std::vector<long> & getGhostExchangeSources(int rank) const;
 
+	bool isPartitioned() const;
+	AdaptionStatus getPartitionStatus(bool global = false) const;
 	std::vector<adaption::Info> partition(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
 	std::vector<adaption::Info> partition(const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
 	std::vector<adaption::Info> partition(MPI_Comm communicator, bool trackChanges, bool squeezeStorage = false);
 	std::vector<adaption::Info> partition(bool trackChanges, bool squeezeStorage = false);
-	bool isPartitioned() const;
+	std::vector<adaption::Info> partitionPrepare(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partitionPrepare(const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partitionPrepare(MPI_Comm communicator, bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partitionPrepare(bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partitionAlter(bool trackAdaption = true, bool squeezeStorage = false);
+	void partitionCleanup();
 
 	adaption::Info sendCells(const int &sendRank, const int &recvRank, const std::vector<long> &cellsToSend);
 #endif
@@ -485,7 +492,10 @@ protected:
 	void addPointToBoundingBox(const std::array<double, 3> &point);
 	void removePointFromBoundingBox(const std::array<double, 3> &point, bool delayedBoxUpdate = false);
 #if BITPIT_ENABLE_MPI==1
-	virtual std::vector<adaption::Info> _partition(bool trackChanges);
+	void setAdaptionStatus(AdaptionStatus status);
+	virtual std::vector<adaption::Info> _partitionPrepare(bool trackChanges);
+	virtual std::vector<adaption::Info> _partitionAlter(bool trackChanges);
+	virtual void _partitionCleanup();
 
 	void setPartitioned(bool partitioned);
 
