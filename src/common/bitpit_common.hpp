@@ -27,7 +27,12 @@
 /*!
  * @defgroup common Common
  * @{
- * @defgroup commonUtils Utils
+ * @defgroup common::utils Utils
+ *     @{
+ *     @defgroup common::utils::string String utils
+ *     @defgroup common::utils::binary Binary utils
+  *     @defgroup common::utils::hashing Hashing utils
+ *     @}
  * @defgroup macro Macros
  * @}
  *
@@ -41,6 +46,5 @@
 
 #include "compiler.hpp"
 #include "utils.hpp"
-#include "utils.tpp"
 
 #endif

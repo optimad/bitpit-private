@@ -89,7 +89,7 @@ public:
 
     void destroy();
     void reserve(int nVectors, int nItems = 0);
-    void swap(FlatVector2D &other);
+    void swap(FlatVector2D &other) noexcept;
     bool operator==(const FlatVector2D& rhs) const;
     void fill(T &value);
     bool empty() const;
@@ -146,6 +146,8 @@ private:
     T* operator[](const int &i);
     bool isIndexValid(const int &i) const;
     bool isIndexValid(const int &i, const int &j) const;
+
+    void destroy(bool destroyIndex, bool destroyValues);
 
 };
 

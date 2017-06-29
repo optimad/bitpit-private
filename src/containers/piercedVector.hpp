@@ -25,623 +25,282 @@
 #ifndef __BITPIT_PIERCED_VECTOR_HPP__
 #define __BITPIT_PIERCED_VECTOR_HPP__
 
-#define  __PI_REFERENCE__ typename PiercedIterator<value_t, id_t, value_no_cv_t>::reference
-#define  __PI_POINTER__   typename PiercedIterator<value_t, id_t, value_no_cv_t>::pointer
+#include <cassert>
+#include <limits>
+#include <unordered_map>
+#include <type_traits>
+#include <vector>
+
+#include "piercedKernel.hpp"
+#include "piercedStorage.hpp"
 
 #define __PV_REFERENCE__       typename PiercedVector<value_t, id_t>::reference
 #define __PV_CONST_REFERENCE__ typename PiercedVector<value_t, id_t>::const_reference
 #define __PV_POINTER__         typename PiercedVector<value_t, id_t>::pointer
 #define __PV_CONST_POINTER__   typename PiercedVector<value_t, id_t>::const_pointer
 
-#include <algorithm>
-#include <cassert>
-#include <iterator>
-#include <limits>
-#include <unordered_map>
-#include <memory>
-#include <type_traits>
-#include <vector>
+namespace bitpit {
 
-namespace bitpit{
-
-template<typename value_t, typename id_t>
-class PiercedVector;
-
-/*!
-	\ingroup containers
-
-	@brief Iterator for the class PiercedVector
-
-	Usage: use <tt>PiercedVector<value_t, id_t>::iterator</tt>
-	to declare an iterator for a pierced vector, use
-	<tt>PiercedVector<vaue_t, id_t>::const_iterator</tt> to declare
-	a const iterator for a pierced vector.
-
-	@tparam value_t The type of the elements stored in the vector
-	@tparam id_t The type of the ids to associate to the elements
-*/
-template<typename value_t, typename id_t = long,
-         typename value_no_cv_t = typename std::remove_cv<value_t>::type>
-class PiercedIterator
-	: public std::iterator<std::forward_iterator_tag, value_no_cv_t, std::ptrdiff_t, value_t*, value_t&>
-{
-	static_assert(std::is_integral<id_t>::value, "Signed integer required for id.");
-	static_assert(std::numeric_limits<id_t>::is_signed, "Signed integer required for id.");
-
-	 friend class PiercedIterator<value_no_cv_t, id_t>;
-
-private:
-	/*!
-		Container.
-	*/
-	template<typename PV_value_t, typename PV_id_t>
-	using Container = PiercedVector<PV_value_t, PV_id_t>;
-
-	/*
-		Container type
-
-		When building a const_iterator the pointer to the container has to
-		be declared const.
-	*/
-	typedef
-		typename std::conditional<std::is_const<value_t>::value,
-			const Container<value_no_cv_t, id_t>,
-			Container<value_no_cv_t, id_t>
-		>::type
-
-		container_t;
-
-public:
-	/*!
-		Constant container
-	*/
-	typedef container_t container_type;
-
-	/*!
-		Type of data stored in the container
-	*/
-	typedef value_t value_type;
-
-	/*!
-		Type of ids stored in the container
-	*/
-	typedef id_t id_type;
-
-	// Friendships
-	template<typename PV_value_t, typename PV_id_t>
-	friend class PiercedVector;
-
-	// Constructors
-	PiercedIterator();
-
-	// General methods
-	void swap(PiercedIterator& other) noexcept;
-
-	container_type & getContainer() const;
-
-	// Methos to extract information on the current element
-	id_t getId(const id_t &fallback = -1) const noexcept;
-	std::size_t getRawIndex() const noexcept;
-
-	// Operators
-	PiercedIterator& operator++();
-	PiercedIterator operator++(int);
-
-	__PI_REFERENCE__ operator*() const;
-	__PI_POINTER__ operator->() const;
-
-	template<typename U = value_t, typename U_no_cv = value_no_cv_t,
-             typename std::enable_if<std::is_same<U, U_no_cv>::value, int>::type = 0>
-	operator PiercedIterator<const U_no_cv, id_t>() const;
-
-	/*!
-		Two-way comparison.
-	*/
-	template<typename other_value_t, typename other_id_t = long,
-         typename other_value_no_cv_t = typename std::remove_cv<value_t>::type>
-	bool operator==(const PiercedIterator<other_value_t, other_id_t, other_value_no_cv_t>& rhs) const
-	{
-		return (m_container == rhs.m_container) && (m_pos == rhs.m_pos);
-	}
-
-	/*!
-		Two-way comparison.
-	*/
-	template<typename other_value_t, typename other_id_t = long,
-         typename other_value_no_cv_t = typename std::remove_cv<value_t>::type>
-	bool operator!=(const PiercedIterator<other_value_t, other_id_t, other_value_no_cv_t>& rhs) const
-	{
-		return (m_container != rhs.m_container) || (m_pos != rhs.m_pos);
-	}
-
-private:
-	/*!
-		Internal pointer to the container.
-	*/
-	container_t *m_container;
-
-	/*!
-		Position inside the container.
-	*/
-	size_t m_pos;
-
-	// Constructors
-	explicit PiercedIterator(container_t *container, const size_t &pos);
-
-};
-
-/*!
-	\ingroup containers
-
-	@brief Base class for the pierced vectors.
+/**
+* \ingroup containers
+*
+* \brief Base class for the pierced vectors.
 */
 class BasePiercedVector {
 };
 
-/*!
-	\ingroup containers
-
-	@brief Metafunction for generating a pierced vector.
-
-	@details
-	Usage: use <tt>PiercedVector<value_t, id_t></tt> to declare a pierced
-	vector.
-
-	Internally all the holes are stored in a single vector. The first part of
-	this vector contains the "regular" holes, whereas the last part contains
-	the "pending" holes. The space reserved to the pending holes is fixed.
-	To track begin and end of pending/regular holes section, two couple of
-	begin/end iterators are used.
-
-	         /------ Regular holes begin
-	         |
-	         |                     /------ Regular holes end
-	         |                     |
-	         v                     v
-	    |-+-+R+R+R+R+R+R+R+R+R+R+R+-+-+-+-+-+P+P+P+P+P+P+P+-+-+-+-+-+-|
-	     <   REGULAR HOLES SECTION   >   <     MAX PENDING HOLES     >
-	                                         ^             ^
-	                                         |             |
-	               Pending holes begin ------/             |
-	                                                       |
-	                               Pending holes end ------/
-
-	At the beginning, the vector of the holes will have a size equal to the
-	maximum number of pending holes. When an element is deleted, its position
-	is marked as a pending hole and it is inserted at the end of the existing
-	pending holes (or after the regular holes if there are no pending holes).
-	When the maximum number of pending holes is reached, the hole's vector
-	is flushed. First, pending holes are then converted to regular holes.
-	The difference between pending and regular holes is that the position of
-	a pending hole is just marked as empty, whereas the position of a regular
-	hole contains the distance from the next non-epty element (to speed-up
-	vector traversal). Once the positions associated to the pending holes are
-	updated, pending holes are moved into the regular holes and all the holes
-	are compacted at the beginning of the holes' vector. Finally, the vector
-	is resized: the new size of the vector is the number of regular holes plus
-	the maximum number of allowed pending holes.
-
-	When a new element needs to be inserted in the element, first a suitable
-	position is searched in the pending holes, if no suitable positions is
-	found, the search is extended to regular holes. If, among the holes, there
-	is no suitable position, a new element is added in the container.
-
-	@tparam value_t The type of the elements stored in the vector
-	@tparam id_t The type of the ids to associate to the elements
+/**
+* \ingroup containers
+*
+* \brief Metafunction for generating a pierced vector.
+*
+* \details
+* Usage: use <tt>PiercedVector<value_t, id_t></tt> to declare a pierced
+* vector.
+*
+* \tparam value_t is the type of the elements stored in the vector
+* \tparam id_t is the type of the ids associated to the elements
 */
 template<typename value_t, typename id_t = long>
-class PiercedVector : public BasePiercedVector {
-	static_assert(std::is_integral<id_t>::value, "Signed integer required for id.");
-	static_assert(std::numeric_limits<id_t>::is_signed, "Signed integer required for id.");
-
-private:
-	/*!
-		Maximum number of pending deletes before the changes are flushed.
-	*/
-	static const std::size_t MAX_PENDING_HOLES;
+class PiercedVector : public BasePiercedVector,
+                      private PiercedKernel<id_t>,
+                      private PiercedStorage<value_t, id_t> {
 
 public:
-	// Friendships
-	template<typename PI_value_t, typename PI_id_t, typename PI_value_no_cv_t>
-	friend class PiercedIterator;
+    // Typedefs
 
-	/*!
-		Type of data stored in the container
-	*/
-	typedef value_t value_type;
+    /**
+    * Kernel template
+    */
+    template<typename PK_id_t>
+    using Kernel = PiercedKernel<PK_id_t>;
 
-	/*!
-		Type of ids stored in the container
-	*/
-	typedef id_t id_type;
+    /**
+    * Kernel type
+    */
+    typedef Kernel<id_t> kernel_type;
 
-	/*!
-		Iterator for the pierced array.
-	*/
-	typedef PiercedIterator<value_t, id_t> iterator;
+    /*!
+    * Type of data stored in the container
+    */
+    typedef typename PiercedStorage<value_t, id_t>::value_type value_type;
 
-	/*!
-		Constant iterator for the pierced array.
-	*/
-	typedef PiercedIterator<const value_t, id_t> const_iterator;
+    /*!
+    * Type of ids stored in the container
+    */
+    typedef typename PiercedKernel<id_t>::id_type id_type;
 
-	/*!
-		Iterator for the pierced array raw container.
-	*/
-	typedef typename std::vector<value_t>::iterator raw_iterator;
+    /**
+    * Reference
+    */
+    typedef typename PiercedStorage<value_t, id_t>::reference reference;
 
-	/*!
-		Constant iterator for the pierced array raw container.
-	*/
-	typedef typename std::vector<value_t>::const_iterator raw_const_iterator;
+    /**
+    * Constant reference
+    */
+    typedef typename PiercedStorage<value_t, id_t>::const_reference const_reference;
 
-	/*!
-		Reference
-	*/
-	typedef typename std::vector<value_t>::reference reference;
+    /**
+    * Pointer
+    */
+    typedef typename PiercedStorage<value_t, id_t>::pointer pointer;
 
-	/*!
-		Constant reference
-	*/
-	typedef typename std::vector<value_t>::const_reference const_reference;
+    /**
+    * Constant pointer
+    */
+    typedef typename PiercedStorage<value_t, id_t>::const_pointer const_pointer;
 
-	/*!
-		Pointer
-	*/
-	typedef typename std::vector<value_t>::pointer pointer;
+    /**
+    * Iterator
+    */
+    typedef typename PiercedStorage<value_t, id_t>::iterator iterator;
 
-	/*!
-		Constant pointer
-	*/
-	typedef typename std::vector<value_t>::const_pointer const_pointer;
+    /**
+    * Constant iterator
+    */
+    typedef typename PiercedStorage<value_t, id_t>::const_iterator const_iterator;
 
-	/*!
-		Functional for compare the position of two elements
-	*/
-	struct positionLess
-	{
-		positionLess(PiercedVector<value_t> &vector)
-		{
-			m_vector = &vector;
-		}
+    /**
+    * Raw iterator
+    */
+    typedef typename PiercedStorage<value_t, id_t>::raw_iterator raw_iterator;
 
-		bool operator()(const id_t &id_1, const id_t &id_2) const
-		{
-			return m_vector->getPosFromId(id_1) < m_vector->getPosFromId(id_2);
-		}
+    /**
+    * Raw constant iterator
+    */
+    typedef typename PiercedStorage<value_t, id_t>::raw_const_iterator raw_const_iterator;
 
-		PiercedVector<value_t> *m_vector;
-	};
+    /**
+    * Range
+    */
+    typedef typename PiercedStorage<value_t, id_t>::range range;
 
-	/*!
-		Functional for compare the position of two elements
-	*/
-	struct positionGreater
-	{
-		positionGreater(PiercedVector<value_t> &vector)
-		{
-			m_vector = &vector;
-		}
+    /**
+    * Constant range
+    */
+    typedef typename PiercedStorage<value_t, id_t>::const_range const_range;
 
-		bool operator()(const id_t &id_1, const id_t &id_2) const
-		{
-			return m_vector->getPosFromId(id_1) > m_vector->getPosFromId(id_2);
-		}
+    // Contructors
+    PiercedVector();
+    PiercedVector(std::size_t n);
 
-		PiercedVector<value_t> *m_vector;
-	};
+    // Methods that modify the contents of the container
+    using PiercedKernel<id_t>::updateId;
 
-	// Contructors
-	PiercedVector();
-	PiercedVector(std::size_t n);
+    iterator reclaim(id_t id);
+    iterator reclaimAfter(const id_t &referenceId, id_t id);
+    iterator reclaimBack(id_t id);
+    iterator reclaimBefore(const id_t &referenceId, id_t id);
 
-	// Methods that modify the contents of the container
-	iterator pushBack(const id_t &id, value_t &&value);
+    iterator moveAfter(const id_t &referenceId, id_t id, bool delayed = false);
+    iterator moveBefore(const id_t &referenceId, id_t id, bool delayed = false);
 
-	iterator reclaim(const id_t &id);
-	iterator reclaimAfter(const id_t &referenceId, const id_t &id);
-	iterator reclaimBack(const id_t &id);
-	iterator reclaimBefore(const id_t &referenceId, const id_t &id);
+    iterator insert(id_t id, const value_t &value);
+    iterator insertAfter(const id_t &referenceId, id_t id, const value_t &value);
+    iterator insertBefore(const id_t &referenceId, id_t id, const value_t &value);
 
-	iterator moveAfter(const id_t &referenceId, const id_t &id, bool delayed = false);
-	iterator moveBefore(const id_t &referenceId, const id_t &id, bool delayed = false);
+    iterator replace(id_t id, value_t &&value);
 
-	iterator insert(const id_t &id, const value_t &value);
-	iterator insertAfter(const id_t &referenceId, const id_t &id, const value_t &value);
-	iterator insertBefore(const id_t &referenceId, const id_t &id, const value_t &value);
+    iterator pushBack(id_t id, const value_t &value);
 
-	iterator replace(id_t id, value_t &&value);
+    template<typename... Args, typename std::enable_if<PiercedStorage<value_t, id_t>::template has_initialize<Args...>()>::type * = nullptr>
+    iterator emreclaim(id_t id, Args&&... args);
+    template<typename... Args, typename std::enable_if<PiercedStorage<value_t, id_t>::template has_initialize<Args...>()>::type * = nullptr>
+    iterator emreclaimAfter(const id_t &referenceId, id_t id, Args&&... args);
+    template<typename... Args, typename std::enable_if<PiercedStorage<value_t, id_t>::template has_initialize<Args...>()>::type * = nullptr>
+    void emreclaimBack(id_t id, Args&&... args);
+    template<typename... Args, typename std::enable_if<PiercedStorage<value_t, id_t>::template has_initialize<Args...>()>::type * = nullptr>
+    iterator emreclaimBefore(const id_t &referenceId, id_t id, Args&&... args);
 
-	void updateId(const id_t &currentId, const id_t &updatedId);
+    template<typename... Args>
+    iterator emplace(id_t id, Args&&... args);
+    template<typename... Args>
+    iterator emplaceAfter(const id_t &referenceId, id_t id, Args&&... args);
+    template<typename... Args>
+    void emplaceBack(id_t id, Args&&... args);
+    template<typename... Args>
+    iterator emplaceBefore(const id_t &referenceId, id_t id, Args&&... args);
 
-	template<typename... Args>
-	typename PiercedVector<value_t, id_t>::iterator emplace(const id_t &id, Args&&... args);
-	template<typename... Args>
-	typename PiercedVector<value_t, id_t>::iterator emplaceAfter(const id_t &referenceId, const id_t &id, Args&&... args);
-	template<typename... Args>
-	void emplaceBack(const id_t &id, Args&&... args);
-	template<typename... Args>
-	typename PiercedVector<value_t, id_t>::iterator emplaceBefore(const id_t &referenceId, const id_t &id, Args&&... args);
+    template<typename... Args>
+    iterator emreplace(id_t id, Args&&... args);
 
-	template<typename... Args>
-	typename PiercedVector<value_t, id_t>::iterator emreplace(id_t id, Args&&... args);
+    iterator erase(id_t id, bool delayed = false);
+    void popBack();
 
-	iterator erase(id_t id, bool delayed = false);
+    void swap(id_t id_first, id_t id_second);
 
-	void popBack();
+    // Methods that modify the container as a whole
+    using PiercedKernel<id_t>::flush;
 
-	void swap(const id_t &id_first, const id_t &id_second);
+    void clear(bool release = true);
+    void reserve(std::size_t n);
+    void resize(std::size_t n);
+    void sort();
+    void squeeze();
+    void shrinkToFit();
+    void swap(PiercedVector &x) noexcept;
 
-	// Methods that modify the container as a whole
-	void clear(bool release = true);
-	void flush();
-	void reserve(std::size_t n);
-	void resize(std::size_t n);
-	void sort();
-	void squeeze();
-	void shrinkToFit();
-	void swap(PiercedVector& x) noexcept;
+    // Methods that extract information about the container
+    using PiercedKernel<id_t>::capacity;
+    using PiercedKernel<id_t>::contiguous;
+    using PiercedKernel<id_t>::empty;
+    using PiercedKernel<id_t>::isIteratorSlow;
+    using PiercedKernel<id_t>::maxSize;
+    using PiercedKernel<id_t>::size;
 
-	// Methods that extract information on the container
-	std::size_t capacity() const;
-	bool contiguous() const;
-	void dump();
-	bool empty() const;
-	bool isIteratorSlow();
-	std::size_t maxSize() const;
-	std::size_t size() const;
+    const PiercedKernel<id_t> & getKernel() const;
+    const PiercedStorage<value_t, id_t> & getStorage() const;
 
-	// Methods that extract information on the contents of the container
-	bool exists(id_t id) const;
-	const_iterator find(id_t id) const;
-	iterator find(id_t id);
-	std::size_t evalFlatIndex(id_t id);
-	std::size_t getRawIndex(id_t id) const;
+    void dump();
 
-	std::vector<id_t> getIds(bool ordered = true) const;
-	id_t getSizeMarker(const size_t &targetSize, const id_t &fallback = -1);
+    // Methods that extract information on the contents of the container
+    using PiercedKernel<id_t>::contains;
+    using PiercedKernel<id_t>::getRawIndex;
+    using PiercedKernel<id_t>::evalFlatIndex;
 
-	// Methods that extract the contents of the container
-	__PV_POINTER__ data() noexcept;
+    std::size_t rawIndex(id_t id) const;
+    bool exists(id_t id) const;
 
-	__PV_REFERENCE__ back();
-	__PV_CONST_REFERENCE__ back() const;
+    using PiercedKernel<id_t>::getIds;
+    using PiercedKernel<id_t>::getSizeMarker;
 
-	__PV_REFERENCE__ front();
-	__PV_CONST_REFERENCE__ front() const;
+    // Methods that extract the contents of the container
+    using PiercedStorage<value_t, id_t>::data;
 
-	__PV_REFERENCE__ at(const id_t &id);
-	__PV_CONST_REFERENCE__ at(const id_t &id) const;
+    __PV_REFERENCE__ back();
+    __PV_CONST_REFERENCE__ back() const;
 
-	__PV_REFERENCE__ rawAt(const std::size_t &pos);
-	__PV_CONST_REFERENCE__ rawAt(const std::size_t &pos) const;
-	std::size_t rawIndex(id_t id) const;
+    __PV_REFERENCE__ front();
+    __PV_CONST_REFERENCE__ front() const;
 
-	__PV_CONST_REFERENCE__ operator[](const id_t &id) const;
-	__PV_REFERENCE__ operator[](const id_t &id);
+    __PV_REFERENCE__ at(id_t id);
+    __PV_CONST_REFERENCE__ at(id_t id) const;
 
-	// Iterators
-	iterator getIterator(const id_t &id) noexcept;
-	const_iterator getConstIterator(const id_t &id) const noexcept;
+    __PV_REFERENCE__ rawAt(std::size_t pos);
+    __PV_CONST_REFERENCE__ rawAt(std::size_t pos) const;
 
-	iterator getIteratorFromRawIndex(const std::size_t &pos) noexcept;
-	const_iterator getConstIteratorFromRawIndex(const std::size_t &pos) const noexcept;
+    __PV_CONST_REFERENCE__ operator[](id_t id) const;
+    __PV_REFERENCE__ operator[](id_t id);
 
-	iterator begin() noexcept;
-	iterator end() noexcept;
-	const_iterator begin() const noexcept;
-	const_iterator end() const noexcept;
-	const_iterator cbegin() const noexcept;
-	const_iterator cend() const noexcept;
+    const_iterator find(id_t id) const;
+    iterator find(id_t id);
 
-	raw_iterator rawBegin() noexcept;
-	raw_iterator rawEnd() noexcept;
-	raw_const_iterator rawBegin() const noexcept;
-	raw_const_iterator rawEnd() const noexcept;
-	raw_const_iterator rawCbegin() const noexcept;
-	raw_const_iterator rawCend() const noexcept;
+    // Iterators
+    using PiercedStorage<value_t, id_t>::getIterator;
+    using PiercedStorage<value_t, id_t>::getConstIterator;
+
+    using PiercedStorage<value_t, id_t>::getIteratorFromRawIndex;
+    using PiercedStorage<value_t, id_t>::getConstIteratorFromRawIndex;
+
+    using PiercedStorage<value_t, id_t>::begin;
+    using PiercedStorage<value_t, id_t>::end;
+    using PiercedStorage<value_t, id_t>::cbegin;
+    using PiercedStorage<value_t, id_t>::cend;
+
+    using PiercedStorage<value_t, id_t>::rawBegin;
+    using PiercedStorage<value_t, id_t>::rawEnd;
+    using PiercedStorage<value_t, id_t>::rawCbegin;
+    using PiercedStorage<value_t, id_t>::rawCend;
+
+    // External storage
+    using PiercedStorage<value_t, id_t>::getSyncMaster;
+
+    template<typename data_t>
+    void registerStorage(PiercedStorage<data_t, id_t> *storage, PiercedSyncMaster::SyncMode syncMode);
+    template<typename data_t>
+    void unregisterStorage(PiercedStorage<data_t, id_t> *storage);
+    template<typename data_t>
+    bool isStorageRegistered(const PiercedStorage<data_t, id_t> *storage) const;
+    template<typename data_t>
+    PiercedSyncMaster::SyncMode getStorageSyncMode(const PiercedStorage<data_t, id_t> *storage) const;
+
+    using PiercedKernel<id_t>::sync;
+
+    // Dump and restore
+    template<typename T = value_t, typename std::enable_if<PiercedStorage<T, id_t>::has_dump_restore>::type * = nullptr>
+    void restore(std::istream &stream);
+
+    template<typename T = value_t, typename std::enable_if<PiercedStorage<T, id_t>::has_dump_restore>::type * = nullptr>
+    void dump(std::ostream &stream) const;
 
 private:
-	/*!
-		Hasher for the id map.
+    typedef typename PiercedKernel<id_t>::FillAction FillAction;
+    typedef typename PiercedKernel<id_t>::MoveAction MoveAction;
+    typedef typename PiercedKernel<id_t>::SwapAction SwapAction;
+    typedef typename PiercedKernel<id_t>::EraseAction EraseAction;
 
-		Since the id are uniques, the hasher can be a function that
-		takes the id and cast it to a size_t.
+    iterator reclaimValue(const FillAction &action);
+    iterator insertValue(const FillAction &action, const value_t &value);
+    template<typename... Args, typename std::enable_if<PiercedStorage<value_t, id_t>::template has_initialize<Args...>()>::type * = nullptr>
+    iterator emreclaimValue(const FillAction &action, Args&&... args);
+    template<typename... Args>
+    iterator emplaceValue(const FillAction &action, Args&&... args);
 
-		The hasher is defined as a struct, because a struct can be
-		passed as an object into metafunctions (meaning that the type
-		deduction for the template paramenters can take place, and
-		also meaning that inlining is easier for the compiler). A bare
-		function would have to be passed as a function pointer.
-		To transform a function template into a function pointer,
-		the template would have to be manually instantiated (with a
-		perhaps unknown type argument).
+    iterator moveValue(const MoveAction &action);
 
-	*/
-	struct PiercedHasher {
-		/*!
-			Function call operator that casts the specified
-			value to a size_t.
+    void swapValues(const SwapAction &action);
 
-			\tparam U type of the value
-			\param value is the value to be casted
-			\result Returns the value casted to a size_t.
-		*/
-		template<typename U>
-		constexpr std::size_t operator()(U&& value) const noexcept
-		{
-			return static_cast<std::size_t>(std::forward<U>(value));
-		}
-	};
-
-	/*!
-		Storage position
-	*/
-	struct StoragePosition {
-		StoragePosition(size_t _pos, bool _ready)
-			: pos(_pos), ready(_ready)
-		{
-		}
-
-		size_t pos;
-		bool ready;
-	};
-
-	/*!
-		Container used for storing holes
-	*/
-	typedef std::vector<std::size_t> hole_container;
-
-	/*!
-		Hole iterator
-	*/
-	typedef hole_container::iterator hole_iterator;
-
-	/*!
-		Vector that will hold the elements.
-	*/
-	std::vector<value_t>m_v;
-
-	/*!
-		Vector that will hold the ids.
-	*/
-	std::vector<id_t> m_ids;
-
-	/*!
-		Container that will hold a list of the holes present in
-		the piecrecd vector.
-	*/
-	hole_container m_holes;
-
-	/*!
-		Iterator pointing to the first regular hole
-	*/
-	hole_iterator m_holes_regular_begin;
-
-	/*!
-		Iterator pointing to the last regular hole
-	*/
-	hole_iterator m_holes_regular_end;
-
-	/*!
-		Iterator pointing to the first pending hole
-	*/
-	hole_iterator m_holes_pending_begin;
-
-	/*!
-		Iterator pointing to the last pending hole
-	*/
-	hole_iterator m_holes_pending_end;
-
-	/*!
-		Tracks if the regular holes are sorted
-	*/
-	bool m_holes_regular_sorted;
-
-	/*!
-		Tracks if the pending holes are sorted
-	*/
-	bool m_holes_pending_sorted;
-
-	/*!
-		Map that links the id of the elements and their position
-		inside the internal vector.
-	*/
-	std::unordered_map<id_t, std::size_t, PiercedHasher> m_pos;
-
-	/*!
-		Position of the first element in the internal vector.
-	*/
-	std::size_t m_begin_pos;
-
-	/*!
-		Position of the last element in the internal vector.
-	*/
-	std::size_t m_end_pos;
-
-	/*!
-		Position of the first dirty element.
-
-		After the first dirty position the id of the holes can not be
-		properly defined, meaning that the iterator can take longer to
-		iterate through the elements.
-	*/
-	std::size_t m_dirty_begin_pos;
-
-	/*!
-		Compares the id of the elements in the specified position.
-
-		\param pos_x is the position to the first element to compare
-		\param y is the position to the second element to compare
-		\result Returns true if the element x has an id lower than the element
-		y, false otherwise. Negative ids are special ids and are considered
-		higher than positive ids.
-	*/
-	struct idLess
-	{
-		const std::vector<id_t> &m_ids;
-
-		idLess(const std::vector<id_t> &ids)
-			: m_ids(ids)
-		{
-		}
-
-	    inline bool operator() (const std::size_t &pos_x, const std::size_t &pos_y)
-	    {
-			id_t id_x = m_ids[pos_x];
-			id_t id_y = m_ids[pos_y];
-
-		    if (id_x >= 0 && id_y < 0) {
-			    return true;
-		    } else if (id_x < 0 && id_y >= 0) {
-			    return false;
-		    } else if (id_x >= 0) {
-			    return (id_x < id_y);
-		    } else {
-			    return (id_x > id_y);
-		    }
-	    }
-	};
-
-	iterator getIteratorFromPos(const std::size_t &pos) noexcept;
-	const_iterator getConstIteratorFromPos(const std::size_t &pos) const noexcept;
-
-	StoragePosition fillHead(const id_t &id);
-	StoragePosition fillTail(const id_t &id);
-	StoragePosition fillBefore(const std::size_t &referencePos, const id_t &id);
-	StoragePosition fillAfter(const std::size_t &referencePos, const id_t &id);
-	StoragePosition fillHole(const hole_iterator &holeItr, const id_t &id);
-	StoragePosition fillAppend(const id_t &id);
-	StoragePosition fillInsert(const std::size_t &pos, const id_t &id);
-
-	void pierce(const std::size_t &pos, bool flush = true);
-
-	void holesClear(bool release = false);
-	void holesClearRegular(bool release = false);
-	void holesClearPending(bool release = false);
-	void holesResize(size_t offset, size_t nRegulars, size_t nPendings, bool release = true);
-	std::size_t holesCount() const;
-	std::size_t holesCountPending() const;
-	std::size_t holesCountRegular() const;
-	void holesFlush();
-	void holesSortPending();
-	void holesSortRegular();
-
-	bool validateId(const id_t &id);
-
-	std::size_t findPrevUsedPos(std::size_t pos) const;
-	std::size_t findNextUsedPos(std::size_t pos) const;
-	bool isPosEmpty(std::size_t pos) const;
-	std::size_t getPosFromId(id_t id) const;
-	void setBeginPos(const std::size_t &pos);
-	void setEndPos(const std::size_t &pos);
-
-	void setPosId(const std::size_t &pos, const id_t &id);
-	void setPosEmptyId(const std::size_t &pos, const std::size_t &nextUsedPos);
-	void swapPosIds(const std::size_t &pos_1, const id_t &id_1, const std::size_t &pos_2, const id_t &id_2);
-
-	void storageShrink(size_t n, bool force = false);
-	std::size_t storageSize() const;
+    iterator eraseValue(const EraseAction &action);
 
 };
 

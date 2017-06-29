@@ -178,6 +178,9 @@ void VolCartesian::__reset()
 */
 void VolCartesian::initialize()
 {
+	// This patch need to be spawn
+	setSpawnStatus(SPAWN_NEEDED);
+
 	// Set the light memory mode
 	m_memoryMode = MemoryMode::MEMORY_LIGHT;
 
@@ -554,16 +557,20 @@ double VolCartesian::getSpacing(const int &direction) const
 }
 
 /*!
-	Updates the patch.
+	Generates the patch.
 
+	\param trackSpawn if set to true the changes to the patch will be tracked
 	\result Returns a vector of adaption::Info that can be used to track
 	the changes done during the update.
 */
-const std::vector<adaption::Info> VolCartesian::_updateAdaption(bool trackAdaption, bool squeezeStorage)
+std::vector<adaption::Info> VolCartesian::_spawn(bool trackSpawn)
 {
-	BITPIT_UNUSED(squeezeStorage);
+	std::vector<adaption::Info> updateInfo;
 
-	log::cout() << ">> Updating cartesian mesh\n";
+	// If the patch is in 'normal' mode there is nothing to do.
+	if (getMemoryMode() == MEMORY_NORMAL) {
+		return updateInfo;
+	}
 
 	// Enable advanced editing
 	setExpert(true);
@@ -583,10 +590,9 @@ const std::vector<adaption::Info> VolCartesian::_updateAdaption(bool trackAdapti
 	setExpert(false);
 
 	// Adaption info
-	std::vector<adaption::Info> adaptionData;
-	if (trackAdaption) {
-		adaptionData.emplace_back();
-		adaption::Info &adaptionCellInfo = adaptionData.back();
+	if (trackSpawn) {
+		updateInfo.emplace_back();
+		adaption::Info &adaptionCellInfo = updateInfo.back();
 		adaptionCellInfo.type   = adaption::TYPE_CREATION;
 		adaptionCellInfo.entity = adaption::ENTITY_CELL;
 		adaptionCellInfo.current.reserve(m_cells.size());
@@ -596,8 +602,8 @@ const std::vector<adaption::Info> VolCartesian::_updateAdaption(bool trackAdapti
 			cellId = cell.getId();
 		}
 
-		adaptionData.emplace_back();
-		adaption::Info &adaptionInterfaceInfo = adaptionData.back();
+		updateInfo.emplace_back();
+		adaption::Info &adaptionInterfaceInfo = updateInfo.back();
 		adaptionInterfaceInfo.type   = adaption::TYPE_CREATION;
 		adaptionInterfaceInfo.entity = adaption::ENTITY_INTERFACE;
 		adaptionInterfaceInfo.current.reserve(m_interfaces.size());
@@ -607,14 +613,14 @@ const std::vector<adaption::Info> VolCartesian::_updateAdaption(bool trackAdapti
 			interfaceId = interface.getId();
 		}
 	} else {
-		adaptionData.emplace_back();
+		updateInfo.emplace_back();
 	}
 
 	// Updating the adaption brings the patch is in normal memory mode
 	setMemoryMode(MemoryMode::MEMORY_NORMAL, false);
 
 	// Done
-	return adaptionData;
+	return updateInfo;
 }
 
 /*!
@@ -844,53 +850,6 @@ void VolCartesian::addInterfacesDirection(const int &direction)
 }
 
 /*!
-	Marks a cell for refinement.
-
-	This is a void function since mesh refinement is not implemented
-	for Cartesian meshes.
-
-	\param id is the id of the cell that needs to be refined
-*/
-bool VolCartesian::_markCellForRefinement(const long &id)
-{
-	BITPIT_UNUSED(id);
-
-	return false;
-}
-
-/*!
-	Marks a cell for coarsening.
-
-	This is a void function since mesh coarsening is not implemented
-	for Cartesian meshes.
-
-	\param id the cell to be refined
-*/
-bool VolCartesian::_markCellForCoarsening(const long &id)
-{
-	BITPIT_UNUSED(id);
-
-	return false;
-}
-
-/*!
-	Enables cell balancing.
-
-	This is a void function since mesh coarsening is not implemented
-	for Cartesian meshes.
-
-	\param id is the id of the cell
-	\param enabled defines if enable the balancing for the specified cell
-*/
-bool VolCartesian::_enableCellBalancing(const long &id, bool enabled)
-{
-	BITPIT_UNUSED(id);
-	BITPIT_UNUSED(enabled);
-
-	return false;
-}
-
-/*!
  *  Get the version associated to the binary dumps.
  *
  *  \result The version associated to the binary dumps.
@@ -909,19 +868,19 @@ int VolCartesian::_getDumpVersion() const
  */
 void VolCartesian::_dump(std::ostream &stream)
 {
-	IO::binary::write(stream, m_minCoords[0]);
-	IO::binary::write(stream, m_minCoords[1]);
-	IO::binary::write(stream, m_minCoords[2]);
+	utils::binary::write(stream, m_minCoords[0]);
+	utils::binary::write(stream, m_minCoords[1]);
+	utils::binary::write(stream, m_minCoords[2]);
 
-	IO::binary::write(stream, m_maxCoords[0] - m_minCoords[0]);
-	IO::binary::write(stream, m_maxCoords[1] - m_minCoords[1]);
-	IO::binary::write(stream, m_maxCoords[2] - m_minCoords[2]);
+	utils::binary::write(stream, m_maxCoords[0] - m_minCoords[0]);
+	utils::binary::write(stream, m_maxCoords[1] - m_minCoords[1]);
+	utils::binary::write(stream, m_maxCoords[2] - m_minCoords[2]);
 
-	IO::binary::write(stream, m_nCells1D[0]);
-	IO::binary::write(stream, m_nCells1D[1]);
-	IO::binary::write(stream, m_nCells1D[2]);
+	utils::binary::write(stream, m_nCells1D[0]);
+	utils::binary::write(stream, m_nCells1D[1]);
+	utils::binary::write(stream, m_nCells1D[2]);
 
-	IO::binary::write(stream, m_memoryMode);
+	utils::binary::write(stream, m_memoryMode);
 }
 
 /*!
@@ -933,31 +892,31 @@ void VolCartesian::_restore(std::istream &stream)
 {
 	// Origin
 	std::array<double, 3> origin;
-	IO::binary::read(stream, origin[0]);
-	IO::binary::read(stream, origin[1]);
-	IO::binary::read(stream, origin[2]);
+	utils::binary::read(stream, origin[0]);
+	utils::binary::read(stream, origin[1]);
+	utils::binary::read(stream, origin[2]);
 
 	setOrigin(origin);
 
 	// Lengths
 	std::array<double, 3> lengths;
-	IO::binary::read(stream, lengths[0]);
-	IO::binary::read(stream, lengths[1]);
-	IO::binary::read(stream, lengths[2]);
+	utils::binary::read(stream, lengths[0]);
+	utils::binary::read(stream, lengths[1]);
+	utils::binary::read(stream, lengths[2]);
 
 	setLengths(lengths);
 
 	// Discretization
 	std::array<int, 3> nCells;
-	IO::binary::read(stream, nCells[0]);
-	IO::binary::read(stream, nCells[1]);
-	IO::binary::read(stream, nCells[2]);
+	utils::binary::read(stream, nCells[0]);
+	utils::binary::read(stream, nCells[1]);
+	utils::binary::read(stream, nCells[2]);
 
 	setDiscretization(nCells);
 
 	// Memory mode
 	MemoryMode memoryMode;
-	IO::binary::read(stream, memoryMode);
+	utils::binary::read(stream, memoryMode);
 	setMemoryMode(memoryMode);
 }
 

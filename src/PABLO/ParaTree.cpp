@@ -334,75 +334,75 @@ namespace bitpit {
     void ParaTree::dump(std::ostream &stream, bool full)
     {
         // Version
-        IO::binary::write(stream, getDumpVersion());
+        utils::binary::write(stream, getDumpVersion());
 
         // Tree data
-        IO::binary::write(stream, getNproc());
+        utils::binary::write(stream, getNproc());
 
-        IO::binary::write(stream, getDim());
+        utils::binary::write(stream, getDim());
 
-        IO::binary::write(stream, getSerial());
-        IO::binary::write(stream, getMaxDepth());
-        IO::binary::write(stream, getStatus());
-        IO::binary::write(stream, getBalanceCodimension());
+        utils::binary::write(stream, getSerial());
+        utils::binary::write(stream, getMaxDepth());
+        utils::binary::write(stream, getStatus());
+        utils::binary::write(stream, getBalanceCodimension());
 
         for (int i = 0; i < m_global.m_nfaces; i++) {
-            IO::binary::write(stream, getPeriodic(i));
+            utils::binary::write(stream, getPeriodic(i));
         }
 
         // Octant data
         uint32_t nOctants = getNumOctants();
-        IO::binary::write(stream, nOctants);
+        utils::binary::write(stream, nOctants);
 
         uint32_t nGlobalOctants = getGlobalNumOctants();
-        IO::binary::write(stream, nGlobalOctants);
+        utils::binary::write(stream, nGlobalOctants);
 
         for (uint32_t i = 0; i < nOctants; i++) {
             const Octant &octant = m_octree.m_octants[i];
 
-            IO::binary::write(stream, octant.getLevel());
-            IO::binary::write(stream, octant.getX());
-            IO::binary::write(stream, octant.getY());
-            IO::binary::write(stream, octant.getZ());
+            utils::binary::write(stream, octant.getLevel());
+            utils::binary::write(stream, octant.getX());
+            utils::binary::write(stream, octant.getY());
+            utils::binary::write(stream, octant.getZ());
 
             for (size_t k = 0; k < octant.m_info.size(); ++k) {
-                IO::binary::write(stream, (bool) octant.m_info[k]);
+                utils::binary::write(stream, (bool) octant.m_info[k]);
             }
 
-            IO::binary::write(stream, octant.getBalance());
-            IO::binary::write(stream, octant.getMarker());
+            utils::binary::write(stream, octant.getBalance());
+            utils::binary::write(stream, octant.getMarker());
         }
 
         // Information about partitioning
         for (int k = 0; k < m_nproc; ++k) {
-            IO::binary::write(stream, m_partitionFirstDesc[k]);
+            utils::binary::write(stream, m_partitionFirstDesc[k]);
         }
 
         for (int k = 0; k < m_nproc; ++k) {
-            IO::binary::write(stream, m_partitionLastDesc[k]);
+            utils::binary::write(stream, m_partitionLastDesc[k]);
         }
 
         for (int k = 0; k < m_nproc; ++k) {
-            IO::binary::write(stream, m_partitionRangeGlobalIdx[k]);
+            utils::binary::write(stream, m_partitionRangeGlobalIdx[k]);
         }
 
         // Extended information (mapping, ...)
-        IO::binary::write(stream, full);
+        utils::binary::write(stream, full);
         if (full) {
-            IO::binary::write(stream, m_lastOp);
+            utils::binary::write(stream, m_lastOp);
             if (m_lastOp == OP_ADAPT_MAPPED){
                 for (auto idx : m_mapIdx) {
-                    IO::binary::write(stream, idx);
+                    utils::binary::write(stream, idx);
                 }
 
-                IO::binary::write(stream, m_octree.m_lastGhostBros.size());
+                utils::binary::write(stream, m_octree.m_lastGhostBros.size());
                 for (auto lastGhostBrother : m_octree.m_lastGhostBros) {
-                    IO::binary::write(stream, lastGhostBrother);
+                    utils::binary::write(stream, lastGhostBrother);
                 }
             }
             else if (m_lastOp == OP_LOADBALANCE || m_lastOp == OP_LOADBALANCE_FIRST){
                 for (int i = 0; i < m_nproc; ++i) {
-                    IO::binary::write(stream, m_partitionRangeGlobalIdx0[i]);
+                    utils::binary::write(stream, m_partitionRangeGlobalIdx0[i]);
                 }
             }
         }
@@ -419,21 +419,21 @@ namespace bitpit {
     {
         // Version
         int version;
-        IO::binary::read(stream, version);
+        utils::binary::read(stream, version);
         if (version != getDumpVersion()) {
             throw std::runtime_error ("The version of the file does not match the required version");
         }
 
         // Check if the number of processors matches
         int nProcs;
-        IO::binary::read(stream, nProcs);
+        utils::binary::read(stream, nProcs);
         if (nProcs != m_nproc) {
             throw std::runtime_error ("The restart was saved with a different number of processors.");
         }
 
         // Initialize the tree
         uint8_t dimension;
-        IO::binary::read(stream, dimension);
+        utils::binary::read(stream, dimension);
 
         m_octree.initialize(dimension);
         m_trans.initialize(dimension);
@@ -441,17 +441,17 @@ namespace bitpit {
         reset(false);
 
         // Set tree properties
-        IO::binary::read(stream, m_serial);
-        IO::binary::read(stream, m_maxDepth);
-        IO::binary::read(stream, m_status);
+        utils::binary::read(stream, m_serial);
+        utils::binary::read(stream, m_maxDepth);
+        utils::binary::read(stream, m_status);
 
         bool balanceCodimension;
-        IO::binary::read(stream, balanceCodimension);
+        utils::binary::read(stream, balanceCodimension);
         setBalanceCodimension(balanceCodimension);
 
         for (int i = 0; i < m_global.m_nfaces; i++) {
             bool periodicBorder;
-            IO::binary::read(stream, periodicBorder);
+            utils::binary::read(stream, periodicBorder);
             if (periodicBorder){
             	setPeriodic(i);
             }
@@ -459,11 +459,11 @@ namespace bitpit {
 
         // Restore octants
         uint32_t nOctants;
-        IO::binary::read(stream, nOctants);
+        utils::binary::read(stream, nOctants);
         m_octree.m_sizeOctants = nOctants;
 
         uint32_t nGlobalOctants;
-        IO::binary::read(stream, nGlobalOctants);
+        utils::binary::read(stream, nGlobalOctants);
         m_globalNumOctants = nGlobalOctants;
 
         m_octree.m_octants.clear();
@@ -471,34 +471,34 @@ namespace bitpit {
         for (uint32_t i = 0; i < nOctants; i++) {
             // Create octant
             uint8_t level;
-            IO::binary::read(stream, level);
+            utils::binary::read(stream, level);
 
             uint32_t x;
-            IO::binary::read(stream, x);
+            utils::binary::read(stream, x);
 
             uint32_t y;
-            IO::binary::read(stream, y);
+            utils::binary::read(stream, y);
 
             uint32_t z;
-            IO::binary::read(stream, z);
+            utils::binary::read(stream, z);
 
             Octant octant(false, m_dim, level, x, y, z);
 
             // Set octant info
             for (size_t k = 0; k < octant.m_info.size(); ++k) {
                 bool bit;
-                IO::binary::read(stream, bit);
+                utils::binary::read(stream, bit);
                 octant.m_info.set(k, bit);
             }
 
             // Set octant 2:1 balance
             bool balance21;
-            IO::binary::read(stream, balance21);
+            utils::binary::read(stream, balance21);
             octant.setBalance(balance21);
 
             // Set marker
             int8_t marker;
-            IO::binary::read(stream, marker);
+            utils::binary::read(stream, marker);
             octant.setMarker(marker);
 
             // Add octant to the list
@@ -511,7 +511,7 @@ namespace bitpit {
         m_partitionFirstDesc.resize(m_nproc);
         for (int k = 0; k < m_nproc; ++k) {
             uint64_t descendant;
-            IO::binary::read(stream, descendant);
+            utils::binary::read(stream, descendant);
             m_partitionFirstDesc[k] = descendant;
         }
         m_octree.m_firstDescMorton = m_partitionFirstDesc[m_rank];
@@ -519,7 +519,7 @@ namespace bitpit {
         m_partitionLastDesc.resize(m_nproc);
         for (int k = 0; k < m_nproc; ++k) {
             uint64_t descendant;
-            IO::binary::read(stream, descendant);
+            utils::binary::read(stream, descendant);
             m_partitionLastDesc[k] = descendant;
         }
         m_octree.m_lastDescMorton = m_partitionLastDesc[m_rank];
@@ -528,7 +528,7 @@ namespace bitpit {
         m_partitionRangeGlobalIdx.resize(m_nproc);
         for (int k = 0; k < m_nproc; ++k) {
             uint64_t rangeGlobalIdx;
-            IO::binary::read(stream, rangeGlobalIdx);
+            utils::binary::read(stream, rangeGlobalIdx);
             m_partitionRangeGlobalIdx[k] = rangeGlobalIdx;
         }
 
@@ -546,25 +546,25 @@ namespace bitpit {
         }
 
         bool full;
-        IO::binary::read(stream, full);
+        utils::binary::read(stream, full);
         if (full) {
-            IO::binary::read(stream, m_lastOp);
+            utils::binary::read(stream, m_lastOp);
             if (m_lastOp == OP_ADAPT_MAPPED) {
                 m_mapIdx.resize(m_octree.m_octants.size());
                 for (size_t i = 0; i < m_octree.m_octants.size(); ++i) {
-                    IO::binary::read(stream, m_mapIdx[i]);
+                    utils::binary::read(stream, m_mapIdx[i]);
                 }
 
                 size_t lastGhostBrosSize;
-                IO::binary::read(stream, lastGhostBrosSize);
+                utils::binary::read(stream, lastGhostBrosSize);
                 m_octree.m_lastGhostBros.resize(lastGhostBrosSize);
                 for (size_t i = 0; i < lastGhostBrosSize; ++i) {
-                    IO::binary::read(stream, m_octree.m_lastGhostBros[i]);
+                    utils::binary::read(stream, m_octree.m_lastGhostBros[i]);
                 }
             }
             else if (m_lastOp == OP_LOADBALANCE || m_lastOp == OP_LOADBALANCE_FIRST){
                 for (int i = 0; i < m_nproc; ++i) {
-                    IO::binary::read(stream, m_partitionRangeGlobalIdx0[i]);
+                    utils::binary::read(stream, m_partitionRangeGlobalIdx0[i]);
                 }
             }
         }
@@ -1232,6 +1232,20 @@ namespace bitpit {
         return m_octree.getMarker(idx);
     };
 
+    /*! Get the refinement marker of an octant after a preadapt.
+    * \param[in] idx Local index of target octant.
+    * \return Marker of octant.
+    * NOTE: if a last operation is not preadapt, it calls preadapt method.
+    */
+    int8_t
+    ParaTree::getPreMarker(uint32_t idx){
+        if (m_lastOp != OP_PRE_ADAPT) {
+            throw std::runtime_error("Last operation different from preadapt, unable to call getPreMarker function");
+        }
+
+        return m_octree.getMarker(idx);
+    };
+
     /*! Get the level of an octant.
      * \param[in] idx Local index of target octant.
      * \return Level of octant.
@@ -1421,6 +1435,10 @@ namespace bitpit {
      */
     void
     ParaTree::setMarker(uint32_t idx, int8_t marker){
+        if (m_lastOp == OP_PRE_ADAPT) {
+            throw std::runtime_error("It is not possible to update the tree until the adaption is completed");
+        }
+
         m_octree.setMarker(idx, marker);
     };
 
@@ -1430,6 +1448,10 @@ namespace bitpit {
      */
     void
     ParaTree::setBalance(uint32_t idx, bool balance){
+        if (m_lastOp == OP_PRE_ADAPT) {
+            throw std::runtime_error("It is not possible to update the tree until the adaption is completed");
+        }
+
         m_octree.setBalance(idx, balance);
     };
 
@@ -1629,6 +1651,20 @@ namespace bitpit {
         return oct->getMarker();
     };
 
+    /*! Get the refinement marker of an octant after a preadapt.
+     * \param[in] oct Pointer to the target octant
+     * \return Marker of octant.
+     * NOTE: if a last operation is not preadapt, it calls preadapt method.
+     */
+    int8_t
+    ParaTree::getPreMarker(Octant* oct){
+        if (m_lastOp != OP_PRE_ADAPT) {
+            throw std::runtime_error("Last operation different from preadapt, unable to call getPreMarker function");
+        }
+
+        return oct->getMarker();
+    };
+
     /*! Get the level of an octant.
      * \param[in] oct Pointer to the target octant
      * \return Level of octant.
@@ -1776,6 +1812,10 @@ namespace bitpit {
      */
     void
     ParaTree::setMarker(Octant* oct, int8_t marker){
+        if (m_lastOp == OP_PRE_ADAPT) {
+            throw std::runtime_error("It is not possible to update the tree until the adaption is completed");
+        }
+
         oct->setMarker(marker);
     };
 
@@ -1785,6 +1825,10 @@ namespace bitpit {
      */
     void
     ParaTree::setBalance(Octant* oct, bool balance){
+        if (m_lastOp == OP_PRE_ADAPT) {
+            throw std::runtime_error("It is not possible to update the tree until the adaption is completed");
+        }
+
         oct->setBalance(balance);
     };
 
@@ -1924,6 +1968,10 @@ namespace bitpit {
      */
     void
     ParaTree::setBalanceCodimension(uint8_t b21codim){
+        if (m_lastOp == OP_PRE_ADAPT) {
+            throw std::runtime_error("It is not possible to update the tree until the adaption is completed");
+        }
+
         m_octree.setBalanceCodim(b21codim);
     };
 
@@ -2231,7 +2279,7 @@ namespace bitpit {
     /*! Get a map of elements sent to the other processes during load balance
      * \return an unordered map associating rank to sent elements given by index extremes of a chunck
      */
-    const std::unordered_map<int,std::array<uint32_t,4> > &
+    const std::unordered_map<int,std::array<uint32_t,2> > &
     ParaTree::getSentIdx() const {
         return m_sentIdx;
     };
@@ -2957,6 +3005,36 @@ namespace bitpit {
         }
     };
 
+    /** Get octants with marker different from zero and the related markers.
+        * The methods has to be called after a apredapt, otherwise it calls preadapt method.
+        * \param[out] idx Vector of local indices of octants with marler different from zero.
+        * \param[out] markers Vector with markers related to octants in the idx list.
+        */
+    void
+    ParaTree::getPreMapping(u32vector & idx, vector<int8_t> & mapper)
+    {
+        if (m_lastOp != OP_PRE_ADAPT) {
+            throw std::runtime_error("Last operation different from preadapt, unable to call getPreMarker function");
+        }
+
+        idx.clear();
+        mapper.clear();
+        idx.reserve(getNumOctants());
+        mapper.reserve(getNumOctants());
+        octantIterator it, itb = getInternalOctantsBegin(), ite = getInternalOctantsEnd();
+
+        int count = 0;
+        int8_t marker;
+        for (it=itb; it!=ite; it++){
+            marker = (*it)->getMarker();
+            if (marker != 0){
+                idx.push_back(count);
+                mapper.push_back(marker);
+            }
+            count++;
+        }
+    };
+
     /** Check if a node lies on the specified octant.
      * \param[in] nodeOctant Pointer to the octant owning the node
      * \param[in] nodeIndex Local index of the node
@@ -3091,11 +3169,73 @@ namespace bitpit {
     // OTHER PARATREE BASED METHODS												    			   //
     // =================================================================================== //
 
+
+    /** Pre-adapt the octree mesh with user setup for markers and 2:1 balancing conditions.
+     *
+     *  The user can call pre-adapt and then adapt or only adapt, however after the
+     *  pre-adapt function has been called the adapt function is mandatory.
+     *
+     * \param[in] check if set to true the function will check if the adaption
+     * will actualy alter the tree (i.e., at least one octant has a non-zero
+     * marker)
+     * \return If the adaption check is enabled, the function returns true if the
+     * adaption will actualy alter the tree (i.e., at least one octant has a non-zero
+     * marker), otherwise it will always return false.
+     */
+    bool
+    ParaTree::preadapt(bool check){
+
+        balance21(true);
+        bool toAdapt = true;
+        if (check)
+            toAdapt = checkToAdapt();
+
+        m_lastOp = OP_PRE_ADAPT;
+
+        (*m_log) << "---------------------------------------------" << endl;
+        (*m_log) << " PRE-ADAPT " << endl;
+
+        if (check)
+            (*m_log) << " Octree to be adapted : " << boolalpha << toAdapt << endl;
+
+        (*m_log) << " " << endl;
+        (*m_log) << "---------------------------------------------" << endl;
+
+        return toAdapt;
+    };
+
+    /** Check to control if the tree has to be adapted.
+     * \return Boolean true if at least one octant has marker not zero.
+     */
+    bool
+    ParaTree::checkToAdapt(){
+
+        bool lcheck = false;
+        bool gcheck = false;
+        octvector::iterator it = m_octree.m_octants.begin();
+        octvector::iterator itend = m_octree.m_octants.end();
+        while(!lcheck && it != itend){
+            lcheck = (it->getMarker() != 0);
+            it++;
+        }
+        if (m_nproc == 1){
+            gcheck = lcheck;
+        }
+        else{
+#if BITPIT_ENABLE_MPI==1
+        m_errorFlag = MPI_Allreduce(&lcheck,&gcheck,1,MPI_C_BOOL,MPI_LOR,m_comm);
+#endif
+        }
+        return gcheck;
+    };
+
     /** Adapt the octree mesh with user setup for markers and 2:1 balancing conditions.
      * \param[in] mapper_flag True/False if you want/don't want to track the changes in structure octant by a mapper.
      * \n NOTE: if mapper_flag = true the adapt method ends after a single level (refining/coarsening) adaptation.
      * \n The resulting markers will be increased/decreased by one.
-     * \return Boolean if adapt has done something.
+     * \return Boolean true if adapt has done something.
+     * \n NOTE: if  pre-adapt method is called before an adapt call the adapt method
+     * do not perform pre-adapt process (no 2:1 balance check).
      */
     bool
     ParaTree::adapt(bool mapper_flag){
@@ -3634,6 +3774,296 @@ namespace bitpit {
 
     };
 
+    /**
+     * Evaluate the elements of the current partition that will be sent to
+     * other processors after the load balance.
+     *
+     * \param[in] weights are the weights of the local octants (if a null
+     * pointer is given a uniform distribution is used)
+     * \return The range of local ids that will be sent to other processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceSendRanges(dvector *weights){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
+
+        // If there is only one processor no octants can be sent
+        if (m_nproc == 1) {
+            return sendRanges;
+        }
+
+        // Compute updated partition
+        std::vector<uint32_t> updatedPartition(m_nproc);
+        if (weights) {
+            computePartition(updatedPartition.data(), weights);
+        } else {
+            computePartition(updatedPartition.data());
+        }
+
+        // Evaluate send ranges
+        return evalLoadBalanceSendRanges(updatedPartition.data());
+    }
+
+    /**
+     * Evaluate the elements of the current partition that will be sent to
+     * other processors after the load balance.
+     *
+     * The families of octants of a desired level are retained compact on the
+     * same process.
+     *
+     * \param[in] level is the level of the families that will be retained
+     * compact on the same process
+     * \param[in] weights are the weights of the local octants (if a null
+     * pointer is given a uniform distribution is used)
+     * \return The range of local ids that will be sent to other processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceSendRanges(uint8_t level, dvector *weights){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
+
+        // If there is only one processor no octants can be sent
+        if (m_nproc == 1) {
+            return sendRanges;
+        }
+
+        // Compute updated partition
+        std::vector<uint32_t> updatedPartition(m_nproc);
+        computePartition(updatedPartition.data(), level, weights);
+
+        // Evaluate send ranges
+        return evalLoadBalanceSendRanges(updatedPartition.data());
+    }
+
+    /**
+     * Evaluate the elements of the current partition that will be sent to
+     * other processors after the load balance.
+     *
+     * \param[in] updatePartition is the pointer to the updated pattition
+     * \return The range of local ids that will be sent to other processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceSendRanges(const uint32_t *updatedPartition){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
+
+        // If there is only one processor no octants can be sent
+        if (m_nproc == 1) {
+            return sendRanges;
+        }
+
+        // Compute current partition schema
+        std::vector<uint32_t> currentPartition(m_nproc, 0);
+        if (!m_serial) {
+            currentPartition[0] = m_partitionRangeGlobalIdx[0] + 1;
+            for (int i = 1; i < m_nproc; ++i) {
+                currentPartition[i] = m_partitionRangeGlobalIdx[i] - m_partitionRangeGlobalIdx[i - 1];
+            }
+        } else {
+            currentPartition[m_rank] = getNumOctants();
+        }
+
+        // Get the intersections
+        std::unordered_map<int, std::array<uint64_t, 2>> globalIntersections = evalPartitionIntersections(currentPartition.data(), m_rank, updatedPartition);
+
+        // Evaluate the send local indexes
+        uint64_t offset = 0;
+        for (int i = 0; i < m_rank; ++i) {
+            offset += currentPartition[i];
+        }
+
+        for (const auto &intersectionEntry : globalIntersections) {
+            int rank = intersectionEntry.first;
+            if (rank == m_rank) {
+                continue;
+            }
+
+            const std::array<uint64_t, 2> &intersection = intersectionEntry.second;
+
+            std::array<uint32_t, 2> &sendRange = sendRanges[rank];
+            sendRange[0] = intersection[0] - offset;
+            sendRange[1] = intersection[1] - offset;
+        }
+
+        return sendRanges;
+    }
+
+    /**
+     * Evaluate the elements of the current partition that will be received
+     * from other processors after the load balance.
+     *
+     * \param[in] weights are the weights of the local octants (if a null
+     * pointer is given a uniform distribution is used)
+     * \return The range of local ids that will be received from other
+     * processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceRecvRanges(dvector *weights){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
+
+        // If there is only one processor no octants can be received
+        if (m_nproc == 1) {
+            return sendRanges;
+        }
+
+        // Compute updated partition
+        std::vector<uint32_t> updatedPartition(m_nproc);
+        if (weights) {
+            computePartition(updatedPartition.data(), weights);
+        } else {
+            computePartition(updatedPartition.data());
+        }
+
+        // Evaluate send ranges
+        return evalLoadBalanceRecvRanges(updatedPartition.data());
+    }
+
+    /**
+     * Evaluate the elements of the current partition that will be received
+     * from other processors after the load balance.
+     *
+     * The families of octants of a desired level are retained compact on the
+     * same process.
+     *
+     * \param[in] level is the level of the families that will be retained
+     * compact on the same process
+     * \param[in] weights are the weights of the local octants (if a null
+     * pointer is given a uniform distribution is used)
+     * \return The range of local ids that will be received from other
+     * processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceRecvRanges(uint8_t level, dvector *weights){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
+
+        // If there is only one processor no octants can be received
+        if (m_nproc == 1) {
+            return sendRanges;
+        }
+
+        // Compute updated partition
+        std::vector<uint32_t> updatedPartition(m_nproc);
+        computePartition(updatedPartition.data(), level, weights);
+
+        // Evaluate receive ranges
+        return evalLoadBalanceRecvRanges(updatedPartition.data());
+    }
+
+    /**
+     * Evaluate the elements of the current partition that will be received
+     * from other processors after the load balance.
+     *
+     * \param[in] updatePartition is the pointer to the updated pattition
+     * \return The range of local ids that will be received from other
+     * processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceRecvRanges(const uint32_t *updatedPartition){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> recvRanges;
+
+        // If there is only one processor no octants can be received
+        if (m_nproc == 1) {
+            return recvRanges;
+        }
+
+        // Compute current partition schema
+        std::vector<uint32_t> currentPartition(m_nproc, 0);
+        if (!m_serial) {
+            currentPartition[0] = m_partitionRangeGlobalIdx[0] + 1;
+            for (int i = 1; i < m_nproc; ++i) {
+                currentPartition[i] = m_partitionRangeGlobalIdx[i] - m_partitionRangeGlobalIdx[i - 1];
+            }
+        } else {
+            currentPartition[m_rank] = getNumOctants();
+        }
+
+        // Get the intersections
+        std::unordered_map<int, std::array<uint64_t, 2>> globalIntersections = evalPartitionIntersections(currentPartition.data(), m_rank, updatedPartition);
+
+        // Evaluate the receive local indexes
+        uint64_t offset = 0;
+        for (int i = 0; i < m_rank; ++i) {
+            offset += updatedPartition[i];
+        }
+
+        for (const auto &intersectionEntry : globalIntersections) {
+            int rank = intersectionEntry.first;
+            if (rank == m_rank) {
+                continue;
+            }
+
+            const std::array<uint64_t, 2> &intersection = intersectionEntry.second;
+
+            std::array<uint32_t, 2> &recvRange = recvRanges[rank];
+            recvRange[0] = intersection[0] - offset;
+            recvRange[1] = intersection[1] - offset;
+        }
+
+        return recvRanges;
+    }
+
+    /**
+     * Compute the intersections of the specified partition defined whithin
+     * the partition schema A with all the partitions defined whithin the
+     * partition schema B.
+     *
+     * Intersections are evaluated in global indexes.
+     *
+     * \param[in] partition_A are the number of octants contained in each
+     * partition of the partition schema A
+     * \param[in] rank_A is the rank associated to the partition for which the
+     * intersections will be evaluated
+     * \param[in] partition_B are the number of octants contained in each
+     * partition of the partition schema B
+     * \result The intersections of the specified partition defined whithin
+     * the partition schema A with all the partitions defined whithin the
+     * partition schema B.
+     */
+    std::unordered_map<int, std::array<uint64_t, 2>>
+    ParaTree::evalPartitionIntersections(const uint32_t *partition_A, int rank_A, const uint32_t *partition_B){
+
+        std::unordered_map<int, std::array<uint64_t, 2>> intersections;
+
+        // If the partition is empty there are no intersections.
+        if (partition_A[rank_A] == 0) {
+            return intersections;
+        }
+
+        // Calculate partition offsets
+        std::vector<uint64_t> offsets_A(m_nproc + 1, 0);
+        std::vector<uint64_t> offsets_B(m_nproc + 1, 0);
+        for (int i = 0; i < m_nproc; ++i) {
+            offsets_A[i + 1] = offsets_A[i] + partition_A[i];
+            offsets_B[i + 1] = offsets_B[i] + partition_B[i];
+        }
+
+        uint64_t beginGlobalId_A = offsets_A[m_rank];
+        uint64_t endGlobalId_A   = offsets_A[m_rank + 1];
+
+        auto firstRankItr = std::upper_bound(offsets_B.begin(), offsets_B.end(), beginGlobalId_A);
+        assert(firstRankItr != offsets_B.begin());
+        firstRankItr--;
+
+        for (auto itr = firstRankItr; itr != offsets_B.end(); ++itr) {
+            int rank_B = std::distance(offsets_B.begin(), itr);
+            uint64_t beginGlobalId_B = offsets_B[rank_B];
+            uint64_t endGlobalId_B   = offsets_B[rank_B + 1];
+
+            std::array<uint64_t, 2> &intersection = intersections[rank_B];
+            intersection[0] = std::max(beginGlobalId_A, beginGlobalId_B);
+            intersection[1] = std::min(endGlobalId_A, endGlobalId_B);
+
+            if (endGlobalId_B >= endGlobalId_A) {
+                break;
+            }
+        }
+
+        return intersections;
+    }
+
     /** Distribute Load-Balancing the octants of the whole tree over
      * the processes of the job following a given partition distribution.
      * Until loadBalance is not called for the first time the mesh is serial.
@@ -3642,7 +4072,8 @@ namespace bitpit {
     void
     ParaTree::privateLoadBalance(uint32_t* partition){
 
-        m_sentIdx.clear();
+        m_sentIdx = evalLoadBalanceSendRanges(partition);
+
         std::array<uint32_t,4> limits = {{0,0,0,0}};
 
         if(m_serial)
@@ -3665,7 +4096,6 @@ namespace bitpit {
                 limits[2] = limits[1] + partition[m_rank];
                 limits[3] = m_octree.m_octants.size();
                 std::pair<int,std::array<uint32_t,4> > procLimits(m_rank,limits);
-                m_sentIdx.insert(procLimits);
 
                 m_octree.m_octants.assign(first, last);
                 octvector(m_octree.m_octants).swap(m_octree.m_octants);
@@ -3781,7 +4211,6 @@ namespace bitpit {
                             limits[0] = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1);
                             limits[1] = (uint32_t)lh + 1;
                             std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
-                            m_sentIdx.insert(procLimits);
 
                             for(uint32_t i = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1); i <= (uint32_t)lh; ++i){
                                 //PACK octants from 0 to lh in sendBuffer[p]
@@ -3819,7 +4248,6 @@ namespace bitpit {
                             limits[0] = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1);
                             limits[1] = (uint32_t)lh + 1;
                             std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
-                            m_sentIdx.insert(procLimits);
 
                             for(uint32_t i = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1); i <= (uint32_t)lh; ++i){
                                 //pack octants from lh - partition[p] to lh
@@ -3866,7 +4294,6 @@ namespace bitpit {
                             limits[0] = ft;
                             limits[1] = ft + nofElementsFromPreviousToSuccessive;
                             std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
-                            m_sentIdx.insert(procLimits);
 
                             for(uint32_t i = ft; i < ft + nofElementsFromPreviousToSuccessive; ++i){
                                 //PACK octants from ft to octantsSize-1
@@ -3904,7 +4331,6 @@ namespace bitpit {
                             limits[0] = ft;
                             limits[1] = endOctants + 1;
                             std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
-                            m_sentIdx.insert(procLimits);
 
                             for(uint32_t i = ft; i <= endOctants; ++i ){
                                 //PACK octants from ft to ft + partition[p] -1
@@ -4066,7 +4492,6 @@ namespace bitpit {
                 setPboundGhosts();
             }
     };
-
 #endif
 
     /*! Get the size of an octant corresponding to a target level.
@@ -4141,7 +4566,9 @@ namespace bitpit {
             (*m_log) << " " << endl;
 
             // 2:1 Balance
-            balance21(true);
+            if (m_lastOp != OP_PRE_ADAPT) {
+                balance21(true);
+            }
 
             (*m_log) << " " << endl;
             (*m_log) << " Initial Number of octants		:	" + to_string(static_cast<unsigned long long>(getNumOctants())) << endl;
@@ -4173,7 +4600,9 @@ namespace bitpit {
             (*m_log) << " " << endl;
 
             // 2:1 Balance
-            balance21(true);
+            if (m_lastOp != OP_PRE_ADAPT) {
+                balance21(true);
+            }
 
             (*m_log) << " " << endl;
             (*m_log) << " Initial Number of octants		:	" + to_string(static_cast<unsigned long long>(m_globalNumOctants)) << endl;

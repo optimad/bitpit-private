@@ -153,7 +153,7 @@ VolOctree::VolOctree(const int &id, std::unique_ptr<PabloUniform> &&tree, std::u
 #endif
 
 	// Sync the patch with the tree
-	sync(true, true, false, false);
+	sync(true, true, false);
 
 	// Set the bounding
 	setBoundingBox();
@@ -225,6 +225,12 @@ void VolOctree::initialize()
 
 	// Reset the tree entruster
 	m_treeAdopter = nullptr;
+
+	// This patch need to be spawn
+	setSpawnStatus(SPAWN_NEEDED);
+
+	// This patch supports adaption
+	setAdaptionStatus(ADAPTION_CLEAN);
 
 	// Set the bounding box as frozen
 	setBoundingBoxFrozen(true);
@@ -576,17 +582,118 @@ int VolOctree::getCellLevel(const long &id) const
 }
 
 /*!
-	Updates the patch.
+	Generates the patch.
 
-	\param trackAdaption if set to true the changes to the patch will be
-	tracked
-	\param squeezeStorage if set to true the vector that store patch information
-	will be squeezed after the synchronization
-	\result Returns all the changes applied to the patch.
+	\param trackSpawn if set to true the changes to the patch will be tracked
+	\result Returns a vector of adaption::Info that can be used to track
+	the changes done during the update.
 */
-const std::vector<adaption::Info> VolOctree::_updateAdaption(bool trackAdaption, bool squeezeStorage)
+std::vector<adaption::Info> VolOctree::_spawn(bool trackSpawn)
 {
+	std::vector<adaption::Info> updateInfo;
 
+	// Perform initial import
+	bool emtpyPatch = (getCellCount() == 0);
+	ParaTree::Operation lastTreeOperation = m_tree->getLastOperation();
+	if (lastTreeOperation == ParaTree::OP_INIT && emtpyPatch) {
+		m_tree->adapt();
+		updateInfo = sync(true, true, trackSpawn);
+	}
+
+	return updateInfo;
+}
+
+/*!
+	Prepares the patch for performing the adaption.
+
+	NOTE: only cells are tracked.
+
+	\param trackAdaption if set to true the function will return the changes
+	that will be performed in the alter step
+	\result If the adaption is tracked, returns a vector of adaption::Info that
+	can be used to discover what changes will be performed in the alter step,
+	otherwise an empty vector will be returned.
+*/
+std::vector<adaption::Info> VolOctree::_adaptionPrepare(bool trackAdaption)
+{
+	BITPIT_UNUSED(trackAdaption);
+
+	if (getSpawnStatus() == SPAWN_NEEDED) {
+		throw std::runtime_error ("The initial import has not been performed.");
+	}
+
+	// Call pre-adapt routine
+	m_tree->preadapt();
+
+	// Track adaption changes
+	adaption::InfoCollection adaptionData;
+	if (trackAdaption) {
+		// Current rank
+		int currentRank = -1;
+#if BITPIT_ENABLE_MPI==1
+		currentRank = getRank();
+#endif
+
+		// Track internal octants that will be coarsend/refined
+		long nOctants = m_tree->getNumOctants();
+
+
+		uint32_t treeId = 0;
+		while (treeId < (uint32_t) nOctants) {
+			int8_t marker = m_tree->getPreMarker(treeId);
+			if (marker == 0) {
+				treeId++;
+				continue;
+			}
+
+			int nUpdatedOctants;
+			adaption::Type adaptionType;
+			if (marker > 0) {
+				nUpdatedOctants = 1;
+				adaptionType    = adaption::TYPE_REFINEMENT;
+			} else {
+				nUpdatedOctants = pow(2, getDimension());
+				adaptionType    = adaption::TYPE_COARSENING;
+			}
+
+			std::size_t adaptionInfoId = adaptionData.create(adaptionType, adaption::ENTITY_CELL, currentRank);
+			adaption::Info &adaptionInfo = adaptionData[adaptionInfoId];
+			adaptionInfo.previous.reserve(nUpdatedOctants);
+			for (int k = 0; k < nUpdatedOctants; ++k) {
+				OctantInfo octantInfo(treeId, true);
+
+				adaptionInfo.previous.emplace_back();
+				long &cellId = adaptionInfo.previous.back();
+				cellId = getOctantId(octantInfo);
+				treeId++;
+			}
+		}
+
+		// Ghost cells will be removed
+		std::size_t adaptionInfoId = adaptionData.create(adaption::TYPE_DELETION, adaption::ENTITY_CELL, currentRank);
+		adaption::Info &adaptionInfo = adaptionData[adaptionInfoId];
+		adaptionInfo.previous.reserve(getGhostCount());
+		for (auto itr = ghostBegin(); itr != ghostEnd(); ++itr) {
+			adaptionInfo.previous.emplace_back();
+			long &deletedGhostId = adaptionInfo.previous.back();
+			deletedGhostId = itr.getId();
+		}
+	}
+
+	return adaptionData.dump();
+}
+
+/*!
+	Alter the patch performing the adpation.
+
+	\param trackAdaption if set to true the function will return the changes
+	done to the patch during the adaption
+	\result If the adaption is tracked, returns a vector of adaption::Info
+	with all the changes done to the patch during the adaption, otherwise an
+	empty vector will be returned.
+*/
+std::vector<adaption::Info> VolOctree::_adaptionAlter(bool trackAdaption)
+{
 	// Updating the tree
 	log::cout() << ">> Adapting tree...";
 
@@ -601,7 +708,15 @@ const std::vector<adaption::Info> VolOctree::_updateAdaption(bool trackAdaption,
 	log::cout() << " Done" << std::endl;
 
 	// Sync the patch
-	return sync(true, true, trackAdaption, squeezeStorage);
+	return sync(true, true, trackAdaption);
+}
+
+/*!
+	Cleanup patch data structured after the adaption.
+*/
+void VolOctree::_adaptionCleanup()
+{
+	// Nothing to do
 }
 
 /*!
@@ -614,11 +729,9 @@ const std::vector<adaption::Info> VolOctree::_updateAdaption(bool trackAdaption,
 	will be generated
 	\param trackChanges if set to true the changes to the patch will be
 	tracked
-	\param squeezeStorage if set to true the vector that store patch information
-	will be squeezed after the synchronization
 	\result Returns all the changes applied to the patch.
 */
-const std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool generateInterfaces, bool trackChanges, bool squeezeStorage)
+std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool generateInterfaces, bool trackChanges)
 {
 	log::cout() << ">> Syncing patch..." << std::endl;
 
@@ -865,7 +978,7 @@ const std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool ge
 	if (!importFromScratch) {
 #if BITPIT_ENABLE_MPI==1
 		// Cells that have been send to other processors need to be removed
-		std::unordered_map<int, std::array<uint32_t, 4>> sendOctants = m_tree->getSentIdx();
+		std::unordered_map<int, std::array<uint32_t, 2>> sendOctants = m_tree->getSentIdx();
 		for (const auto &rankEntry : sendOctants) {
 			int rank = rankEntry.first;
 
@@ -876,15 +989,13 @@ const std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool ge
 				deletionType = adaption::TYPE_PARTITION_SEND;
 			}
 
-			for (int k = 0; k < 2; ++k) {
-				uint32_t beginTreeId = rankEntry.second[2 * k];
-				uint32_t endTreeId   = rankEntry.second[2 * k + 1];
-				for (uint32_t treeId = beginTreeId; treeId < endTreeId; ++treeId) {
-					OctantInfo octantInfo(treeId, true);
-					long cellId = getOctantId(octantInfo);
-					deletedOctants.emplace_back(cellId, deletionType, rank);
-					unmappedOctants[treeId] = false;
-				}
+			uint32_t beginTreeId = rankEntry.second[0];
+			uint32_t endTreeId   = rankEntry.second[1];
+			for (uint32_t treeId = beginTreeId; treeId < endTreeId; ++treeId) {
+				OctantInfo octantInfo(treeId, true);
+				long cellId = getOctantId(octantInfo);
+				deletedOctants.emplace_back(cellId, deletionType, rank);
+				unmappedOctants[treeId] = false;
 			}
 		}
 
@@ -1001,6 +1112,7 @@ const std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool ge
 			// Adaption info for the deleted interfaces
 			std::size_t adaptionInfoId = adaptionData.create(adaption::TYPE_DELETION, adaption::ENTITY_INTERFACE, currentRank);
 			adaption::Info &adaptionInfo = adaptionData[adaptionInfoId];
+			adaptionInfo.previous.reserve(removedInterfaces.size());
 			for (const long &interfaceId : removedInterfaces) {
 				adaptionInfo.previous.emplace_back();
 				long &deletedInterfaceId = adaptionInfo.previous.back();
@@ -1034,11 +1146,6 @@ const std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool ge
 #if BITPIT_ENABLE_MPI==1
 	buildGhostExchangeData();
 #endif
-
-	// Squeeze the patch
-	if (squeezeStorage) {
-		squeeze();
-	}
 
 	// Disable advanced editing
 	setExpert(false);
@@ -1108,6 +1215,7 @@ const std::vector<adaption::Info> VolOctree::sync(bool updateOctantMaps, bool ge
 			// Adaption info
 			std::size_t infoId = adaptionData.create(adaption::TYPE_CREATION, adaption::ENTITY_INTERFACE, currentRank);
 			adaption::Info &adaptionInfo = adaptionData[infoId];
+			adaptionInfo.current.reserve(createdInterfaces.size());
 			for (const long &interfaceId : createdInterfaces) {
 				adaptionInfo.current.emplace_back();
 				long &createdInterfaceId = adaptionInfo.current.back();
@@ -1711,12 +1819,12 @@ void VolOctree::_dump(std::ostream &stream)
 
 	size_t nOctants = m_octantToCell.size();
 	for (size_t n = 0; n < nOctants; ++n) {
-		IO::binary::write(stream, m_octantToCell.at(n));
+		utils::binary::write(stream, m_octantToCell.at(n));
 	}
 
 	size_t nGhosts = m_ghostToCell.size();
 	for (size_t n = 0; n < nGhosts; ++n) {
-		IO::binary::write(stream, m_ghostToCell.at(n));
+		utils::binary::write(stream, m_ghostToCell.at(n));
 	}
 
 	// Dump interfaces
@@ -1744,7 +1852,7 @@ void VolOctree::_restore(std::istream &stream)
 	m_octantToCell.reserve(nOctants);
 	for (size_t n = 0; n < nOctants; ++n) {
 		long cellId;
-		IO::binary::read(stream, cellId);
+		utils::binary::read(stream, cellId);
 
 		m_cellToOctant.insert({cellId, n});
 		m_octantToCell.insert({n, cellId});
@@ -1757,7 +1865,7 @@ void VolOctree::_restore(std::istream &stream)
 	m_ghostToCell.reserve(nGhosts);
 	for (size_t n = 0; n < nGhosts; ++n) {
 		long cellId;
-		IO::binary::read(stream, cellId);
+		utils::binary::read(stream, cellId);
 
 		m_cellToGhost.insert({cellId, n});
 		m_ghostToCell.insert({n, cellId});
@@ -1766,7 +1874,7 @@ void VolOctree::_restore(std::istream &stream)
 	//
 	// Sync the patch
 	//
-	sync(false, false, false, false);
+	sync(false, false, false);
 
 	//
 	// Restore the interfaces

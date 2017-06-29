@@ -83,7 +83,7 @@ const long Vertex::NULL_ID = std::numeric_limits<long>::min();
 */
 Vertex::Vertex()
 {
-	setId(NULL_ID);
+	_initialize(NULL_ID, {{0., 0., 0.}});
 }
 
 /*!
@@ -91,7 +91,7 @@ Vertex::Vertex()
 */
 Vertex::Vertex(const long &id)
 {
-	setId(id);
+	_initialize(id, {{0., 0., 0.}});
 }
 
 /*!
@@ -101,6 +101,41 @@ Vertex::Vertex(const long &id)
 	\param[in] coords are the vertex coordinates
 */
 Vertex::Vertex(const long &id, const std::array<double, 3> &coords)
+{
+	_initialize(id, coords);
+}
+
+/**
+* Exchanges the content of the vertex by the content the specified other
+* vertex.
+*
+* \param other is another vertex whose content is swapped with that of this
+* vertex.
+*/
+void Vertex::swap(Vertex &other) noexcept
+{
+	std::swap(other.m_id, m_id);
+	std::swap(other.m_coords, m_coords);
+}
+
+/*!
+	Initializes the data structures of the vertex.
+
+	\param[in] id is the id of the vertex
+	\param[in] coords are the vertex coordinates
+*/
+void Vertex::initialize(long id, const std::array<double, 3> &coords)
+{
+	_initialize(id, coords);
+}
+
+/*!
+	Internal function to initialize the data structures of the vertex.
+
+	\param[in] id is the id of the vertex
+	\param[in] coords are the vertex coordinates
+*/
+void Vertex::_initialize(long id, const std::array<double, 3> &coords)
 {
 	setId(id);
 	setCoords(coords);

@@ -66,13 +66,13 @@ public:
 	typedef PiercedVector<Cell>::const_iterator CellConstIterator;
 	typedef PiercedVector<Interface>::const_iterator InterfaceConstIterator;
 
-	typedef PiercedRange<Vertex> VertexRange;
-	typedef PiercedRange<Cell> CellRange;
-	typedef PiercedRange<Interface> InterfaceRange;
+	typedef PiercedVector<Vertex>::range VertexRange;
+	typedef PiercedVector<Cell>::range CellRange;
+	typedef PiercedVector<Interface>::range InterfaceRange;
 
-	typedef PiercedRange<const Vertex> VertexConstRange;
-	typedef PiercedRange<const Cell> CellConstRange;
-	typedef PiercedRange<const Interface> InterfaceConstRange;
+	typedef PiercedVector<Vertex>::const_range VertexConstRange;
+	typedef PiercedVector<Cell>::const_range CellConstRange;
+	typedef PiercedVector<Interface>::const_range InterfaceConstRange;
 
 	enum WriteTarget {
 		WRITE_TARGET_CELLS_ALL
@@ -165,6 +165,25 @@ public:
 		bool m_native;
 	};
 
+	/*!
+		Spawn status
+	*/
+	enum SpawnStatus {
+		SPAWN_UNNEEDED = -1,
+		SPAWN_NEEDED,
+		SPAWN_DONE
+	};
+
+	/*!
+		Adaption status
+	*/
+	enum AdaptionStatus {
+		ADAPTION_UNSUPPORTED = -1,
+		ADAPTION_CLEAN,
+		ADAPTION_DIRTY,
+		ADAPTION_PREPARED,
+		ADAPTION_ALTERED
+	};
 
 	virtual ~PatchKernel();
 
@@ -177,7 +196,16 @@ public:
 	bool reserveCells(size_t nCells);
 	bool reserveInterfaces(size_t nInterfaces);
 
-	const std::vector<adaption::Info> update(bool trackAdaption = true, bool squeezeStorage = false);
+	std::vector<adaption::Info> update(bool trackAdaption = true, bool squeezeStorage = false);
+
+	SpawnStatus getSpawnStatus() const;
+	std::vector<adaption::Info> spawn(bool trackSpawn);
+
+	AdaptionStatus getAdaptionStatus(bool global = false) const;
+	std::vector<adaption::Info> adaption(bool trackAdaption = true, bool squeezeStorage = false);
+	std::vector<adaption::Info> adaptionPrepare(bool trackAdaption = true);
+	std::vector<adaption::Info> adaptionAlter(bool trackAdaption = true, bool squeezeStorage = false);
+	void adaptionCleanup();
 
 	void markCellForRefinement(const long &id);
 	void markCellForCoarsening(const long &id);
@@ -325,9 +353,6 @@ public:
 	std::unordered_map<long, long> binSortVertex(PiercedVector<Vertex> vertices, int nBins = 128);
     std::unordered_map<long, long> binSortVertex(int nBins = 128);
 
-	bool isAdaptionDirty(bool global = false) const;
-	const std::vector<adaption::Info> updateAdaption(bool trackAdaption = true, bool squeezeStorage = false);
-
 	virtual void translate(std::array<double, 3> translation);
 	void translate(double sx, double sy, double sz);
 	virtual void scale(std::array<double, 3> scaling);
@@ -386,12 +411,18 @@ public:
 	std::vector<long> & getGhostExchangeSources(int rank);
 	const std::vector<long> & getGhostExchangeSources(int rank) const;
 
-	const std::vector<adaption::Info> partition(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
-	const std::vector<adaption::Info> partition(const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
-	const std::vector<adaption::Info> partition(MPI_Comm communicator, bool trackChanges, bool squeezeStorage = false);
-	const std::vector<adaption::Info> partition(bool trackChanges, bool squeezeStorage = false);
-	const std::vector<adaption::Info> balancePartition(bool trackChanges, bool squeezeStorage = false);
 	bool isPartitioned() const;
+	AdaptionStatus getPartitionStatus(bool global = false) const;
+	std::vector<adaption::Info> partition(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partition(const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partition(MPI_Comm communicator, bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partition(bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partitionPrepare(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges);
+	std::vector<adaption::Info> partitionPrepare(const std::vector<int> &cellRanks, bool trackChanges);
+	std::vector<adaption::Info> partitionPrepare(MPI_Comm communicator, bool trackChanges);
+	std::vector<adaption::Info> partitionPrepare(bool trackChanges);
+	std::vector<adaption::Info> partitionAlter(bool trackAdaption = true, bool squeezeStorage = false);
+	void partitionCleanup();
 
 	adaption::Info sendCells(const int &sendRank, const int &recvRank, const std::vector<long> &cellsToSend);
 #endif
@@ -432,10 +463,17 @@ protected:
 	void dumpInterfaces(std::ostream &stream);
 	void restoreInterfaces(std::istream &stream);
 
-	virtual const std::vector<adaption::Info> _updateAdaption(bool trackAdaption, bool squeezeStorage) = 0;
-	virtual bool _markCellForRefinement(const long &id) = 0;
-	virtual bool _markCellForCoarsening(const long &id) = 0;
-	virtual bool _enableCellBalancing(const long &id, bool enabled) = 0;
+	void setSpawnStatus(SpawnStatus status);
+	virtual std::vector<adaption::Info> _spawn(bool trackAdaption);
+
+	void setAdaptionStatus(AdaptionStatus status);
+	virtual std::vector<adaption::Info> _adaptionPrepare(bool trackAdaption);
+	virtual std::vector<adaption::Info> _adaptionAlter(bool trackAdaption);
+	virtual void _adaptionCleanup();
+	virtual bool _markCellForRefinement(const long &id);
+	virtual bool _markCellForCoarsening(const long &id);
+	virtual bool _enableCellBalancing(const long &id, bool enabled);
+
 	virtual void _setTol(double tolerance);
 	virtual void _resetTol();
 
@@ -449,13 +487,15 @@ protected:
 	virtual std::vector<long> _findCellEdgeNeighs(const long &id, const int &edge, const std::vector<long> &blackList = std::vector<long>()) const;
 	virtual std::vector<long> _findCellVertexNeighs(const long &id, const int &vertex, const std::vector<long> &blackList = std::vector<long>()) const;
 
-	void setAdaptionDirty(bool dirty);
 	void setExpert(bool expert);
 
 	void addPointToBoundingBox(const std::array<double, 3> &point);
 	void removePointFromBoundingBox(const std::array<double, 3> &point, bool delayedBoxUpdate = false);
 #if BITPIT_ENABLE_MPI==1
-	virtual const std::vector<adaption::Info> _balancePartition(bool trackChanges, bool squeezeStorage);
+	void setAdaptionStatus(AdaptionStatus status);
+	virtual std::vector<adaption::Info> _partitionPrepare(bool trackChanges);
+	virtual std::vector<adaption::Info> _partitionAlter(bool trackChanges);
+	virtual void _partitionCleanup();
 
 	void setPartitioned(bool partitioned);
 
@@ -493,7 +533,9 @@ private:
 	std::array<int, 3> m_boxMinCounter;
 	std::array<int, 3> m_boxMaxCounter;
 
-	bool m_adaptionDirty;
+	SpawnStatus m_spawnStatus;
+
+	AdaptionStatus m_adaptionStatus;
 
 	bool m_expert;
 
@@ -522,6 +564,9 @@ private:
 
 	void initialize();
 
+	void beginAlteration();
+	void endAlteration(bool squeezeStorage = false);
+
 	void buildCellInterface(Cell *cell_1, int face_1, Cell *cell_2, int face_2, long interfaceId = Element::NULL_ID);
 
 	VertexIterator createVertex(const std::array<double, 3> &coords, long id = Vertex::NULL_ID);
@@ -533,6 +578,8 @@ private:
 	void setId(int id);
 
 	std::array<double, 3> evalElementCentroid(const Element &element) const;
+
+	void mergeAdaptionInfo(std::vector<adaption::Info> &&source, std::vector<adaption::Info> &destination);
 };
 
 }

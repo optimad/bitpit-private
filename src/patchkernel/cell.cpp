@@ -101,8 +101,8 @@ Cell::Cell()
 */
 Cell::Cell(const long &id, ElementInfo::Type type, bool interior, bool storeNeighbourhood)
 	: Element(id, type), m_pid(0),
-      m_interfaces(storeNeighbourhood ? ElementInfo(type).nFaces : 0, 1, NULL_ID),
-      m_adjacencies(storeNeighbourhood ? ElementInfo(type).nFaces : 0, 1, NULL_ID)
+      m_interfaces(storeNeighbourhood ? ElementInfo::getElementInfo(type).nFaces : 0, 1, NULL_ID),
+      m_adjacencies(storeNeighbourhood ? ElementInfo::getElementInfo(type).nFaces : 0, 1, NULL_ID)
 {
 	_initialize(interior, false, false);
 }
@@ -111,36 +111,52 @@ Cell::Cell(const long &id, ElementInfo::Type type, bool interior, bool storeNeig
         Copy-constructor
 */
 Cell::Cell(const Cell &other)
-	: Element(other)
+	: Element(other),
+	  m_interior(other.m_interior), m_pid(other.m_pid),
+	  m_interfaces(other.m_interfaces), m_adjacencies(other.m_adjacencies)
 {
-	*this = other;
+
 }
 
 /*!
-	Copy assignament operator
+	Copy assignment operator
 */
-Cell & Cell::operator=(const Cell& other)
+Cell & Cell::operator=(const Cell &other)
 {
-	Element::operator=(other);
-	m_interior    = other.m_interior;
-	m_pid         = other.m_pid;
-	m_interfaces  = other.m_interfaces;
-	m_adjacencies = other.m_adjacencies;
+	Cell tmp(other);
+	swap(tmp);
 
 	return (*this);
+}
+
+/**
+* Exchanges the content of the cell by the content the specified other cell.
+*
+* \param other is another cell whose content is swapped with that of this cell.
+*/
+void Cell::swap(Cell &other) noexcept
+{
+	Element::swap(other);
+
+	std::swap(other.m_interior, m_interior);
+	std::swap(other.m_pid, m_pid);
+
+	other.m_interfaces.swap(m_interfaces);
+	other.m_adjacencies.swap(m_adjacencies);
 }
 
 /*!
 	Initializes the data structures of the cell.
 
+	\param id is the id of the element
 	\param type is the type of the element
 	\param interior if true the cell is flagged as interior
 	\param storeNeighbourhood if true the structures to store adjacencies
 	and interfaces will be initialized
 */
-void Cell::initialize(ElementInfo::Type type, bool interior, bool storeNeighbourhood)
+void Cell::initialize(long id, ElementInfo::Type type, bool interior, bool storeNeighbourhood)
 {
-	Element::initialize(type);
+	Element::initialize(id, type);
 
 	_initialize(interior, true, storeNeighbourhood);
 }
@@ -154,11 +170,19 @@ void Cell::_initialize(bool interior, bool initializeNeighbourhood, bool storeNe
 
 	// Neighbourhood
 	if (initializeNeighbourhood) {
-		// To reduce memory fragmentation, destroy the interfaces/adjacencies
-		// before resetting the adjacencies
-		m_interfaces.destroy();
-		m_adjacencies.destroy();
+		// To reduce memory fragmentation, destroy both interfaces/adjacencies
+		// before resetting the interfaces/adjacencies
+		int reallocateInterfaces = (m_interfaces.getItemCount() != getFaceCount());
+		if (reallocateInterfaces) {
+			m_interfaces.destroy();
+		}
 
+		int reallocateAdjacencies = (m_adjacencies.getItemCount() != getFaceCount());
+		if (reallocateAdjacencies) {
+			m_adjacencies.destroy();
+		}
+
+		// Reset the interfaces/adjacencies
 		resetInterfaces(storeNeighbourhood);
 		resetAdjacencies(storeNeighbourhood);
 	}

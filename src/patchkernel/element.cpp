@@ -38,9 +38,16 @@
 */
 bitpit::IBinaryStream& operator>>(bitpit::IBinaryStream &buffer, bitpit::Element &element)
 {
-	buffer >> element.m_type;
-	buffer >> element.m_id;
-	element._initialize(element.m_type);
+	// Initialize the element
+	bitpit::ElementInfo::Type type;
+	buffer >> type;
+
+	long id;
+	buffer >> id;
+
+	element._initialize(id, type);
+
+	// Set the connectivity
 	int nVertices = element.getVertexCount();
 	for (int i = 0; i < nVertices; ++i) {
 	    buffer >> element.m_connect[i];
@@ -1021,19 +1028,19 @@ const long Element::NULL_ID = std::numeric_limits<long>::min();
 	Default constructor.
 */
 Element::Element()
-	: m_type(ElementInfo::UNDEFINED)
 {
-	setId(NULL_ID);
+	_initialize(NULL_ID, ElementInfo::UNDEFINED);
 }
 
 /*!
 	Creates a new element.
-*/
-Element::Element(const long &id, ElementInfo::Type type)
-{
-	_initialize(type);
 
-	setId(id);
+	\param id the id of the element
+	\param type is the type of the element
+*/
+Element::Element(long id, ElementInfo::Type type)
+{
+	_initialize(id, type);
 }
 
 /*!
@@ -1041,48 +1048,81 @@ Element::Element(const long &id, ElementInfo::Type type)
 */
 Element::Element(const Element &other)
 {
-	*this = other;
+	_initialize(other.m_id, other.m_type);
+
+	if (other.m_connect) {
+		int connectSize = getInfo().nVertices;
+		std::copy(other.m_connect.get(), other.m_connect.get() + connectSize, m_connect.get());
+	}
 }
 
 /*!
 	Copy-assignament operator.
 */
-Element & Element::operator=(const Element& other)
+Element & Element::operator=(const Element &other)
 {
-	m_id   = other.m_id;
-	m_type = other.m_type;
+	Element tmp(other);
+	swap(tmp);
 
-	if (other.m_connect) {
-		int nVertices = other.getVertexCount();
-		m_connect = std::unique_ptr<long[]>(new long[nVertices]);
-		std::copy(other.m_connect.get(), other.m_connect.get() + nVertices, m_connect.get());
-	}
+	return *this;
+}
 
-	return (*this);
+/**
+* Exchanges the content of the element by the content the specified other
+* element.
+*
+* \param other is another element whose content is swapped with that of this
+* element
+*/
+void Element::swap(Element &other) noexcept
+{
+	std::swap(other.m_id, m_id);
+	std::swap(other.m_type, m_type);
+	std::swap(other.m_connect, m_connect);
 }
 
 /*!
 	Initializes the data structures of the element.
 
+	\param id the id of the element
 	\param type the type of the element
 */
-void Element::initialize(ElementInfo::Type type)
+void Element::initialize(long id, ElementInfo::Type type)
 {
-	_initialize(type);
+	_initialize(id, type);
 }
 
 /*!
 	Internal function to initialize the data structures of the element.
 
+	\param id the id of the element
 	\param type the type of the element
 */
-void Element::_initialize(ElementInfo::Type type)
+void Element::_initialize(long id, ElementInfo::Type type)
 {
+	// Set the id
+	setId(id);
+
+	// Get previous connect size
+	int previousConnectSize;
+	if (type != ElementInfo::UNDEFINED) {
+		if (m_connect) {
+			assert(getType() != ElementInfo::UNDEFINED);
+			previousConnectSize = getInfo().nVertices;
+		} else {
+			previousConnectSize = 0;
+		}
+	}
+
+	// Set element type
 	setType(type);
 
-	if (getType() != ElementInfo::UNDEFINED) {
-		const int &nVertices = getInfo().nVertices;
-		setConnect(std::unique_ptr<long[]>(new long[nVertices]));
+	// Set connectivity
+	if (type != ElementInfo::UNDEFINED) {
+		int connectSize = getInfo().nVertices;
+		if (connectSize != previousConnectSize) {
+			setConnect(std::unique_ptr<long[]>(new long[connectSize]));
+		}
 	} else {
 		unsetConnect();
 	}

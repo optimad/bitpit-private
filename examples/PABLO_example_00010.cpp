@@ -144,7 +144,8 @@ int main(int argc, char *argv[]) {
 			}
 
 			/**<Adapt the octree.*/
-			pablo10.adapt();
+			pablo10.preadapt(true);
+            pablo10.adapt();
 
 #if BITPIT_ENABLE_MPI==1
 			/**<PARALLEL TEST: (Load)Balance the octree over the processes with communicating the data.*/

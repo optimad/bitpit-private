@@ -30,12 +30,12 @@
 #	include <mpi.h>
 #endif
 
+#include "bitpit_common.hpp"
 #include "bitpit_SA.hpp"
 
 #include "patch_info.hpp"
 #include "patch_kernel.hpp"
 #include "patch_manager.hpp"
-#include "utils.hpp"
 
 namespace bitpit {
 
@@ -120,8 +120,17 @@ void PatchKernel::initialize()
 	// Dimension
 	m_dimension = -1;
 
-	// Adaption
-	m_adaptionDirty = true;
+	// Set the spawn as unneeded
+	//
+	// Specific implementation will set the appropriate status during their
+	// initialization.
+	setSpawnStatus(SPAWN_UNNEEDED);
+
+	// Set the adaption as unsupported
+	//
+	// Specific implementation will set the appropriate status during their
+	// initialization.
+	setAdaptionStatus(ADAPTION_UNSUPPORTED);
 
 	// Parallel
 	m_rank        = 0;
@@ -180,50 +189,255 @@ PatchKernel::~PatchKernel()
 }
 
 /*!
-	Updates the patch
+	Commit all pending changes.
 
 	\param trackAdaption if set to true the changes to the patch will be
 	tracked
-	\param squeezeStorage if set to true the vector that store patch information
-	will be squeezed after the synchronization
+	\param squeezeStorage if set to true patch data structures will be
+	squeezed after the update
 	\result Returns a vector of adaption::Info that can be used to track
 	the changes done during the update.
 */
-const std::vector<adaption::Info> PatchKernel::update(bool trackAdaption, bool squeezeStorage)
+std::vector<adaption::Info> PatchKernel::update(bool trackAdaption, bool squeezeStorage)
 {
-	const std::vector<adaption::Info> adaptionInfo = updateAdaption(trackAdaption, squeezeStorage);
+	std::vector<adaption::Info> updateInfo;
 
-	updateBoundingBox();
+	// Check if there are pending changes
+	bool spawnNeeed       = (getSpawnStatus() == SPAWN_NEEDED);
+	bool adaptionDirty    = (getAdaptionStatus(true) == ADAPTION_DIRTY);
+	bool boundingBoxDirty = isBoundingBoxDirty();
+
+	bool pendingChanges = (spawnNeeed || adaptionDirty || boundingBoxDirty);
+	if (!pendingChanges) {
+		return updateInfo;
+	}
+
+	// Spawn
+	if (spawnNeeed) {
+		mergeAdaptionInfo(spawn(trackAdaption), updateInfo);
+	}
+
+	// Adaption
+	if (adaptionDirty) {
+		mergeAdaptionInfo(adaption(trackAdaption, squeezeStorage), updateInfo);
+	}
+
+	// Update bounding box
+	//
+	// Previous updates may already have updated the bounding box, before
+	// doing the update re-check if it is still dirty.
+	boundingBoxDirty = isBoundingBoxDirty();
+	if (boundingBoxDirty) {
+		updateBoundingBox();
+	}
+
+	return updateInfo;
+}
+
+/*!
+	Generates the patch.
+
+	\param trackSpawn if set to true the changes to the patch will be tracked
+	\result Returns a vector of adaption::Info that can be used to track
+	the changes done during the spawn.
+*/
+std::vector<adaption::Info> PatchKernel::spawn(bool trackSpawn)
+{
+	std::vector<adaption::Info> spawnInfo;
+
+#if BITPIT_ENABLE_MPI==1
+	// This is a collevtive operation and should be called by all processes
+	if (isCommunicatorSet()) {
+		const auto &communicator = getCommunicator();
+		MPI_Barrier(communicator);
+	}
+#endif
+
+	// Check spawn status
+	SpawnStatus spawnStatus = getSpawnStatus();
+	if (spawnStatus == SPAWN_UNNEEDED || spawnStatus == SPAWN_DONE) {
+		return spawnInfo;
+	}
+
+	// Begin patch alteration
+	beginAlteration();
+
+	// Alter patch
+	spawnInfo = _spawn(trackSpawn);
+
+	// End patch alteration
+	endAlteration(true);
+
+	// Spwan is done
+	setSpawnStatus(SPAWN_DONE);
+
+	// Done
+	return spawnInfo;
+}
+
+/*!
+	Execute patch adaption.
+
+	\param trackAdaption if set to true the changes to the patch will be
+	tracked
+	\param squeezeStorage if set to true patch data structures will be
+	squeezed after the update
+	\result Returns a vector of adaption::Info that can be used to track
+	the changes done during the update.
+*/
+std::vector<adaption::Info> PatchKernel::adaption(bool trackAdaption, bool squeezeStorage)
+{
+	std::vector<adaption::Info> adaptionInfo;
+
+	// Check adaption status
+	AdaptionStatus adaptionStatus = getAdaptionStatus(true);
+	if (adaptionStatus == ADAPTION_UNSUPPORTED || adaptionStatus == ADAPTION_CLEAN) {
+		return adaptionInfo;
+	} else if (adaptionStatus != ADAPTION_DIRTY) {
+		throw std::runtime_error ("An adaption is already in progress.");
+	}
+
+	adaptionPrepare(false);
+
+	adaptionInfo = adaptionAlter(trackAdaption, squeezeStorage);
+
+	adaptionCleanup();
 
 	return adaptionInfo;
 }
 
 /*!
-	Updates the adaption
+	Prepares the patch for performing the adaption.
 
-	\param trackAdaption if set to true the changes to the patch will be
-	tracked
-	\param squeezeStorage if set to true the vector that store patch information
-	will be squeezed after the synchronization
-	\result Returns a vector of adaption::Info that can be used to track
-	the changes done during the update.
+	The patch will prepare its data structured for the adaption and optionally
+	track the changes that will be performed to the patch. During this phase
+	no changes will be performed to the patch.
+
+	\param trackAdaption if set to true the function will return the changes
+	that will be performed in the alter step
+	\result If the adaption is tracked, returns a vector of adaption::Info that
+	can be used to discover what changes will be performed in the alter step,
+	otherwise an empty vector will be returned.
 */
-const std::vector<adaption::Info> PatchKernel::updateAdaption(bool trackAdaption, bool squeezeStorage)
+std::vector<adaption::Info> PatchKernel::adaptionPrepare(bool trackAdaption)
 {
 	std::vector<adaption::Info> adaptionInfo;
-	if (!isAdaptionDirty(true)) {
+
+	// Check adaption status
+	AdaptionStatus adaptionStatus = getAdaptionStatus(true);
+	if (adaptionStatus == ADAPTION_UNSUPPORTED || adaptionStatus == ADAPTION_CLEAN) {
 		return adaptionInfo;
+	} else if (adaptionStatus != ADAPTION_DIRTY) {
+		throw std::runtime_error ("An adaption is already in progress.");
 	}
 
-	adaptionInfo = _updateAdaption(trackAdaption, squeezeStorage);
+	// Execute the adaption preparation
+	adaptionInfo = _adaptionPrepare(trackAdaption);
 
+	// Update the status
+	setAdaptionStatus(ADAPTION_PREPARED);
+
+	return adaptionInfo;
+}
+
+/*!
+	Alter the patch performing the adpation.
+
+	The actual modification of the patch takes place during this phase. After
+	this phase the adapton is completed and the patch is in its final state.
+	Optionally the patch can track the changes performed to the patch.
+
+	\param trackAdaption if set to true the function will return the changes
+	done to the patch during the adaption
+	\param squeezeStorage if set to true patch data structures will be
+	squeezed after the adaption
+	\result If the adaption is tracked, returns a vector of adaption::Info
+	with all the changes done to the patch during the adaption, otherwise an
+	empty vector will be returned.
+*/
+std::vector<adaption::Info> PatchKernel::adaptionAlter(bool trackAdaption, bool squeezeStorage)
+{
+	std::vector<adaption::Info> adaptionInfo;
+
+	// Check adaption status
+	AdaptionStatus adaptionStatus = getAdaptionStatus();
+	if (adaptionStatus == ADAPTION_UNSUPPORTED || adaptionStatus == ADAPTION_CLEAN) {
+		return adaptionInfo;
+	} else if (adaptionStatus != ADAPTION_PREPARED) {
+		throw std::runtime_error ("The prepare function has not been called.");
+	}
+
+	// Begin patch alteration
+	beginAlteration();
+
+	// Alter patch
+	adaptionInfo = _adaptionAlter(trackAdaption);
+
+	// End patch alteration
+	endAlteration(squeezeStorage);
+
+	// Update the status
+	setAdaptionStatus(ADAPTION_ALTERED);
+
+	return adaptionInfo;
+}
+
+/*!
+	Cleanup patch data structured after the adaption.
+
+	The patch will only clean-up the data structures needed for adaption.
+*/
+void PatchKernel::adaptionCleanup()
+{
+	AdaptionStatus adaptionStatus = getAdaptionStatus();
+	if (adaptionStatus == ADAPTION_UNSUPPORTED || adaptionStatus == ADAPTION_CLEAN) {
+		return;
+	} else if (adaptionStatus == ADAPTION_PREPARED) {
+		throw std::runtime_error ("It is not yet possible to abort an adaption.");
+	} else if (adaptionStatus != ADAPTION_ALTERED) {
+		throw std::runtime_error ("The alter function has not been called.");
+	}
+
+	// Complete the adaption
+	_adaptionCleanup();
+
+	// Update the status
+	setAdaptionStatus(ADAPTION_CLEAN);
+}
+
+/*!
+	Begin patch alteration.
+*/
+void PatchKernel::beginAlteration()
+{
+	// Nothing to do
+}
+
+/*!
+	End patch alteration.
+
+	\param squeezeStorage if set to true patch data structures will be
+	squeezed after the adaption
+*/
+void PatchKernel::endAlteration(bool squeezeStorage)
+{
+	// Flush data structures
 	m_cells.flush();
 	m_interfaces.flush();
 	m_vertices.flush();
 
-	setAdaptionDirty(false);
+	// Squeeze data structures
+	if (squeezeStorage) {
+		squeeze();
+	}
 
-	return adaptionInfo;
+	// Update geometric information
+	updateBoundingBox();
+
+	// Synchronize storage
+	m_cells.sync();
+	m_interfaces.sync();
+	m_vertices.sync();
 }
 
 /*!
@@ -236,7 +450,7 @@ void PatchKernel::markCellForRefinement(const long &id)
 	bool updated = _markCellForRefinement(id);
 
 	if (updated) {
-		setAdaptionDirty(true);
+		setAdaptionStatus(ADAPTION_DIRTY);
 	}
 }
 
@@ -250,7 +464,7 @@ void PatchKernel::markCellForCoarsening(const long &id)
 	bool updated = _markCellForCoarsening(id);
 
 	if (updated) {
-		setAdaptionDirty(true);
+		setAdaptionStatus(ADAPTION_DIRTY);
 	}
 }
 
@@ -265,7 +479,7 @@ void PatchKernel::enableCellBalancing(const long &id, bool enabled)
 	bool updated = _enableCellBalancing(id, enabled);
 
 	if (updated) {
-		setAdaptionDirty(true);
+		setAdaptionStatus(ADAPTION_DIRTY);
 	}
 }
 
@@ -421,7 +635,7 @@ void PatchKernel::write(VTKWriteMode mode)
 	// Set VTK targets
 	long vtkCellCount = 0;
 	if (m_vtkWriteTarget == WRITE_TARGET_CELLS_ALL) {
-		m_vtkCellRange = CellConstRange(&m_cells);
+		m_vtkCellRange = CellConstRange(&m_cells.getStorage());
 
 		vtkCellCount = getCellCount();
 #if BITPIT_ENABLE_MPI==1
@@ -457,42 +671,59 @@ void PatchKernel::write(VTKWriteMode mode)
 }
 
 /*!
-	Flags the patch for adaption update.
+	Returns the current spawn status.
 
-	\param dirty if true, then patch is informed that the patch needs to
-	adapt after a refinement, coarsening, ... and thus the current data
-	structures are not valid anymore.
+	\return The current spawn status.
 */
-void PatchKernel::setAdaptionDirty(bool dirty)
+PatchKernel::SpawnStatus PatchKernel::getSpawnStatus() const
 {
-	if (m_adaptionDirty == dirty) {
-		return;
-	}
+	// There is no need to check the spawn status globally because the spawn
+	// status will always be the same on all the processors
 
-	m_adaptionDirty = dirty;
+	return m_spawnStatus;
 }
 
 /*!
-	Returns true if the the patch needs to update after an adaption.
+	Set the current spawn status.
 
-	\return This method returns true to indicate the patch needs to update
-	its data strucutres. Otherwise, it returns false.
+	\param status is the spawn status that will be set
 */
-bool PatchKernel::isAdaptionDirty(bool global) const
+void PatchKernel::setSpawnStatus(SpawnStatus status)
 {
-	bool isDirty = m_adaptionDirty;
+	m_spawnStatus = status;
+}
+
+/*!
+	Returns the current adaption status.
+
+	\param global if set to true the adaption status will be
+	\return The current adaption status.
+*/
+PatchKernel::AdaptionStatus PatchKernel::getAdaptionStatus(bool global) const
+{
+	int adaptionStatus = static_cast<int>(m_adaptionStatus);
+
 #if BITPIT_ENABLE_MPI==1
 	if (global && isCommunicatorSet()) {
 		const auto &communicator = getCommunicator();
-		MPI_Allreduce(const_cast<bool *>(&m_adaptionDirty), &isDirty, 1, MPI_C_BOOL, MPI_LOR, communicator);
+		MPI_Allreduce(MPI_IN_PLACE, &adaptionStatus, 1, MPI_INT, MPI_MAX, communicator);
 	}
 #else
 	BITPIT_UNUSED(global);
 #endif
 
-	return isDirty;
+	return static_cast<AdaptionStatus>(adaptionStatus);
 }
 
+/*!
+	Set the current adaption status.
+
+	\param status is the adaption status that will be set
+*/
+void PatchKernel::setAdaptionStatus(AdaptionStatus status)
+{
+	m_adaptionStatus = status;
+}
 
 /*!
 	Returns true if the the patch needs to update its data strucutres.
@@ -502,7 +733,11 @@ bool PatchKernel::isAdaptionDirty(bool global) const
 */
 bool PatchKernel::isDirty(bool global) const
 {
-	return (isAdaptionDirty(global) || isBoundingBoxDirty(global));
+	bool spawnNeeed       = (getSpawnStatus() == SPAWN_NEEDED);
+	bool adaptionDirty    = (getAdaptionStatus(global) == ADAPTION_DIRTY);
+	bool boundingBoxDirty = isBoundingBoxDirty(global);
+
+	return (spawnNeeed || adaptionDirty || boundingBoxDirty);
 }
 
 /*!
@@ -741,9 +976,7 @@ PatchKernel::VertexIterator PatchKernel::createVertex(const std::array<double, 3
 	}
 
 	// Add the vertex
-	PiercedVector<Vertex>::iterator iterator = m_vertices.reclaim(id);
-    iterator->setId(id);
-	iterator->setCoords(coords);
+	PiercedVector<Vertex>::iterator iterator = m_vertices.emreclaim(id, id, coords);
 
 	// Update the bounding box
 	addPointToBoundingBox(iterator->getCoords());
@@ -1414,9 +1647,9 @@ PatchKernel::CellIterator PatchKernel::createCell(ElementInfo::Type type, bool i
 		// If there are ghosts cells, the internal cell should be inserted
 		// before the first ghost cell.
 		if (m_firstGhostId < 0) {
-			iterator = m_cells.reclaim(id);
+			iterator = m_cells.emreclaim(id, id, type, interior, true);
 		} else {
-			iterator = m_cells.reclaimBefore(m_firstGhostId, id);
+			iterator = m_cells.emreclaimBefore(m_firstGhostId, id, id, type, interior, true);
 		}
 		m_nInternals++;
 
@@ -1432,9 +1665,9 @@ PatchKernel::CellIterator PatchKernel::createCell(ElementInfo::Type type, bool i
 		// If there are internal cells, the ghost cell should be inserted
 		// after the last internal cell.
 		if (m_lastInternalId < 0) {
-			iterator = m_cells.reclaim(id);
+			iterator = m_cells.emreclaim(id, id, type, interior, true);
 		} else {
-			iterator = m_cells.reclaimAfter(m_lastInternalId, id);
+			iterator = m_cells.emreclaimAfter(m_lastInternalId, id, id, type, interior, true);
 		}
 		m_nGhosts++;
 
@@ -1445,10 +1678,6 @@ PatchKernel::CellIterator PatchKernel::createCell(ElementInfo::Type type, bool i
 			m_firstGhostId = id;
 		}
 	}
-	iterator->setId(id);
-
-	// Initialize the cell
-	iterator->initialize(type, interior, true);
 
 	return iterator;
 }
@@ -2448,11 +2677,7 @@ PatchKernel::InterfaceIterator PatchKernel::createInterface(ElementInfo::Type ty
 		return interfaceEnd();
 	}
 
-	PiercedVector<Interface>::iterator iterator = m_interfaces.reclaim(id);
-    iterator->setId(id);
-
-	// Initialize the interface
-	iterator->initialize(type);
+	PiercedVector<Interface>::iterator iterator = m_interfaces.emreclaim(id, id, type);
 
 	return iterator;
 }
@@ -2695,12 +2920,12 @@ long PatchKernel::countFreeFaces() const
 void PatchKernel::dumpInterfaces(std::ostream &stream)
 {
 	long nInterfaces = getInterfaceCount();
-	IO::binary::write(stream, nInterfaces);
+	utils::binary::write(stream, nInterfaces);
 
 	std::unordered_set<long> dumpedInterfaces(nInterfaces);
 	for (const Cell &cell : getCells()) {
 		long cellId = cell.getId();
-		IO::binary::write(stream, cellId);
+		utils::binary::write(stream, cellId);
 
 		int nCellInterfaces = cell.getInterfaceCount();
 		const long *interfaces = cell.getInterfaces();
@@ -2714,24 +2939,24 @@ void PatchKernel::dumpInterfaces(std::ostream &stream)
 			const long interfaceOwnerId = interface.getOwner();
 			const long interfaceNeighId = interface.getNeigh();
 
-			IO::binary::write(stream, interfaceId);
+			utils::binary::write(stream, interfaceId);
 			if (cellId == interfaceOwnerId) {
-				IO::binary::write(stream, interface.getOwnerFace());
-				IO::binary::write(stream, interfaceNeighId);
+				utils::binary::write(stream, interface.getOwnerFace());
+				utils::binary::write(stream, interfaceNeighId);
 				if (interfaceNeighId >= 0) {
-					IO::binary::write(stream, interface.getNeighFace());
+					utils::binary::write(stream, interface.getNeighFace());
 				}
 			} else {
-				IO::binary::write(stream, interface.getNeighFace());
-				IO::binary::write(stream, interfaceOwnerId);
-				IO::binary::write(stream, interface.getOwnerFace());
+				utils::binary::write(stream, interface.getNeighFace());
+				utils::binary::write(stream, interfaceOwnerId);
+				utils::binary::write(stream, interface.getOwnerFace());
 			}
 
 			dumpedInterfaces.insert(interfaceId);
 		}
 
 		// There are no more interfaces for this cell
-		IO::binary::write(stream, Interface::NULL_ID);
+		utils::binary::write(stream, Interface::NULL_ID);
 	}
 }
 
@@ -2743,38 +2968,149 @@ void PatchKernel::dumpInterfaces(std::ostream &stream)
 void PatchKernel::restoreInterfaces(std::istream &stream)
 {
 	long nInterfaces;
-	IO::binary::read(stream, nInterfaces);
+	utils::binary::read(stream, nInterfaces);
 	m_interfaces.reserve(nInterfaces);
 
 	long nCells = getCellCount();
 	for (long n = 0; n < nCells; ++n) {
 		long cellId;
-		IO::binary::read(stream, cellId);
+		utils::binary::read(stream, cellId);
 		Cell &cell = m_cells.at(cellId);
 
 		while (true) {
 			long interfaceId;
-			IO::binary::read(stream, interfaceId);
+			utils::binary::read(stream, interfaceId);
 			if (interfaceId < 0) {
 				break;
 			}
 
 			int face;
-			IO::binary::read(stream, face);
+			utils::binary::read(stream, face);
 
 			long otherCellId;
-			IO::binary::read(stream, otherCellId);
+			utils::binary::read(stream, otherCellId);
 
 			Cell *otherCell = nullptr;
 			int otherFace = -1;
 			if (otherCellId >= 0) {
 				otherCell = &m_cells.at(otherCellId);
-				IO::binary::read(stream, otherFace);
+				utils::binary::read(stream, otherFace);
 			}
 
 			buildCellInterface(&cell, face, otherCell, otherFace, interfaceId);
 		}
 	}
+}
+
+/*!
+	Generates the patch.
+
+	Default implementation is a no-op function.
+
+	\param trackSpawn if set to true the changes to the patch will be tracked
+	\result Returns a vector of adaption::Info that can be used to track
+	the changes done during the spawn.
+*/
+std::vector<adaption::Info> PatchKernel::_spawn(bool trackSpawn)
+{
+	BITPIT_UNUSED(trackSpawn);
+
+	assert(true && "The patch needs to implement _spawn");
+
+	return std::vector<adaption::Info>();
+}
+
+/*!
+	Prepares the patch for performing the adaption.
+
+	Default implementation is a no-op function.
+
+	\param trackAdaption if set to true the function will return the changes
+	that will be performed in the alter step
+	\result If the adaption is tracked, returns a vector of adaption::Info that
+	can be used to discover what changes will be performed in the alter step,
+	otherwise an empty vector will be returned.
+*/
+std::vector<adaption::Info> PatchKernel::_adaptionPrepare(bool trackAdaption)
+{
+	BITPIT_UNUSED(trackAdaption);
+
+	return std::vector<adaption::Info>();
+}
+
+/*!
+	Alter the patch performing the adpation.
+
+	Default implementation is a no-op function.
+
+	\param trackAdaption if set to true the function will return the changes
+	done to the patch during the adaption
+	\result If the adaption is tracked, returns a vector of adaption::Info
+	with all the changes done to the patch during the adaption, otherwise an
+	empty vector will be returned.
+*/
+std::vector<adaption::Info> PatchKernel::_adaptionAlter(bool trackAdaption)
+{
+	BITPIT_UNUSED(trackAdaption);
+
+	assert(false && "The patch needs to implement _adaptionAlter");
+
+	return std::vector<adaption::Info>();
+}
+
+/*!
+	Cleanup patch data structured after the adaption.
+
+	Default implementation is a no-op function.
+*/
+void PatchKernel::_adaptionCleanup()
+{
+}
+
+/*!
+	Marks a cell for refinement.
+
+	Default implementation is a no-op function.
+
+	\param id the cell to be refined
+	\result Returns true if the marker was properly set, false otherwise.
+*/
+bool PatchKernel::_markCellForRefinement(const long &id)
+{
+	BITPIT_UNUSED(id);
+
+	return false;
+}
+
+/*!
+	Marks a cell for coarsening.
+
+	Default implementation is a no-op function.
+
+	\param id the cell to be refined
+	\result Returns true if the marker was properly set, false otherwise.
+*/
+bool PatchKernel::_markCellForCoarsening(const long &id)
+{
+	BITPIT_UNUSED(id);
+
+	return false;
+}
+
+/*!
+	Enables cell balancing.
+
+	Default implementation is a no-op function.
+
+	\param id the cell to be refined
+	\result Returns true if the falg was properly set, false otherwise.
+*/
+bool PatchKernel::_enableCellBalancing(const long &id, bool enabled)
+{
+	BITPIT_UNUSED(id);
+	BITPIT_UNUSED(enabled);
+
+	return false;
 }
 
 /*!
@@ -4258,28 +4594,28 @@ int PatchKernel::getDumpVersion() const
 void PatchKernel::dump(std::ostream &stream)
 {
 	// Version
-	IO::binary::write(stream, getDumpVersion());
+	utils::binary::write(stream, getDumpVersion());
 
 	// Generic information
-	IO::binary::write(stream, m_id);
-	IO::binary::write(stream, m_dimension);
-	IO::binary::write(stream, m_vtk.getName());
+	utils::binary::write(stream, m_id);
+	utils::binary::write(stream, m_dimension);
+	utils::binary::write(stream, m_vtk.getName());
 #if BITPIT_ENABLE_MPI==1
-	IO::binary::write(stream, m_partitioned);
+	utils::binary::write(stream, m_partitioned);
 #else
-	IO::binary::write(stream, false);
+	utils::binary::write(stream, false);
 #endif
 
 	// VTK data
-	IO::binary::write(stream, m_vtkWriteTarget);
+	utils::binary::write(stream, m_vtkWriteTarget);
 
 	// Specific dump
 	_dump(stream);
 
 	// Geometric tolerance
-	IO::binary::write(stream, (int) m_hasCustomTolerance);
+	utils::binary::write(stream, (int) m_hasCustomTolerance);
 	if (m_hasCustomTolerance) {
-		IO::binary::write(stream, m_tolerance);
+		utils::binary::write(stream, m_tolerance);
 	}
 
 	// Index generators
@@ -4302,14 +4638,14 @@ void PatchKernel::restore(std::istream &stream, bool reregister)
 
 	// Version
 	int version;
-	IO::binary::read(stream, version);
+	utils::binary::read(stream, version);
 	if (version != getDumpVersion()) {
 		throw std::runtime_error ("The version of the file does not match the required version");
 	}
 
 	// Id
 	int id;
-	IO::binary::read(stream, id);
+	utils::binary::read(stream, id);
 	if (reregister) {
 		patch::manager().unregisterPatch(this);
 		patch::manager().registerPatch(this, id);
@@ -4317,34 +4653,34 @@ void PatchKernel::restore(std::istream &stream, bool reregister)
 
 	// Dimension
 	int dimension;
-	IO::binary::read(stream, dimension);
+	utils::binary::read(stream, dimension);
 	setDimension(dimension);
 
 	// Name
 	std::string name;
-	IO::binary::read(stream, name);
+	utils::binary::read(stream, name);
 	m_vtk.setName(name);
 
 	// Partioned flag
 #if BITPIT_ENABLE_MPI==1
-	IO::binary::read(stream, m_partitioned);
+	utils::binary::read(stream, m_partitioned);
 #else
 	bool dummyPartitioned;
-	IO::binary::read(stream, dummyPartitioned);
+	utils::binary::read(stream, dummyPartitioned);
 #endif
 
 	// VTK data
-	IO::binary::read(stream, m_vtkWriteTarget);
+	utils::binary::read(stream, m_vtkWriteTarget);
 
 	// Specific restore
 	_restore(stream);
 
 	// Geometric tolerance
 	int hasCustomTolerance;
-	IO::binary::read(stream, hasCustomTolerance);
+	utils::binary::read(stream, hasCustomTolerance);
 	if (hasCustomTolerance) {
 		double tolerance;
-		IO::binary::read(stream, tolerance);
+		utils::binary::read(stream, tolerance);
 		setTol(tolerance);
 	} else {
 		resetTol();
@@ -4354,6 +4690,24 @@ void PatchKernel::restore(std::istream &stream, bool reregister)
 	m_vertexIdGenerator.restore(stream);
 	m_cellIdGenerator.restore(stream);
 	m_interfaceIdGenerator.restore(stream);
+}
+
+/*!
+ *  Merge the specified adaption info.
+ *
+ *  \param[in] source is the source adaption info
+ *  \param[in,out] desintation is the destination adaption info
+ */
+void PatchKernel::mergeAdaptionInfo(std::vector<adaption::Info> &&source, std::vector<adaption::Info> &destination)
+{
+	if (source.empty()) {
+		return;
+	} else if (destination.empty()) {
+		destination.swap(source);
+		return;
+	}
+
+	throw std::runtime_error ("Unable to merge the adaption info.");
 }
 
 }

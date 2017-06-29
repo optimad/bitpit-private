@@ -22,67 +22,82 @@
  *
 \*---------------------------------------------------------------------------*/
 
-#ifndef __BITPIT_PIERCED_RANGE_HPP__
-#define __BITPIT_PIERCED_RANGE_HPP__
+#ifndef __BITPIT_PIERCED_STORAGE_RANGE_HPP__
+#define __BITPIT_PIERCED_STORAGE_RANGE_HPP__
 
-#include "piercedVector.hpp"
+#include <stdexcept>
+
+#include "piercedKernel.hpp"
+#include "piercedKernelRange.hpp"
 
 namespace bitpit {
 
+template<typename PKR_id_t>
+class PiercedKernelRange;
+
+template<typename PS_value_t, typename PS_id_t>
+class PiercedStorage;
+
 /*!
-    @brief The PiercedRange allow to iterate using range-based loops over
-    a PiercedVector.
+    @brief The PiercedStorageRange allow to iterate using range-based loops over
+    a PiercedStorage.
 */
 template<typename value_t, typename id_t = long,
          typename value_no_cv_t = typename std::remove_cv<value_t>::type>
-class PiercedRange
+class PiercedStorageRange : protected PiercedKernelRange<id_t>
 {
 
+friend class PiercedStorageRange<value_no_cv_t, id_t, value_no_cv_t>;
+
+template<typename PS_value_t, typename PS_id_t>
+friend class PiercedStorage;
+
 private:
-    /*!
-        Container.
+    /**
+    * Storage.
     */
-    template<typename PV_value_t, typename PV_id_t>
-    using Container = PiercedVector<PV_value_t, PV_id_t>;
+    template<typename PS_value_t, typename PS_id_t>
+    using Storage = PiercedStorage<PS_value_t, PS_id_t>;
 
-    /*
-        Container type
-
-        When building a const_range the iterator has to be declared const.
+    /**
+    * Storage type
+    *
+    * When building a const_iterator the pointer to the storage has to be
+    * declared const.
     */
     typedef
         typename std::conditional<std::is_const<value_t>::value,
-            const Container<value_no_cv_t, id_t>,
-            Container<value_no_cv_t, id_t>
+            const Storage<value_no_cv_t, id_t>,
+            Storage<value_no_cv_t, id_t>
         >::type
 
-        container_t;
+        storage_t;
 
     /*
-        Iterator type
-
-        When building a const_iterator the pointer to the container has to
-        be declared const.
+    * Iterator type
+    *
+    * When building a const_iterator the pointer to the container has to
+    * be declared const.
     */
     typedef
         typename std::conditional<std::is_const<value_t>::value,
-            typename container_t::const_iterator,
-            typename container_t::iterator
+            typename storage_t::const_iterator,
+            typename storage_t::iterator
         >::type
 
         iterator_t;
 
     /*
-        Const iterator type
-
-        When building a const_iterator the pointer to the container has to
-        be declared const.
+    * Const iterator type
+    *
+    * When building a const_iterator the pointer to the container has to
+    * be declared const.
     */
-    typedef typename container_t::const_iterator const_iterator_t;
+    typedef typename storage_t::const_iterator const_iterator_t;
 
 public:
     /*! Type of container */
-    typedef container_t container_type;
+    typedef storage_t storage_type;
 
     /*! Type of data stored in the container */
     typedef value_t value_type;
@@ -97,13 +112,17 @@ public:
     typedef const_iterator_t const_iterator;
 
     // Constructors
-    PiercedRange();
-    PiercedRange(container_t *container);
-    PiercedRange(container_t *container, id_t first, id_t last);
-    PiercedRange(iterator begin, iterator end);
+    PiercedStorageRange();
+    PiercedStorageRange(storage_t *storage);
+    PiercedStorageRange(storage_t *storage, id_t first, id_t last);
+    PiercedStorageRange(const iterator &begin, const iterator &end);
 
     // General methods
-    void swap(PiercedRange &other) noexcept;
+    void swap(PiercedStorageRange &other) noexcept;
+
+    storage_type & getStorage() const;
+
+    const PiercedKernelRange<id_t> & getKernelRange() const;
 
     // Methods to get begin and end
     template<typename U = value_t, typename U_no_cv = value_no_cv_t,
@@ -124,17 +143,13 @@ public:
         Two-way comparison.
     */
     template<typename other_value_t, typename other_id_t = long>
-    bool operator==(const PiercedRange<other_value_t, other_id_t> &rhs) const
+    bool operator==(const PiercedStorageRange<other_value_t, other_id_t> &rhs) const
     {
-        if (m_container == rhs.m_container) {
+        if (PiercedKernelRange<id_t>::operator!=(rhs)) {
             return false;
         }
 
-        if (m_begin_pos == rhs.m_begin_pos) {
-            return false;
-        }
-
-        if (m_end_pos == rhs.m_end_pos) {
+        if (m_storage != rhs.m_storage) {
             return false;
         }
 
@@ -142,20 +157,16 @@ public:
     }
 
     /*!
-        Two-way comparison.
+    * Two-way comparison.
     */
     template<typename other_value_t, typename other_id_t = long>
-    bool operator!=(const PiercedRange<other_value_t, other_id_t> &rhs) const
+    bool operator!=(const PiercedStorageRange<other_value_t, other_id_t> &rhs) const
     {
-        if (m_container != rhs.m_container) {
+        if (PiercedKernelRange<id_t>::operator!=(rhs)) {
             return true;
         }
 
-        if (m_begin_pos == rhs.m_begin_pos) {
-            return true;
-        }
-
-        if (m_end_pos != rhs.m_end_pos) {
+        if (m_storage != rhs.m_storage) {
             return true;
         }
 
@@ -163,20 +174,14 @@ public:
     }
 
 private:
-    /*! Container */
-    container_t *m_container;
-
-    /*! Begin */
-    size_t m_begin_pos;
-
-    /*! End */
-    size_t m_end_pos;
+    /*! Storage */
+    storage_t *m_storage;
 
 };
 
 }
 
 // Include the implementation
-#include "piercedRange.tpp"
+#include "piercedStorageRange.tpp"
 
 #endif
