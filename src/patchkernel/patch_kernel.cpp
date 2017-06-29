@@ -364,7 +364,7 @@ std::vector<adaption::Info> PatchKernel::adaptionAlter(bool trackAdaption, bool 
 	if (adaptionStatus == ADAPTION_UNSUPPORTED || adaptionStatus == ADAPTION_CLEAN) {
 		return adaptionInfo;
 	} else if (adaptionStatus != ADAPTION_PREPARED) {
-		throw std::runtime_error ("The prepare function has no been called.");
+		throw std::runtime_error ("The prepare function has not been called.");
 	}
 
 	// Begin patch alteration
@@ -393,9 +393,9 @@ void PatchKernel::adaptionCleanup()
 	if (adaptionStatus == ADAPTION_UNSUPPORTED || adaptionStatus == ADAPTION_CLEAN) {
 		return;
 	} else if (adaptionStatus == ADAPTION_PREPARED) {
-		// We are aboring an adaption after calling the prepare function
+		throw std::runtime_error ("It is not yet possible to abort an adaption.");
 	} else if (adaptionStatus != ADAPTION_ALTERED) {
-		throw std::runtime_error ("The alter function has no been called.");
+		throw std::runtime_error ("The alter function has not been called.");
 	}
 
 	// Complete the adaption
