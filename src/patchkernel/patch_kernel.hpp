@@ -417,10 +417,10 @@ public:
 	std::vector<adaption::Info> partition(const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
 	std::vector<adaption::Info> partition(MPI_Comm communicator, bool trackChanges, bool squeezeStorage = false);
 	std::vector<adaption::Info> partition(bool trackChanges, bool squeezeStorage = false);
-	std::vector<adaption::Info> partitionPrepare(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
-	std::vector<adaption::Info> partitionPrepare(const std::vector<int> &cellRanks, bool trackChanges, bool squeezeStorage = false);
-	std::vector<adaption::Info> partitionPrepare(MPI_Comm communicator, bool trackChanges, bool squeezeStorage = false);
-	std::vector<adaption::Info> partitionPrepare(bool trackChanges, bool squeezeStorage = false);
+	std::vector<adaption::Info> partitionPrepare(MPI_Comm communicator, const std::vector<int> &cellRanks, bool trackChanges);
+	std::vector<adaption::Info> partitionPrepare(const std::vector<int> &cellRanks, bool trackChanges);
+	std::vector<adaption::Info> partitionPrepare(MPI_Comm communicator, bool trackChanges);
+	std::vector<adaption::Info> partitionPrepare(bool trackChanges);
 	std::vector<adaption::Info> partitionAlter(bool trackAdaption = true, bool squeezeStorage = false);
 	void partitionCleanup();
 
