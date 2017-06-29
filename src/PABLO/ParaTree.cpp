@@ -2279,7 +2279,7 @@ namespace bitpit {
     /*! Get a map of elements sent to the other processes during load balance
      * \return an unordered map associating rank to sent elements given by index extremes of a chunck
      */
-    const std::unordered_map<int,std::array<uint32_t,4> > &
+    const std::unordered_map<int,std::array<uint32_t,2> > &
     ParaTree::getSentIdx() const {
         return m_sentIdx;
     };
@@ -3774,79 +3774,177 @@ namespace bitpit {
 
     };
 
-    /** Compute the end of the head section and the beginning of the tail section of octants vector (with user defined weights) used during the load balance.
-     * The head will be sent to predecessor processes during loadBalance, while the tail will be sent to the successor processes.
-     * If no head or no tail for a process are built from new partition, these two limits are set to UINT_MAX. The same for serial runs.
-     * If PABLO is serial when this method is called these two limits have the same meaning but no octants will be really sent to other processes.
-     * ATTENTION: these information are valid until the call to the analogous loadbalance method if no modification have been done on the grid and on the weights in case.
-     * \param[in] weight Pointer to a vector of weights of the local octants (weight=NULL is uniform distribution).
-     * \return An array containing the two pairs (headBegin, headEnd) and
-     * (tailBegin, tailEnd) of the octants ids that will be sent to other
-     * processors
+    /**
+     * Evaluate the elements of the current partition that will be sent to
+     * other processors after the load balance.
+     *
+     * \param[in] weights are the weights of the local octants (if a null
+     * pointer is given a uniform distribution is used)
+     * \return The range of local ids that will be sent to other processors.
      */
-    std::array<uint32_t, 4>
-    ParaTree::virtualLoadBalance(dvector *weight){
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceSendRanges(dvector *weights){
 
-        std::array<uint32_t, 4> limits;
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
 
-        // Early return if the tree is serial
+        // If there is only one processor no octants can be sent
         if (m_nproc == 1) {
-            limits[0] = 0;
-            limits[1] = limits[0];
-            limits[2] = getNumOctants();
-            limits[3] = limits[2];
-
-            return limits;
+            return sendRanges;
         }
 
-        // Compute partition
-        std::vector<uint32_t> partition(m_nproc);
-        if (weight) {
-            computePartition(partition.data(), weight);
+        // Compute updated partition
+        std::vector<uint32_t> updatedPartition(m_nproc);
+        if (weights) {
+            computePartition(updatedPartition.data(), weights);
         } else {
-            computePartition(partition.data());
+            computePartition(updatedPartition.data());
         }
 
-        // Execute virtual load balance
-        limits = privateVirtualLoadBalance(partition);
-
-        return limits;
+        // Evaluate send ranges
+        return evalLoadBalanceSendRanges(updatedPartition.data());
     }
 
-    /** Evaluate the end of the head section and the beginning of the tail section of octants vector (with user defined weights) used during the load balance.
-     * The families of octants of a desired level are retained compact on the same process.
-     * The head will be sent to predecessor processes during loadBalance, while the tail will be sent to the successor processes.
-     * If no head or no tail for a process are built from new partition, these two limits are set to UINT_MAX. The same for serial runs.
-     * If PABLO is serial when this method is called these two limits have the same meaning but no octants will be really sent to other processes.
-     * WARNING: these information are valid until the call to the analogous loadbalance method if no modification have been done on the grid and on the weights in case.
-     * \param[in] weight Pointer to a vector of weights of the local octants (weight=NULL is uniform distribution).
-     * \return An array containing the two pairs (headBegin, headEnd) and
-     * (tailBegin, tailEnd) of the octants ids that will be sent to other
-     * processors
+    /**
+     * Evaluate the elements of the current partition that will be sent to
+     * other processors after the load balance.
+     *
+     * The families of octants of a desired level are retained compact on the
+     * same process.
+     *
+     * \param[in] level is the level of the families that will be retained
+     * compact on the same process
+     * \param[in] weights are the weights of the local octants (if a null
+     * pointer is given a uniform distribution is used)
+     * \return The range of local ids that will be sent to other processors.
      */
-    std::array<uint32_t, 4> limits;
-    ParaTree::virtualLoadBalance(uint8_t level, dvector * weight){
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceSendRanges(uint8_t level, dvector *weights){
 
-        std::array<uint32_t, 4> limits;
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
 
-        // Early return if the tree is serial
+        // If there is only one processor no octants can be sent
         if (m_nproc == 1) {
-            limits[0] = 0;
-            limits[1] = limits[0];
-            limits[2] = getNumOctants();
-            limits[3] = limits[2];
-
-            return limits;
+            return sendRanges;
         }
 
-        // Compute partition
-        std::vector<uint32_t> partition(m_nproc);
-        computePartition(partition.data(), level, weight);
+        // Compute updated partition
+        std::vector<uint32_t> updatedPartition(m_nproc);
+        computePartition(updatedPartition.data(), level, weights);
 
-        // Execute virtual load balance
-        limits = privateVirtualLoadBalance(partition);
+        // Evaluate send ranges
+        return evalLoadBalanceSendRanges(updatedPartition.data());
+    }
 
-        return limits;
+    /**
+     * Evaluate the elements of the current partition that will be sent to
+     * other processors after the load balance.
+     *
+     * \param[in] updatePartition is the pointer to the updated pattition
+     * \return The range of local ids that will be sent to other processors.
+     */
+    std::unordered_map<int, std::array<uint32_t, 2>>
+    ParaTree::evalLoadBalanceSendRanges(const uint32_t *updatedPartition){
+
+        std::unordered_map<int, std::array<uint32_t, 2>> sendRanges;
+
+        // If there is only one processor no octants can be sent
+        if (m_nproc == 1) {
+            return sendRanges;
+        }
+
+        // Compute current partition schema
+        std::vector<uint32_t> currentPartition(m_nproc, 0);
+        if (!m_serial) {
+            currentPartition[0] = m_partitionRangeGlobalIdx[0] + 1;
+            for (int i = 1; i < m_nproc; ++i) {
+                currentPartition[i] = m_partitionRangeGlobalIdx[i] - m_partitionRangeGlobalIdx[i - 1];
+            }
+        } else {
+            currentPartition[m_rank] = getNumOctants();
+        }
+
+        // Get the intersections
+        std::unordered_map<int, std::array<uint64_t, 2>> globalIntersections = evalPartitionIntersections(currentPartition.data(), m_rank, updatedPartition);
+
+        // Evaluate the send local indexes
+        uint64_t offset = 0;
+        for (int i = 0; i < m_rank; ++i) {
+            offset = currentPartition[i];
+        }
+
+        for (const auto &intersectionEntry : globalIntersections) {
+            int rank = intersectionEntry.first;
+            if (rank == m_rank) {
+                continue;
+            }
+
+            const std::array<uint64_t, 2> &intersection = intersectionEntry.second;
+
+            std::array<uint32_t, 2> &sendRange = sendRanges[rank];
+            sendRange[0] = intersection[0] - offset;
+            sendRange[1] = intersection[1] - offset;
+        }
+
+        return sendRanges;
+    }
+
+    /**
+     * Compute the intersections of the specified partition defined whithin
+     * the partition schema A with all the partitions defined whithin the
+     * partition schema B.
+     *
+     * Intersections are evaluated in global indexes.
+     *
+     * \param[in] partition_A are the number of octants contained in each
+     * partition of the partition schema A
+     * \param[in] rank_A is the rank associated to the partition for which the
+     * intersections will be evaluated
+     * \param[in] partition_B are the number of octants contained in each
+     * partition of the partition schema B
+     * \result The intersections of the specified partition defined whithin
+     * the partition schema A with all the partitions defined whithin the
+     * partition schema B.
+     */
+    std::unordered_map<int, std::array<uint64_t, 2>>
+    ParaTree::evalPartitionIntersections(const uint32_t *partition_A, int rank_A, const uint32_t *partition_B){
+
+        std::unordered_map<int, std::array<uint64_t, 2>> intersections;
+
+        // If the partition is empty there are no intersections.
+        if (partition_A[rank_A] == 0) {
+            return intersections;
+        }
+
+        // Calculate partition offsets
+        std::vector<uint64_t> offsets_A(m_nproc + 1, 0);
+        std::vector<uint64_t> offsets_B(m_nproc + 1, 0);
+        for (int i = 0; i < m_nproc; ++i) {
+            offsets_A[i + 1] = offsets_A[i] + partition_A[i];
+            offsets_B[i + 1] = offsets_B[i] + partition_B[i];
+        }
+
+        uint64_t beginGlobalId_A = offsets_A[m_rank];
+        uint64_t endGlobalId_A   = offsets_A[m_rank + 1];
+
+        auto firstRankItr = std::upper_bound(offsets_B.begin(), offsets_B.end(), beginGlobalId_A);
+        assert(firstRankItr != offsets_B.begin());
+        firstRankItr--;
+
+        for (auto itr = firstRankItr; itr != offsets_B.end(); ++itr) {
+            int rank_B = std::distance(offsets_B.begin(), itr);
+            uint64_t beginGlobalId_B = offsets_B[rank_B];
+            uint64_t endGlobalId_B   = offsets_B[rank_B + 1];
+
+            std::array<uint64_t, 2> &intersection = intersections[rank_B];
+            intersection[0] = std::max(beginGlobalId_A, beginGlobalId_B);
+            intersection[1] = std::min(endGlobalId_A, endGlobalId_B);
+
+            if (endGlobalId_B >= endGlobalId_A) {
+                break;
+            }
+        }
+
+        return intersections;
     }
 
     /** Distribute Load-Balancing the octants of the whole tree over
@@ -3857,7 +3955,8 @@ namespace bitpit {
     void
     ParaTree::privateLoadBalance(uint32_t* partition){
 
-        m_sentIdx.clear();
+        m_sentIdx = evalLoadBalanceSendRanges(partition);
+
         std::array<uint32_t,4> limits = {{0,0,0,0}};
 
         if(m_serial)
@@ -3880,7 +3979,6 @@ namespace bitpit {
                 limits[2] = limits[1] + partition[m_rank];
                 limits[3] = m_octree.m_octants.size();
                 std::pair<int,std::array<uint32_t,4> > procLimits(m_rank,limits);
-                m_sentIdx.insert(procLimits);
 
                 m_octree.m_octants.assign(first, last);
                 octvector(m_octree.m_octants).swap(m_octree.m_octants);
@@ -3996,7 +4094,6 @@ namespace bitpit {
                             limits[0] = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1);
                             limits[1] = (uint32_t)lh + 1;
                             std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
-                            m_sentIdx.insert(procLimits);
 
                             for(uint32_t i = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1); i <= (uint32_t)lh; ++i){
                                 //PACK octants from 0 to lh in sendBuffer[p]
@@ -4034,7 +4131,6 @@ namespace bitpit {
                             limits[0] = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1);
                             limits[1] = (uint32_t)lh + 1;
                             std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
-                            m_sentIdx.insert(procLimits);
 
                             for(uint32_t i = (uint32_t)(lh - nofElementsFromSuccessiveToPrevious + 1); i <= (uint32_t)lh; ++i){
                                 //pack octants from lh - partition[p] to lh
@@ -4081,7 +4177,6 @@ namespace bitpit {
                             limits[0] = ft;
                             limits[1] = ft + nofElementsFromPreviousToSuccessive;
                             std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
-                            m_sentIdx.insert(procLimits);
 
                             for(uint32_t i = ft; i < ft + nofElementsFromPreviousToSuccessive; ++i){
                                 //PACK octants from ft to octantsSize-1
@@ -4119,7 +4214,6 @@ namespace bitpit {
                             limits[0] = ft;
                             limits[1] = endOctants + 1;
                             std::pair<int,std::array<uint32_t,4> > procLimits(p,limits);
-                            m_sentIdx.insert(procLimits);
 
                             for(uint32_t i = ft; i <= endOctants; ++i ){
                                 //PACK octants from ft to ft + partition[p] -1
@@ -4281,45 +4375,6 @@ namespace bitpit {
                 setPboundGhosts();
             }
     };
-
-    /** Given a partition, evaluate the end of the head section and the beginning of the tail section of octants vector (with user defined weights) used during the load balance.
-     * The families of octants of a desired level are retained compact on the same process.
-     * The head will be sent to predecessor processes during loadBalance, while the tail will be sent to the successor processes.
-     * If no head or no tail for a process are built from new partition, these two limits are set to UINT_MAX. The same for serial runs.
-     * If PABLO is serial when this method is called these two limits have the same meaning but no octants will be really sent to other processes.
-     * ATTENTION: these information are valid until the call to the analogous loadbalance method if no modification have been done on the grid and on the weights in case.
-     * \param[in] weight Pointer to a vector of weights of the local octants (weight=NULL is uniform distribution).
-     * \return An array containing the two pairs (headBegin, headEnd) and
-     * (tailBegin, tailEnd) of the octants ids that will be sent to other
-     * processors
-     */
-    std::array<uint32_t, 4>
-    ParaTree::privateVirtualLoadBalance(uint32_t *partition){
-
-        uint32_t nOctants = getNumOctants();
-
-        // Resident octant begin and end
-        int32_t beginResidentId = 0;
-        if (!m_serial && m_rank > 0) {
-            beginResidentId -= m_partitionRangeGlobalIdx[m_rank - 1];
-        }
-
-        for (int i = 0; i < m_rank - 1; ++i) {
-            beginResidentId += partition[i];
-        }
-
-        int32_t endResidentId = beginResidentId + partition[m_rank];
-
-        // Build head and tail that will be sent to other processors
-        std::array<uint32_t, 4> limits;
-        limits[0] = 0;
-        limits[1] = std::min(std::max(beginResidentId, 0), nOctants);
-        limits[2] = std::min(std::max(endResidentId, 0), nOctants);
-        limits[3] = nOctants;
-
-        return limits;
-    }
-
 #endif
 
     /*! Get the size of an octant corresponding to a target level.
