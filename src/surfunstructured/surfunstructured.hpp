@@ -64,7 +64,7 @@ public:
         unsigned short exportDGF(const std::string &);
 
 protected:
-	SurfUnstructured(const SurfUnstructured &other) = default;
+	SurfUnstructured(const SurfUnstructured &) = default;
 
 	int _getDumpVersion() const;
 	void _dump(std::ostream &stream);

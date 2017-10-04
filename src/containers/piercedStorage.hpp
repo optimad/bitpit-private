@@ -258,7 +258,7 @@ public:
     PiercedStorage(const PiercedStorage<value_t, id_t> &x, const PiercedKernel<id_t> *kernel);
     PiercedStorage(const PiercedStorage<value_t, id_t> &x, PiercedKernel<id_t> *kernel, PiercedSyncMaster::SyncMode syncMode);
     PiercedStorage(const PiercedStorage<value_t, id_t> &x);
-    PiercedStorage(PiercedStorage<value_t, id_t> &&x) = default;
+    PiercedStorage(PiercedStorage<value_t, id_t> &&) = default;
 
     ~PiercedStorage();
 

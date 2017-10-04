@@ -67,7 +67,7 @@ class LevelSet{
     ~LevelSet() ;
     LevelSet() ;
 
-    LevelSet(LevelSet&& other) = default;
+    LevelSet(LevelSet&& ) = default;
     void                    clear();
 
     void                    setMesh( VolumeKernel* ) ;

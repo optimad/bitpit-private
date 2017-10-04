@@ -90,9 +90,9 @@ public:
 	Element(long id, ElementType type, std::unique_ptr<long[]> &&connectStorage);
 
 	Element(const Element &other);
-	Element(Element&& other) = default;
+	Element(Element&&) = default;
 	Element& operator = (const Element &other);
-	Element& operator=(Element&& other) = default;
+	Element& operator=(Element&&) = default;
 
 	void swap(Element &other) noexcept;
 

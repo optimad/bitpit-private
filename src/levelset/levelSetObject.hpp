@@ -49,7 +49,7 @@ class LevelSetObject{
     int                                         m_id;           /**< identifier of object */
 
     protected:
-    LevelSetObject(const LevelSetObject &other) = default;
+    LevelSetObject(const LevelSetObject &) = default;
 
     LevelSetKernel*                             m_kernelPtr;    /**< pointer to kernel */
     double                                      m_narrowBand;   /**< Size of narrow band */

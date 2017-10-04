@@ -71,8 +71,8 @@ public:
     FlatVector2D(const std::vector<int> &sizes, const T &value = T());
     FlatVector2D(const int &nVectors, const int &size, const T &value = T());
     FlatVector2D(const std::vector<std::vector<T> > &vector2D);
-    FlatVector2D(const FlatVector2D &other) = default;
-    FlatVector2D(FlatVector2D &&other) = default;
+    FlatVector2D(const FlatVector2D &) = default;
+    FlatVector2D(FlatVector2D &&) = default;
 
     /*!
         Copy assignment operator.
@@ -80,7 +80,7 @@ public:
         Assigns new contents to the container, replacing its current contents,
         and modifying its size accordingly.
     */
-    FlatVector2D & operator=(const FlatVector2D &other) = default;
+    FlatVector2D & operator=(const FlatVector2D &) = default;
 
     /*!
         Move assignment operator.
@@ -88,7 +88,7 @@ public:
         The move assignment operator "steals" the resources held by the
         argument.
     */
-    FlatVector2D & operator=(FlatVector2D &&other) = default;
+    FlatVector2D & operator=(FlatVector2D &&) = default;
 
     void initialize(const std::vector<int> &sizes, const T &value = T());
     void initialize(const int &nVectors, const int &size, const T &value = T());

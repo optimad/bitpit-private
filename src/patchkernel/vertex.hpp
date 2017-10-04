@@ -55,10 +55,10 @@ public:
 	Vertex(const long &id);
 	Vertex(const long &id, const std::array<double, 3> &coords);
 
-	Vertex(const Vertex &other) = default;
-	Vertex(Vertex &&other) = default;
-	Vertex& operator = (const Vertex &other) = default;
-	Vertex& operator=(Vertex &&other) = default;
+	Vertex(const Vertex &) = default;
+	Vertex(Vertex &&) = default;
+	Vertex& operator = (const Vertex &) = default;
+	Vertex& operator=(Vertex &&) = default;
 
 	void swap(Vertex &other) noexcept;
 

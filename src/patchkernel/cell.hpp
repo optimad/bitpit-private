@@ -57,10 +57,10 @@ public:
 	Cell(const long &id, ElementType type, std::unique_ptr<long[]> &&connectStorage,
 	     bool interior = true, bool storeNeighbourhood = true);
 
-	Cell(const Cell &other) = default;
-	Cell(Cell&& other) = default;
-	Cell& operator = (const Cell &other) = default;
-	Cell& operator=(Cell&& other) = default;
+	Cell(const Cell &) = default;
+	Cell(Cell&&) = default;
+	Cell& operator = (const Cell &) = default;
+	Cell& operator=(Cell&&) = default;
 
 	void swap(Cell &other) noexcept;
 

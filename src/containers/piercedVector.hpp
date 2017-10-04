@@ -114,7 +114,7 @@ public:
     PiercedVector();
     PiercedVector(std::size_t n);
     PiercedVector(const PiercedVector<value_t, id_t> &x);
-    PiercedVector(PiercedVector<value_t, id_t> &&x) = default;
+    PiercedVector(PiercedVector<value_t, id_t> &&) = default;
     PiercedVector<value_t, id_t> & operator=(PiercedVector<value_t, id_t> x);
 
     // Methods that modify the contents of the container

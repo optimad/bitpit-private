@@ -128,7 +128,7 @@ public:
 	bool isVertexCartesianIdValid(const std::array<int, 3> &ijk) const;
 
 protected:
-	VolCartesian(const VolCartesian &other) = default;
+	VolCartesian(const VolCartesian &) = default;
 
 	std::vector<adaption::Info> _spawn(bool trackSpawn);
 

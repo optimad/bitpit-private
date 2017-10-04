@@ -194,7 +194,7 @@ public:
         The move assignment operator "steals" the resources held by the
         argument.
     */
-    ProxyVector & operator=(ProxyVector &&other) = default;
+    ProxyVector & operator=(ProxyVector &&) = default;
 
     ProxyVector & operator=(const ProxyVector &other);
 

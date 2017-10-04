@@ -57,7 +57,7 @@ public:
 	long locatePoint(const std::array<double, 3> &point);
 
 protected:
-	VolUnstructured(const VolUnstructured &other) = default;
+	VolUnstructured(const VolUnstructured &) = default;
 
 	int _getDumpVersion() const;
 	void _dump(std::ostream &stream);

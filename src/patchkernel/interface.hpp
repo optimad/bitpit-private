@@ -42,10 +42,10 @@ public:
 	Interface(const long &id, ElementType type = ElementType::UNDEFINED, int connectSize = 0);
 	Interface(const long &id, ElementType type, std::unique_ptr<long[]> &&connectStorage);
 
-	Interface(const Interface &other) = default;
-	Interface(Interface&& other) = default;
-	Interface& operator = (const Interface &other) = default;
-	Interface& operator=(Interface&& other) = default;
+	Interface(const Interface &) = default;
+	Interface(Interface&&) = default;
+	Interface& operator = (const Interface &) = default;
+	Interface& operator=(Interface&&) = default;
 
 	void swap(Interface &other) noexcept;
 
