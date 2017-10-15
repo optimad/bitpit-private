@@ -33,12 +33,14 @@
  * @defgroup lamanipulation Manipulation
  * @defgroup lamultiplication Multiplication
  * @defgroup lainfo Info
- * @defgroup lasolve Solve
+ * @defgroup system_solver_small System Solvers (Small Systems)
  * @}
  */
 
 #include "bitpit_version.hpp"
 
 #include "LinearAlgebra.hpp"
+#include "system_solvers_small.tpp"
+
 
 #endif
