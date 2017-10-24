@@ -90,6 +90,8 @@ void read(std::istream &stream, T *value, size_t size);
 
 void read(std::istream &stream, std::string &string);
 
+void read(std::istream &stream, std::array<std::string,3> &string);
+
 }
 
 }
