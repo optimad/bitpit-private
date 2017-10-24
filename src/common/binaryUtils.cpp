@@ -1,25 +1,25 @@
 /*---------------------------------------------------------------------------*\
-*
-*  bitpit
-*
-*  Copyright (C) 2015-2017 OPTIMAD engineering Srl
-*
-*  -------------------------------------------------------------------------
-*  License
-*  This file is part of bitpit.
-*
-*  bitpit is free software: you can redistribute it and/or modify it
-*  under the terms of the GNU Lesser General Public License v3 (LGPL)
-*  as published by the Free Software Foundation.
-*
-*  bitpit is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-*  License for more details.
-*
-*  You should have received a copy of the GNU Lesser General Public License
-*  along with bitpit. If not, see <http://www.gnu.org/licenses/>.
-*
+ *
+ *  bitpit
+ *
+ *  Copyright (C) 2015-2017 OPTIMAD engineering Srl
+ *
+ *  -------------------------------------------------------------------------
+ *  License
+ *  This file is part of bitpit.
+ *
+ *  bitpit is free software: you can redistribute it and/or modify it
+ *  under the terms of the GNU Lesser General Public License v3 (LGPL)
+ *  as published by the Free Software Foundation.
+ *
+ *  bitpit is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
+ *  License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with bitpit. If not, see <http://www.gnu.org/licenses/>.
+ *
 \*---------------------------------------------------------------------------*/
 
 #include "binaryUtils.hpp"
@@ -35,7 +35,7 @@ namespace binary {
 
     \param stream is the stream to write to
     \param container is the container to write
-*/
+ */
 template<>
 void write(std::ostream &stream, const std::vector<bool> &container)
 {
@@ -47,7 +47,7 @@ void write(std::ostream &stream, const std::vector<bool> &container)
 
     \param stream is the stream to write to
     \param string is the string to write
-*/
+ */
 void write(std::ostream &stream, const std::string &string)
 {
     size_t size = string.length() + 1;
@@ -60,7 +60,7 @@ void write(std::ostream &stream, const std::string &string)
 
     \param stream is the stream to write to
     \param container is the container to write
-*/
+ */
 template<>
 void read(std::istream &stream, std::vector<bool> &container)
 {
@@ -72,7 +72,7 @@ void read(std::istream &stream, std::vector<bool> &container)
 
     \param stream is the stream to read from
     \param[out] string on output it will contain the read string
-*/
+ */
 void read(std::istream &stream, std::string &string)
 {
     size_t size;
@@ -81,6 +81,24 @@ void read(std::istream &stream, std::string &string)
     read(stream, cstring, size);
     string = cstring;
     delete[] cstring;
+}
+
+/*!
+    Read the given array of strings to the specified stream in binary format.
+
+    \param stream is the stream to read from
+    \param[out] std::array<string,3> on output it will contain the read strings
+ */
+void read(std::istream &stream, std::array<std::string,3> &string)
+{
+    for (int i=0; i<3; i++){
+        size_t size;
+        read(stream, size);
+        char * cstring = new char [size];
+        read(stream, cstring, size);
+        string[i] = cstring;
+        delete[] cstring;
+    }
 }
 
 }
