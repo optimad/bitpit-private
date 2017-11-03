@@ -125,7 +125,7 @@ void Discretizer::solve()
 
     // Subtract constant terms to the RHS
     long nUnknowns = m_matrix.getRowCount();
-    PetscScalar *raw_rhs = getRHSRawPtr();
+    double *raw_rhs = getRHSRawPtr();
     for (int i = 0; i < nUnknowns; ++i) {
         raw_rhs[i] -= m_constants[i];
     }

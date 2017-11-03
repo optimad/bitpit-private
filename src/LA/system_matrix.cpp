@@ -118,9 +118,13 @@ void SparseMatrix::_initialize(long nRows, long nCols, long nMaximumNZ)
     assert(nCols >= 0);
     assert(nMaximumNZ >= 0);
 
+    clear();
+
     m_pattern.reserve(nRows, nMaximumNZ);
     m_values.reserve(nMaximumNZ);
 
+    m_nRows = nRows;
+    m_nCols = nCols;
 #if BITPIT_ENABLE_MPI == 1
     MPI_Allreduce(&m_nRows, &m_global_nRows, 1, MPI_LONG, MPI_SUM, m_communicator);
     MPI_Allreduce(&m_nCols, &m_global_nCols, 1, MPI_LONG, MPI_SUM, m_communicator);
@@ -211,6 +215,8 @@ bool SparseMatrix::isInitialized() const
 */
 bool SparseMatrix::isFinalized() const
 {
+    std::cout << " SS " << m_lastRow  << std::endl;
+    std::cout << " SS " << m_nRows << std::endl;
     return (m_lastRow >= (m_nRows - 1));
 }
 
