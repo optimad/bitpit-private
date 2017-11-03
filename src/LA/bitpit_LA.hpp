@@ -34,6 +34,7 @@
  * @defgroup lamultiplication Multiplication
  * @defgroup lainfo Info
  * @defgroup system_solver_small System Solvers (Small Systems)
+ * @defgroup system_solver_large System Solvers (Large Systems)
  * @}
  */
 
@@ -41,6 +42,6 @@
 
 #include "LinearAlgebra.hpp"
 #include "system_solvers_small.tpp"
-
+#include "system_solvers_large.hpp"
 
 #endif
