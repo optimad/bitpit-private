@@ -341,7 +341,7 @@ set(VOLCARTESIAN_DEPS "common;patchkernel")
 set(VOLOCTREE_DEPS "common;PABLO;patchkernel")
 set(VOLUNSTRUCTURED_DEPS "common;patchkernel")
 set(RBF_DEPS "operators;IO;SA")
-set(DISCRETIZATION_DEPS "common;containers;LA")
+set(DISCRETIZATION_DEPS "common;containers;LA;patchkernel")
 set(LEVELSET_DEPS "common;communications;SA;CG;surfunstructured;voloctree;volcartesian")
 set(POD_DEPS "IO;common;containers;voloctree")
 
