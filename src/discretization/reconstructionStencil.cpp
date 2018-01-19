@@ -44,7 +44,7 @@ ReconstructionStencil::ReconstructionStencil(const std::array<double,3> &centre,
     : m_centre(centre), m_order(order), m_dim(dim)
 {
     assert(m_order==0 || m_order==1 || m_order==2);
-    assert(m_dim==2 || m_dim==3);
+    assert(m_dim==1 || m_dim==2 || m_dim==3);
 
 }
 
@@ -265,7 +265,28 @@ std::vector<double> ReconstructionStencil::getPointValueEquation(const std::arra
 
     std::array<double,3> dist = point - m_centre;
 
-    if(m_dim==2){
+    if(m_dim==1){
+
+        for(int i=0; i<nCoeff; ++i){
+
+            switch (i){
+                case 0: // p_0
+                    coeff[i] = 1.;
+                    break;
+
+                case 1: // p_x
+                    coeff[i] = dist[0];
+                    break;
+
+                case 2: // p_xx
+                    coeff[i] = 0.5 *dist[0]*dist[0];
+                    break;
+            }
+
+        }
+
+
+    } else if(m_dim==2){
 
         for(int i=0; i<nCoeff; ++i){
 
@@ -340,7 +361,27 @@ std::vector<double> ReconstructionStencil::getPointDerivativeEquation(const std:
 
     std::array<double,3> dist = point - m_centre;
 
-    if(m_dim==2){
+    if(m_dim==1){
+
+        for(int i=0; i<nCoeff; ++i){
+
+            switch (i){
+                case 0: // p_0
+                    coeff[i] = 0;
+                    break;
+
+                case 1: // p_x
+                    coeff[i] = 1;
+                    break;
+
+                case 2: // p_xx
+                    coeff[i] = dist[0];
+                    break;
+            }
+
+        }
+
+    } else if(m_dim==2){
 
         for(int i=0; i<nCoeff; ++i){
 
@@ -416,7 +457,27 @@ std::vector<double> ReconstructionStencil::getCellAverageEquation( const std::ar
 
     std::array<double,3> dist = cellCentre - m_centre;
 
-    if(m_dim==2){
+    if(m_dim==1){
+
+        for(int i=0; i<nCoeff; ++i){
+
+            switch (i){
+                case 0: // p_0
+                    coeff[i] = 1;
+                    break;
+
+                case 1: // p_x
+                    coeff[i] = dist[0];
+                    break;
+
+                case 2: // p_xx
+                    coeff[i] = 0.5 *(dist[0]*dist[0] +cellSize*cellSize/12.);
+                    break;
+            }
+
+        }
+
+    } else if(m_dim==2){
 
         for(int i=0; i<nCoeff; ++i){
 
@@ -499,7 +560,24 @@ int ReconstructionStencil::getCoefficientCount() const
 int ReconstructionStencil::getIndexFromCoefficient( const ReconstructionStencil::Coefficient &coeff) const
 {
 
-    if(m_dim==2){
+    if(m_dim==1){
+
+        switch (coeff){
+            case P_0: 
+                return 0;
+                break;
+
+            case P_X: 
+                return 1;
+                break;
+
+            case P_XX: 
+                return 2;
+                break;
+
+        }
+
+    } else if(m_dim==2){
 
         switch (coeff){
             case P_0: 
@@ -581,7 +659,23 @@ int ReconstructionStencil::getIndexFromCoefficient( const ReconstructionStencil:
   */
 ReconstructionStencil::Coefficient ReconstructionStencil::getCoefficientFromIndex( int i ) const
 {
-    if(m_dim==2){
+    if(m_dim==1){
+
+        switch (i){
+            case 0: 
+                return ReconstructionStencil::Coefficient::P_0;
+                break;
+
+            case 1: 
+                return ReconstructionStencil::Coefficient::P_X;
+                break;
+
+            case 2: 
+                return ReconstructionStencil::Coefficient::P_XX;
+                break;
+        }
+
+    } else if(m_dim==2){
 
         switch (i){
             case 0: 

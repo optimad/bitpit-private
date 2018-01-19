@@ -233,6 +233,48 @@ int subtest_002()
 }
 
 /*!
+* Subtest 003
+*
+* Testing computation of reconstruction polynomials in 1D configuration
+*/
+int subtest_003()
+{
+    int dim = 1;
+    double h = 1.;
+    std::array<double,3> centre = {{0.,0.,0.}};
+
+    { // test costant reconstruction stencil
+        log::cout() << "Testing 1D stretched mesh, quadratic, with cell values " << std::endl;
+        std::vector<ReconstructionStencil::Condition> equations(3);
+
+        equations[0].id = 0;
+        equations[0].size = h;
+        equations[0].coordinate = {{0.,0.,0.}};
+        equations[0].data = ReconstructionStencil::ReconstructionData::CELL_VALUE;
+        equations[0].type = ReconstructionStencil::ReconstructionType::CONSTRAINT;
+
+        equations[1].id = 1;
+        equations[1].size = h;
+        equations[1].coordinate = {{-h,0.,0.}};
+        equations[1].data = ReconstructionStencil::ReconstructionData::CELL_VALUE;
+        equations[1].type = ReconstructionStencil::ReconstructionType::MINIMIZE;
+
+        equations[2].id = 2;
+        equations[2].size = h;
+        equations[2].coordinate = {{h,0.,0.}};
+        equations[2].data = ReconstructionStencil::ReconstructionData::CELL_VALUE;
+        equations[2].type = ReconstructionStencil::ReconstructionType::MINIMIZE;
+
+        ReconstructionStencil stencil(centre,2,dim);
+        stencil.compute(equations);
+
+        stencil.display( log::cout() );
+    }
+
+
+    return 0;
+}
+/*!
  * Main program.
  */
 int main(int argc, char *argv[])
@@ -263,6 +305,16 @@ int main(int argc, char *argv[])
 
     try {
         status = subtest_002();
+        if (status != 0) {
+            return status;
+        }
+    } catch (const std::exception &exception) {
+        log::cout() << exception.what();
+        exit(1);
+    }
+
+    try {
+        status = subtest_003();
         if (status != 0) {
             return status;
         }
