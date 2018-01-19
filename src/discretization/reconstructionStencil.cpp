@@ -168,9 +168,8 @@ void  ReconstructionStencil::compute(const std::vector<Condition> &equations)
     // Since we are interested only in x (the polynomial coefficients)
     // only the first nCoeff rows of the matrix S^-1 T are computed.
     // The stencil are stored according the stored pivoting.
+    m_coefficientWeights.resize(nCoeff*nEquations);
     for( int i=0; i<nCoeff; ++i ) {
-
-        std::vector<double> weights(nEquations);
 
         for( int j=0; j<nEquations; ++j) {
 
@@ -188,13 +187,8 @@ void  ReconstructionStencil::compute(const std::vector<Condition> &equations)
 
             }
 
-            weights[ pivot[j] ] = value;
+            m_coefficientWeights[ linearIndexColMajor(i,pivot[j],nCoeff,nEquations) ] = value;
         }
-
-        Coefficient coeff = getCoefficientFromIndex(i);
-        int index = static_cast<int>(coeff);
-
-        m_coefficientWeights[index] = weights;
     }
 }
 
@@ -205,13 +199,22 @@ void  ReconstructionStencil::compute(const std::vector<Condition> &equations)
   */
 std::vector<double> ReconstructionStencil::getWeights( const Coefficient &coeff) const
 {
-    int index = static_cast<int>(coeff);
-    std::vector<double> weights(m_pattern.size(),0);
+    int nEquations(m_pattern.size());
+    std::vector<double> weights(nEquations,0);
 
-    std::unordered_map<int,std::vector<double>>::const_iterator weightItr = m_coefficientWeights.find(index);
+    if( m_dim < getCoefficientMinimumDimension(coeff)) {
+        return weights;
+    }
 
-    if( weightItr != m_coefficientWeights.end() ){
-        weights = weightItr->second;
+    if( m_order < getCoefficientMinimumOrder(coeff) ){
+        return weights;
+    }
+
+    int i=getIndexFromCoefficient(coeff);
+    int nCoeff = getCoefficientCount();
+
+    for( int j=0; j<nEquations; ++j){
+        weights[j] = m_coefficientWeights[ linearIndexColMajor(i,j,nCoeff,nEquations) ];
     }
 
     return weights;
@@ -224,57 +227,12 @@ std::vector<double> ReconstructionStencil::getWeights( const Coefficient &coeff)
 void ReconstructionStencil::display( std::ostream &str, double tollerance) const
 {
 
-    // display all coefficients
-    std::unordered_map<int,std::vector<double>>::const_iterator coeffItr;
+    for( int index = 0; index < getCoefficientCount(); ++index){
 
-    for( coeffItr = m_coefficientWeights.begin(); coeffItr!=m_coefficientWeights.end() ; ++coeffItr ){
-        const int &index = coeffItr->first;
+        str << getCoefficientFromIndex(index) << " ";
 
-        switch(index){
-            case 0:
-                str << " P_0  ";
-                break;
-
-            case 1:
-                str << " P_X  ";
-                break;
-
-            case 2:
-                str << " P_Y  ";
-                break;
-
-            case 3:
-                str << " P_Z  ";
-                break;
-
-            case 4:
-                str << " P_XX ";
-                break;
-
-            case 5:
-                str << " P_YY ";
-                break;
-
-            case 6:
-                str << " P_ZZ ";
-                break;
-
-            case 7:
-                str << " P_XY ";
-                break;
-
-            case 8:
-                str << " P_XZ ";
-                break;
-
-            case 9:
-                str << " P_YZ ";
-                break;
-
-        }
-
-        const std::vector<double> &weights = coeffItr->second;
-        std::vector<double>::const_iterator weightItr = weights.begin(); 
+        std::vector<double> weights = getWeights( getCoefficientFromIndex(index));
+        std::vector<double>::iterator weightItr = weights.begin(); 
 
         size_t cellCount = m_pattern.size();
         std::vector<long>::const_iterator cellItr = m_pattern.begin(); 
@@ -535,6 +493,87 @@ int ReconstructionStencil::getCoefficientCount() const
 }
 
 /*!
+  Compute the number of coefficients of the polynom
+  \return number of coefficients
+  */
+int ReconstructionStencil::getIndexFromCoefficient( const ReconstructionStencil::Coefficient &coeff) const
+{
+
+    if(m_dim==2){
+
+        switch (coeff){
+            case P_0: 
+                return 0;
+                break;
+
+            case P_X: 
+                return 1;
+                break;
+
+            case P_Y: 
+                return 2;
+                break;
+
+            case P_XX: 
+                return 3;
+                break;
+
+            case P_YY: 
+                return 4;
+                break;
+
+            case P_XY:
+                return 5;
+                break;
+        }
+
+    } else if(m_dim==3){
+
+        switch (coeff){
+            case P_0: 
+                return 0;
+                break;
+
+            case P_X: 
+                return 1;
+                break;
+
+            case P_Y: 
+                return 2;
+                break;
+
+            case P_Z: 
+                return 3;
+                break;
+
+            case P_XX: 
+                return 4;
+                break;
+
+            case P_YY: 
+                return 5;
+                break;
+
+            case P_ZZ:
+                return 6;
+                break;
+
+            case P_XY:
+                return 7;
+                break;
+
+            case P_XZ:
+                return 8;
+                break;
+
+            case P_YZ:
+                return 9;
+                break;
+        }
+    }
+}
+
+/*!
   Transfors the index used for solving the least-squares system
   into the enum desctibing the coefficient 
   \param[in] i column index used for the least-squares problem
@@ -616,6 +655,43 @@ ReconstructionStencil::Coefficient ReconstructionStencil::getCoefficientFromInde
     }
 }
 
+int ReconstructionStencil::getCoefficientMinimumOrder( const Coefficient &coeff) const
+{
+    switch(coeff){
+        case P_0:
+            return 0;
+            break;
+
+        case P_X: case P_Y: case P_Z:
+            return 1;
+            break;
+
+        case P_XX: case P_YY: case P_ZZ: case P_XY: case P_XZ: case P_YZ:
+            return 2;
+            break;
+    }
+}
+
+int ReconstructionStencil::getCoefficientMinimumDimension( const Coefficient &coeff) const
+{
+    switch(coeff){
+        case P_0:
+            return 0;
+            break;
+
+        case P_X: case P_XX: 
+            return 1;
+            break;
+
+        case P_Y: case P_YY: case P_XY:
+            return 2;
+            break;
+
+        case P_Z: case P_ZZ: case P_XZ: case P_YZ:
+            return 3;
+            break;
+    }
+}
 /*!
   Computes the factorial of an integer
   \param[in] x integer
@@ -637,7 +713,7 @@ int ReconstructionStencil::factorial(int x) const
  */
 int ReconstructionStencil::linearIndexColMajor(int rowIndex, int colIndex, int rows, int columns) const
 {
-    return rowIndex +colIndex*columns; 
+    return rowIndex +colIndex*rows; 
 }
 
 /*!
@@ -651,7 +727,7 @@ int ReconstructionStencil::linearIndexColMajor(int rowIndex, int colIndex, int r
  */
 int ReconstructionStencil::linearIndexRowMajor(int rowIndex, int colIndex, int rows, int columns) const
 {
-    return rowIndex*rows +colIndex; 
+    return rowIndex*columns +colIndex; 
 }
 
 /*!
@@ -780,5 +856,48 @@ void ReconstructionStencil::displayRowMajorSymmetric( std::ostream &out, double*
     }
 }
 
+std::ostream& operator<<(std::ostream &out, const ReconstructionStencil::Coefficient &coeff){
+    switch (coeff){
+        case ReconstructionStencil::Coefficient::P_0: 
+            out << "P_0";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_X: 
+            out << "P_X";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_Y: 
+            out << "P_Y";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_Z: 
+            out << "P_Z";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_XX: 
+            out << "P_XX";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_YY: 
+            out << "P_YY";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_ZZ:
+            out << "P_ZZ";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_XY:
+            out << "P_XY";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_XZ:
+            out << "P_XZ";
+            break;
+
+        case ReconstructionStencil::Coefficient::P_YZ:
+            out << "P_YZ";
+            break;
+    }
+}
 
 }

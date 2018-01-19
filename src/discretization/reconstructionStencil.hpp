@@ -83,14 +83,17 @@ private:
     int m_dim; 
     std::array<double,3> m_centre;
     std::vector<long> m_pattern;
-    std::unordered_map<int,std::vector<double>> m_coefficientWeights;
+    std::vector<double> m_coefficientWeights;
 
     std::vector<double> getPointValueEquation( const std::array<double,3> &point) const ;
     std::vector<double> getPointDerivativeEquation( const std::array<double,3> &point, const std::array<double,3> &direction) const ;
     std::vector<double> getCellAverageEquation( const std::array<double,3> &cellCentre, double cellSize) const;
 
     int getCoefficientCount() const;
+    int getIndexFromCoefficient( const Coefficient &coeff) const;
     Coefficient getCoefficientFromIndex(int i) const;
+    int getCoefficientMinimumOrder( const Coefficient &coeff) const;
+    int getCoefficientMinimumDimension( const Coefficient &coeff) const;
 
     int factorial(int x) const;
     int linearIndexColMajor(int rowIndex, int colIndex, int rows, int columns) const;
@@ -102,6 +105,8 @@ private:
     void displayColMajorSymmetric( std::ostream &out, double* A, int rows, int columns, char uplo) const;
     void displayRowMajorSymmetric( std::ostream &out, double* A, int rows, int columns, char uplo) const;
 };
+
+std::ostream& operator<<(std::ostream &out, const ReconstructionStencil::Coefficient &coefficient);
 
 }
 
