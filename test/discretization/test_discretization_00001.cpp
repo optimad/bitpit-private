@@ -250,25 +250,46 @@ int subtest_003()
         equations[0].id = 0;
         equations[0].size = h;
         equations[0].coordinate = {{0.,0.,0.}};
-        equations[0].data = ReconstructionStencil::ReconstructionData::CELL_VALUE;
+        equations[0].data = ReconstructionStencil::ReconstructionData::POINT_VALUE;
         equations[0].type = ReconstructionStencil::ReconstructionType::CONSTRAINT;
 
         equations[1].id = 1;
-        equations[1].size = h;
-        equations[1].coordinate = {{-h,0.,0.}};
-        equations[1].data = ReconstructionStencil::ReconstructionData::CELL_VALUE;
+        equations[1].size = 0.5*h;
+        equations[1].coordinate = {{-0.75*h,0.,0.}};
+        equations[1].data = ReconstructionStencil::ReconstructionData::POINT_VALUE;
         equations[1].type = ReconstructionStencil::ReconstructionType::MINIMIZE;
 
         equations[2].id = 2;
-        equations[2].size = h;
-        equations[2].coordinate = {{h,0.,0.}};
-        equations[2].data = ReconstructionStencil::ReconstructionData::CELL_VALUE;
+        equations[2].size = 2*h;
+        equations[2].coordinate = {{1.5*h,0.,0.}};
+        equations[2].data = ReconstructionStencil::ReconstructionData::POINT_VALUE;
         equations[2].type = ReconstructionStencil::ReconstructionType::MINIMIZE;
 
         ReconstructionStencil stencil(centre,2,dim);
         stencil.compute(equations);
-
         stencil.display( log::cout() );
+
+        std::vector<double> realCoeff(3);
+        std::vector<double> pointValues(3);
+        std::array<double,3> dist;
+
+        realCoeff[0] = 1.1;
+        realCoeff[1] = 2.2;
+        realCoeff[2] = 3.3;
+
+        dist = equations[0].coordinate - centre;
+        pointValues[0] = realCoeff[0] +realCoeff[1]*dist[0] +0.5*realCoeff[2]*dist[0]*dist[0]; 
+
+        dist = equations[1].coordinate - centre;
+        pointValues[1] = realCoeff[0] +realCoeff[1]*dist[0] +0.5*realCoeff[2]*dist[0]*dist[0]; 
+
+        dist = equations[2].coordinate - centre;
+        pointValues[2] = realCoeff[0] +realCoeff[1]*dist[0] +0.5*realCoeff[2]*dist[0]*dist[0]; 
+
+        std::vector<double> testCoeff = stencil.computeCoefficients(pointValues);
+
+        log::cout() << " imposed  polynomial " << realCoeff << std::endl;
+        log::cout() << " computed polynomial " << testCoeff << std::endl;
     }
 
 

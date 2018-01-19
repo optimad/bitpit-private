@@ -24,6 +24,7 @@
 
 #include <cassert>
 #include <limits>
+#include <cblas.h>
 
 #include "bitpit_private_lapacke.hpp"
 
@@ -190,6 +191,26 @@ void  ReconstructionStencil::compute(const std::vector<Condition> &equations)
             m_coefficientWeights[ linearIndexColMajor(i,pivot[j],nCoeff,nEquations) ] = value;
         }
     }
+}
+
+/*!
+   Computes the coefficients of the polynomial using the reconstruction values.
+   The values nedd to passed in the same order as the equations in compute().
+   \param[in] values the known terms of the linear equations 
+ */
+std::vector<double>  ReconstructionStencil::computeCoefficients(const std::vector<double> &values)
+{
+
+    int nCoeff = getCoefficientCount();
+    int nEquat = m_pattern.size();
+    std::vector<double> coefficients(getCoefficientCount());
+
+    // use Level2 (C)BLAS to compute matrix-vector product
+    cblas_dgemv( CBLAS_ORDER::CblasColMajor, CBLAS_TRANSPOSE::CblasNoTrans, 
+            nCoeff, nEquat, 1., m_coefficientWeights.data(), nCoeff, 
+            values.data(), 1, 0, coefficients.data(), 1);
+
+    return coefficients;
 }
 
 /*!
