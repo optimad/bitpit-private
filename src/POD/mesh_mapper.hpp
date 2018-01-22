@@ -36,9 +36,40 @@
 
 namespace bitpit {
 
-namespace mapping{
+namespace mapping
+{
 
-typedef adaption::Info Info;
+enum Type {
+    TYPE_UNKNOWN = 0,
+    TYPE_REFINEMENT,
+    TYPE_COARSENING,
+    TYPE_RENUMBERING
+};
+
+enum Entity {
+    ENTITY_UNKNOWN = -1,
+    ENTITY_CELL,
+};
+struct Info
+{
+    Info()
+    : type(TYPE_UNKNOWN), entity(ENTITY_UNKNOWN)
+    {
+    }
+
+    Info(Type user_type, Entity user_entity)
+    : type(user_type), entity(user_entity)
+    {
+    }
+
+    Type type;
+    Entity entity;
+    std::vector<long> mapped;
+# if BITPIT_ENABLE_MPI
+    std::vector<int> rank;
+# endif
+};
+
 
 }
 
@@ -70,17 +101,17 @@ protected:
 
 #if BITPIT_ENABLE_MPI
     MPI_Comm                m_communicator; /**< MPI communicator */
-#endif
     int                     m_rank;         /**< Local rank of process. */
     int                     m_nProcs;       /**< Number of processes. */
+#endif
 
     VolumeKernel* m_referenceMesh;
     VolumeKernel* m_mappedMesh;
 
-    PiercedStorage<adaption::Info> m_mapper;  /**< Mapping info for each cell of reference mesh.
+    PiercedStorage<mapping::Info> m_mapper;  /**< Mapping info for each cell of reference mesh.
                                                                   The mapping info is treated as a set of adaption info related to
                                                                   an adaption of the mapped mesh toward the reference mesh. */
-    PiercedStorage<adaption::Info> m_invmapper;  /**< Inverse mapping info for each cell of mapped mesh. */
+    PiercedStorage<mapping::Info> m_invmapper;  /**< Inverse mapping info for each cell of mapped mesh. */
 
 
     std::unordered_map<long, mapping::Info> m_previousmapper;
