@@ -228,26 +228,26 @@ void run()
     /** Map data on second mesh and write */
     PiercedStorage<double> data2(1, &patch_2D->getCells());
     {
-    const PiercedStorage<mapping::Info> & mapper = mapobject.getMapping();
+    const PiercedStorage<mapping::mInfo> & mapper = mapobject.getMapping();
     std::vector<double> vdata2(patch_2D->getInternalCount());
     count = 0;
     for (Cell & cell : patch_2D->getCells()){
         if (cell.isInterior()){
             long id = cell.getId();
-            if (mapper[id].type == adaption::Type::TYPE_RENUMBERING){
-                data2[id] = data[mapper[id].previous[0]];
+            if (mapper[id].type == mapping::Type::TYPE_RENUMBERING){
+                data2[id] = data[mapper[id].mapped[0]];
                 vdata2[count] = data2[id];
             }
-            else if (mapper[id].type == adaption::Type::TYPE_COARSENING){
+            else if (mapper[id].type == mapping::Type::TYPE_COARSENING){
                 data2[id] = 0.0;
-                int n = mapper[id].previous.size();
-                for (long idd : mapper[id].previous){
+                int n = mapper[id].mapped.size();
+                for (long idd : mapper[id].mapped){
                     data2[id] += data[idd] / n;
                 }
                 vdata2[count] = data2[id];
             }
-            else if (mapper[id].type == adaption::Type::TYPE_REFINEMENT){
-                data2[id] = data[mapper[id].previous[0]];
+            else if (mapper[id].type == mapping::Type::TYPE_REFINEMENT){
+                data2[id] = data[mapper[id].mapped[0]];
                 vdata2[count] = data2[id];
             }
             count++;
@@ -264,27 +264,27 @@ void run()
 
     /** Re-Map data on first mesh with inverse mapping and write */
     {
-    const PiercedStorage<mapping::Info> & invmapper = mapobject.getInverseMapping();
+    const PiercedStorage<mapping::mInfo> & invmapper = mapobject.getInverseMapping();
     PiercedStorage<double> data3(1, &patch_2D_original->getCells());
     std::vector<double> vdata3(patch_2D_original->getInternalCount());
     count = 0;
     for (Cell & cell : patch_2D_original->getCells()){
         if (cell.isInterior()){
             long id = cell.getId();
-            if (invmapper[id].type == adaption::Type::TYPE_RENUMBERING){
-                data3[id] = data2[invmapper[id].previous[0]];
+            if (invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
+                data3[id] = data2[invmapper[id].mapped[0]];
                 vdata3[count] = data3[id];
             }
-            else if (invmapper[id].type == adaption::Type::TYPE_COARSENING){
+            else if (invmapper[id].type == mapping::Type::TYPE_COARSENING){
                 data3[id] = 0.0;
-                int n = invmapper[id].previous.size();
-                for (long idd : invmapper[id].previous){
+                int n = invmapper[id].mapped.size();
+                for (long idd : invmapper[id].mapped){
                     data3[id] += data2[idd] / n;
                 }
                 vdata3[count] = data3[id];
             }
-            else if (invmapper[id].type == adaption::Type::TYPE_REFINEMENT){
-                data3[id] = data2[invmapper[id].previous[0]];
+            else if (invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
+                data3[id] = data2[invmapper[id].mapped[0]];
                 vdata3[count] = data3[id];
             }
             count++;
