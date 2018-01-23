@@ -340,6 +340,9 @@ int subtest_004()
         bitpit::StencilScalar pointValueStencil = stencil.computePointValueStencil(point);
         pointValueStencil.display( log::cout() );
 
+        std::array<double,3> direction = {{1.,0.,0.}};
+        bitpit::StencilScalar pointDerivativeStencil = stencil.computePointDerivativeStencil(point,direction);
+        pointDerivativeStencil.display( log::cout() );
 
     }
 

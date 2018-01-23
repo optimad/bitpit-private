@@ -247,6 +247,39 @@ bitpit::StencilScalar ReconstructionStencil::computePointValueStencil( const std
 }
 
 /*!
+   Computes the stencil of the reconstructed directional derivative in a given point
+   In other words, when multiplying the function values according to
+   the pattern of the stencil times their corrisponding the weights,
+   the directional derivative at point is obtained
+   \param[in] point the coordinates of the point
+   \param[in] direction the direction of the derivative
+   \return the stencil responsabile for determing the directional derivative at the point
+ */
+bitpit::StencilScalar ReconstructionStencil::computePointDerivativeStencil( const std::array<double,3> &point, const std::array<double,3> &direction)
+{
+
+    StencilScalar stencil;
+
+    int nCoeff = getCoefficientCount();
+    int nEquat = m_pattern.size();
+    std::vector<double> csi = getPointDerivativeEquation(point,direction);
+    std::vector<double> weights(nEquat);
+
+    // use Level2 (C)BLAS to compute matrix-vector product
+    cblas_dgemv( CBLAS_ORDER::CblasColMajor, CBLAS_TRANSPOSE::CblasTrans, 
+            nCoeff, nEquat, 1., m_coefficientWeights.data(), nCoeff, 
+            csi.data(), 1, 0, weights.data(), 1);
+
+
+    for( int i=0; i< nEquat; ++i){
+        stencil.addWeight( m_pattern[i], weights[i]);
+    }
+
+    return stencil;
+
+}
+
+/*!
   Returns the weight to be used in order to calculate the polynomial coefficient
   \param[in] coeff polynomial coefficient
   \return weights that should multiply the given data

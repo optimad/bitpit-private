@@ -74,7 +74,9 @@ public:
 
     void compute( const std::vector<Condition> &equations );
     std::vector<double> computeCoefficients( const std::vector<double> &values );
+
     bitpit::StencilScalar computePointValueStencil( const std::array<double,3> &point );
+    bitpit::StencilScalar computePointDerivativeStencil( const std::array<double,3> &point, const std::array<double,3> &direction );
 
     std::vector<double> getWeights( const Coefficient &coeff ) const;
     void display(std::ostream &out, double tollerance = 1.e-10) const;
