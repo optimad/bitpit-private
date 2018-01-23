@@ -364,48 +364,47 @@ BaseStencil<weight_t>& BaseStencil<weight_t>::operator-=(const BaseStencil<weigh
     return *this;
 }
 
+}
+
 template<typename weight_t>
-BaseStencil<weight_t> operator*(const BaseStencil<weight_t> &stencil_A, double factor)
+bitpit::BaseStencil<weight_t> operator*(const bitpit::BaseStencil<weight_t> &stencil_A, double factor)
 {
     return (factor * stencil_A);
 }
 
 template<typename weight_t>
-BaseStencil<weight_t> operator*(double factor, const BaseStencil<weight_t> &stencil_A)
+bitpit::BaseStencil<weight_t> operator*(double factor, const bitpit::BaseStencil<weight_t> &stencil_A)
 {
-    BaseStencil<weight_t> stencil_B(stencil_A);
+    bitpit::BaseStencil<weight_t> stencil_B(stencil_A);
     stencil_B *= factor;
 
     return stencil_B;
 }
 
 template<typename weight_t>
-BaseStencil<weight_t> operator/(const BaseStencil<weight_t> &stencil_A, double factor)
+bitpit::BaseStencil<weight_t> operator/(const bitpit::BaseStencil<weight_t> &stencil_A, double factor)
 {
-    BaseStencil<weight_t> stencil_B(stencil_A);
+    bitpit::BaseStencil<weight_t> stencil_B(stencil_A);
     stencil_B /= factor;
 
     return stencil_B;
 }
 
 template<typename weight_t>
-BaseStencil<weight_t> operator+(const BaseStencil<weight_t> &stencil_A, const BaseStencil<weight_t> &value)
+bitpit::BaseStencil<weight_t> operator+(const bitpit::BaseStencil<weight_t> &stencil_A, const bitpit::BaseStencil<weight_t> &value)
 {
-    BaseStencil<weight_t> stencil_B(stencil_A);
+    bitpit::BaseStencil<weight_t> stencil_B(stencil_A);
     stencil_B += value;
 
     return stencil_B;
 }
 
 template<typename weight_t>
-BaseStencil<weight_t> operator-(const BaseStencil<weight_t> &stencil_A, const BaseStencil<weight_t> &value)
+bitpit::BaseStencil<weight_t> operator-(const bitpit::BaseStencil<weight_t> &stencil_A, const bitpit::BaseStencil<weight_t> &value)
 {
-    BaseStencil<weight_t> stencil_B(stencil_A);
+    bitpit::BaseStencil<weight_t> stencil_B(stencil_A);
     stencil_B -= value;
 
     return stencil_B;
 }
-
-}
-
 #endif

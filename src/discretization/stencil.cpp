@@ -108,34 +108,36 @@ StencilVector::StencilVector(BaseStencil &&other)
 {
 }
 
-StencilScalar dotProduct(const StencilVector &stencil_A, const std::array<double, 3> &vector)
+}
+
+bitpit::StencilScalar dotProduct(const bitpit::StencilVector &stencil_A, const std::array<double, 3> &vector)
 {
-    StencilScalar stencil_B;
+    bitpit::StencilScalar stencil_B;
 
-    const FlatVector2D<std::array<double, 3>> &weights_A = stencil_A.getWeights();
+    const bitpit::FlatVector2D<std::array<double, 3>> &weights_A = stencil_A.getWeights();
 
-    const FlatVector2D<long> &pattern = stencil_A.getPattern();
+    const bitpit::FlatVector2D<long> &pattern = stencil_A.getPattern();
     for (int i = 0; i < pattern.size(); ++i) {
         int nBucketItems = pattern.getItemCount(i);
         for (int j = 0; j < nBucketItems; ++j) {
             const long id = pattern.getItem(i, j);
             const std::array<double, 3> &weight_A = weights_A.getItem(i, j);
-            stencil_B.addWeight(id, ::dotProduct(weight_A, vector));
+            stencil_B.addWeight(id, dotProduct(weight_A, vector));
         }
     }
 
-    stencil_B.setConstant(::dotProduct(stencil_A.getConstant(), vector));
+    stencil_B.setConstant(dotProduct(stencil_A.getConstant(), vector));
 
     return stencil_B;
 }
 
-StencilVector operator*(const StencilScalar &stencil_A, const std::array<double, 3> &vector)
+bitpit::StencilVector operator*(const bitpit::StencilScalar &stencil_A, const std::array<double, 3> &vector)
 {
-    StencilVector stencil_B;
+    bitpit::StencilVector stencil_B;
 
-    const FlatVector2D<double> &weights_A = stencil_A.getWeights();
+    const bitpit::FlatVector2D<double> &weights_A = stencil_A.getWeights();
 
-    const FlatVector2D<long> &pattern = stencil_A.getPattern();
+    const bitpit::FlatVector2D<long> &pattern = stencil_A.getPattern();
     for (int i = 0; i < pattern.size(); ++i) {
         int nBucketItems = pattern.getItemCount(i);
         for (int j = 0; j < nBucketItems; ++j) {
@@ -145,9 +147,8 @@ StencilVector operator*(const StencilScalar &stencil_A, const std::array<double,
         }
     }
 
-    stencil_B.setConstant(::operator*(stencil_A.getConstant(), vector));
+    stencil_B.setConstant(stencil_A.getConstant()*vector);
 
     return stencil_B;
 }
 
-}

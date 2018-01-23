@@ -152,26 +152,27 @@ public:
 
 };
 
+}
+
 // Operators
 template <typename weight_t>
-BaseStencil<weight_t> operator*(const BaseStencil<weight_t> &stencil, double factor);
+bitpit::BaseStencil<weight_t> operator*(const bitpit::BaseStencil<weight_t> &stencil, double factor);
 
 template <typename weight_t>
-BaseStencil<weight_t> operator*(double factor, const BaseStencil<weight_t> &stencil);
+bitpit::BaseStencil<weight_t> operator*(double factor, const bitpit::BaseStencil<weight_t> &stencil);
 
 template <typename weight_t>
-BaseStencil<weight_t> operator/(const BaseStencil<weight_t> &stencil, double factor);
+bitpit::BaseStencil<weight_t> operator/(const bitpit::BaseStencil<weight_t> &stencil, double factor);
 
 template <typename weight_t>
-BaseStencil<weight_t> operator+(const BaseStencil<weight_t> &, const BaseStencil<weight_t> &);
+bitpit::BaseStencil<weight_t> operator+(const bitpit::BaseStencil<weight_t> &, const bitpit::BaseStencil<weight_t> &);
 
 template <typename weight_t>
-BaseStencil<weight_t> operator-(const BaseStencil<weight_t> &, const BaseStencil<weight_t> &);
+bitpit::BaseStencil<weight_t> operator-(const bitpit::BaseStencil<weight_t> &, const bitpit::BaseStencil<weight_t> &);
 
-StencilScalar dotProduct(const StencilVector &, const std::array<double,3> &);
+bitpit::StencilScalar dotProduct(const bitpit::StencilVector &, const std::array<double,3> &);
 
-StencilVector operator*(const StencilScalar &, const std::array<double,3> &);
+bitpit::StencilVector operator*(const bitpit::StencilScalar &, const std::array<double,3> &);
 
-}
 
 #endif
