@@ -596,6 +596,9 @@ int ReconstructionStencil::getIndexFromCoefficient( const ReconstructionStencil:
                 return 2;
                 break;
 
+            default:
+                throw std::runtime_error(" Coefficient not supported for 1D reconstructionStencils");
+                break;
         }
 
     } else if(m_dim==2){
@@ -623,6 +626,10 @@ int ReconstructionStencil::getIndexFromCoefficient( const ReconstructionStencil:
 
             case P_XY:
                 return 5;
+                break;
+
+            default:
+                throw std::runtime_error(" Coefficient not supported for 2D reconstructionStencils");
                 break;
         }
 
@@ -670,6 +677,8 @@ int ReconstructionStencil::getIndexFromCoefficient( const ReconstructionStencil:
                 break;
         }
     }
+
+    BITPIT_UNREACHABLE("");
 }
 
 /*!
@@ -768,6 +777,7 @@ ReconstructionStencil::Coefficient ReconstructionStencil::getCoefficientFromInde
                 break;
         }
     }
+    BITPIT_UNREACHABLE("");
 }
 
 int ReconstructionStencil::getCoefficientMinimumOrder( const Coefficient &coeff) const
@@ -785,6 +795,7 @@ int ReconstructionStencil::getCoefficientMinimumOrder( const Coefficient &coeff)
             return 2;
             break;
     }
+    BITPIT_UNREACHABLE("");
 }
 
 int ReconstructionStencil::getCoefficientMinimumDimension( const Coefficient &coeff) const
@@ -806,6 +817,8 @@ int ReconstructionStencil::getCoefficientMinimumDimension( const Coefficient &co
             return 3;
             break;
     }
+
+    BITPIT_UNREACHABLE("");
 }
 /*!
   Computes the factorial of an integer
@@ -828,6 +841,7 @@ int ReconstructionStencil::factorial(int x) const
  */
 int ReconstructionStencil::linearIndexColMajor(int rowIndex, int colIndex, int rows, int columns) const
 {
+    BITPIT_UNUSED(columns);
     return rowIndex +colIndex*rows; 
 }
 
@@ -842,6 +856,7 @@ int ReconstructionStencil::linearIndexColMajor(int rowIndex, int colIndex, int r
  */
 int ReconstructionStencil::linearIndexRowMajor(int rowIndex, int colIndex, int rows, int columns) const
 {
+    BITPIT_UNUSED(rows);
     return rowIndex*columns +colIndex; 
 }
 
@@ -1013,6 +1028,9 @@ std::ostream& operator<<(std::ostream &out, const ReconstructionStencil::Coeffic
             out << "P_YZ";
             break;
     }
+
+    return out;
+
 }
 
 }
