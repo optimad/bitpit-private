@@ -22,8 +22,8 @@
  *
 \*---------------------------------------------------------------------------*/
 
-#ifndef __BTPIT_STENCIL_HPP__
-#define __BTPIT_STENCIL_HPP__
+#ifndef __BTPIT_RECONSTRUCTIONSTENCIL_HPP__
+#define __BTPIT_RECONSTRUCTIONSTENCIL_HPP__
 
 #include <array>
 #include <unordered_map>
