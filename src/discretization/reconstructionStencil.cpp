@@ -24,10 +24,12 @@
 
 #include <cassert>
 #include <limits>
-#include <lapacke.h>
+
+#include "bitpit_private_lapacke.hpp"
 
 #include "bitpit_patchkernel.hpp"
 #include "bitpit_LA.hpp"
+
 #include "reconstructionStencil.hpp"
 
 namespace bitpit {
