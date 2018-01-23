@@ -31,6 +31,7 @@
 #include "bitpit_IO.hpp"
 #include "bitpit_operators.hpp"
 
+#include "stencil.hpp"
 #include "reconstructionStencil.hpp"
 
 namespace bitpit {
@@ -211,6 +212,38 @@ std::vector<double>  ReconstructionStencil::computeCoefficients(const std::vecto
             values.data(), 1, 0, coefficients.data(), 1);
 
     return coefficients;
+}
+
+/*!
+   Computes the stencil of the reconstructed value in a given point.
+   In other words, when multiplying the function values according to
+   the pattern of the stencil times their corrisponding the weights,
+   the value at point is retrieved.
+   \param[in] point the coordinates of the point
+   \return the stencil responsabile for reconstructing the value at the point
+ */
+bitpit::StencilScalar ReconstructionStencil::computePointValueStencil( const std::array<double,3> &point)
+{
+
+    StencilScalar stencil;
+
+    int nCoeff = getCoefficientCount();
+    int nEquat = m_pattern.size();
+    std::vector<double> csi = getPointValueEquation(point);
+    std::vector<double> weights(nEquat);
+
+    // use Level2 (C)BLAS to compute matrix-vector product
+    cblas_dgemv( CBLAS_ORDER::CblasColMajor, CBLAS_TRANSPOSE::CblasTrans, 
+            nCoeff, nEquat, 1., m_coefficientWeights.data(), nCoeff, 
+            csi.data(), 1, 0, weights.data(), 1);
+
+
+    for( int i=0; i< nEquat; ++i){
+        stencil.addWeight( m_pattern[i], weights[i]);
+    }
+
+    return stencil;
+
 }
 
 /*!
