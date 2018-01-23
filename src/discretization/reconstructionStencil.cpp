@@ -28,8 +28,8 @@
 
 #include "bitpit_private_lapacke.hpp"
 
-#include "bitpit_patchkernel.hpp"
-#include "bitpit_LA.hpp"
+#include "bitpit_IO.hpp"
+#include "bitpit_operators.hpp"
 
 #include "reconstructionStencil.hpp"
 

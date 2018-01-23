@@ -26,10 +26,8 @@
 #define __BTPIT_RECONSTRUCTIONSTENCIL_HPP__
 
 #include <array>
-#include <unordered_map>
+#include <vector>
 
-#include "bitpit_common.hpp"
-#include "bitpit_containers.hpp"
 
 namespace bitpit {
 
