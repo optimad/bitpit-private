@@ -1875,6 +1875,15 @@ namespace bitpit {
         return oct->computeMorton();
     };
 
+    /*!Get the morton index of the last possible descendant with maximum refinement level of a target octant.
+     * \param[in] oct Pointer to the target octant
+     * \return Morton index of the last finest descendant of the target octant.
+     */
+    uint64_t
+    ParaTree::getLastDescMorton(const Octant* oct) const {
+        return oct->buildLastDesc().computeMorton();
+    };
+
     /** Compute the Morton index of the specified node of an octant (without
      * level).
      * \param[in] oct Pointer to the target octant
@@ -1950,6 +1959,12 @@ namespace bitpit {
     ParaTree::getIsNewC(const Octant* oct) const {
         return oct->getIsNewC();
     };
+
+    std::bitset<17>
+    ParaTree::getInfo(const Octant* oct) const {
+        return oct->m_info;
+    }
+
 
     /*! Get the local index of an octant.
      * \param[in] oct Pointer to target octant.
@@ -2122,6 +2137,14 @@ namespace bitpit {
     ParaTree::getLastDescMorton(uint32_t idx) const {
         return m_octree.m_octants[idx].buildLastDesc().computeMorton();
     };
+
+    /*!Get the pointer to vector of local internal octants.
+     * \return Pointer to vector of local internal octants
+     */
+const octvector*
+    ParaTree::getInternalOctants() {
+        return &(m_octree.m_octants);
+    }
 
     /*!Get the begin position for the iterator of the local internal octants.
      * \return Iterator begin of the local internal octants (dereferencing results in a pointer to an octant).

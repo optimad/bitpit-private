@@ -25,7 +25,7 @@
 #ifndef __BITPIT_POD_VOLOCTREE_HPP__
 #define __BITPIT_POD_VOLOCTREE_HPP__
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #    include <mpi.h>
 #endif
 #include <string>
@@ -37,12 +37,12 @@
 
 namespace bitpit {
 
-class PODVolOctree: public PODKernel {
+class PODVolOctree: private PODKernel {
 
     friend class POD;
 
 public:
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     PODVolOctree(MPI_Comm comm = MPI_COMM_WORLD);
 # else
     PODVolOctree();
@@ -60,6 +60,7 @@ private:
 
     VolumeKernel* createMesh() override;
 
+    void _computeMapper(VolumeKernel * mesh, MapperVolOctree* & mapper, bool fillInv) override;
 
     bitpit::PiercedStorage<bitpit::adaption::Info> mapMesh(bitpit::VolOctree * mesh);
     void mapMeshSamePartition(bitpit::VolOctree * mesh, bitpit::PiercedStorage<bitpit::adaption::Info> & mapper);

@@ -25,7 +25,7 @@
 #ifndef __BITPIT_POD_KERNEL_HPP__
 #define __BITPIT_POD_KERNEL_HPP__
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #    include <mpi.h>
 #endif
 #include <string>
@@ -33,7 +33,7 @@
 #include <unordered_map>
 
 #include "pod_common.hpp"
-#include "mesh_mapper.hpp"
+#include "mapper_voloctree.hpp"
 #include "bitpit_patchkernel.hpp"
 #include "bitpit_IO.hpp"
 
@@ -44,7 +44,7 @@ class PODKernel : public VTKBaseStreamer {
     friend class POD;
 
 public:
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     PODKernel(MPI_Comm comm = MPI_COMM_WORLD);
 # else
     PODKernel();
@@ -62,13 +62,14 @@ public:
     void evalCellsVolume();
     double getCellVolume(long id);
     double getRawCellVolume(long rawIndex);
-    MeshMapper & getMeshMapper();
+    MeshMapper & getMapper();
+
     bool isMapperDirty();
     void computeMapper(VolumeKernel * mesh, bool fillInv = true);
-    void prepareMapper(const std::vector<adaption::Info> & info);
-    void updateMapper(const std::vector<adaption::Info> & info, bool fillInv = true);
+    void adaptionPrepare(const std::vector<adaption::Info> & info);
+    void adaptionAlter(const std::vector<adaption::Info> & info, bool fillInv = true);
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Comm getCommunicator() const;
     bool isCommunicatorSet() const;
 #endif
@@ -78,13 +79,13 @@ protected:
     VolumeKernel            *m_meshPOD;     /**< Pointer to POD mesh*/
     PiercedStorage<double>   m_cellsVolume; /**< Cells volume of POD mesh*/
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Comm                m_communicator; /**< MPI communicator */
 #endif
     int                     m_rank;         /**< Local rank of process. */
     int                     m_nProcs;       /**< Number of processes. */
 
-    MeshMapper              m_meshmap;      /**< Mapping object TO/FROM pod mesh.*/
+    MapperVolOctree*        m_meshmap;      /**< Mapping object TO pod mesh.*/
 
     bool                    m_dirtymap;     /**< True if mapping has to be recomputed/updated [to be set by set method]. */
 
@@ -99,6 +100,8 @@ protected:
     void setMapperDirty(bool dirty = true);
 
     virtual VolumeKernel* createMesh() = 0;
+
+    virtual void _computeMapper(VolumeKernel * mesh, MapperVolOctree* & mapper, bool fillInv) = 0;
 
     virtual pod::PODField mapPODFieldToPOD(const pod::PODField & field, const std::unordered_set<long> * targetCells) = 0;
     virtual void mapPODFieldFromPOD(pod::PODField & field, const std::unordered_set<long> * targetCells, const pod::PODField & mappedField) = 0;
@@ -116,7 +119,7 @@ protected:
 
     virtual void adaptMeshToMesh(VolumeKernel * meshToAdapt, VolumeKernel * meshReference) = 0;
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     void initializeCommunicator(MPI_Comm communicator);
     void freeCommunicator();
 #endif

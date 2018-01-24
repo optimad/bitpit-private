@@ -23,19 +23,18 @@
 \*---------------------------------------------------------------------------*/
 
 /**
- * \example meshmapper_example_00001.cpp
+ * \example mapper_voloctree_example_00002.cpp
  * 
- * \brief Mesh mapping computing between voloctree meshes.
- * <b>To run</b>: ./meshmapper_example_00001 \n
+ * \brief Mesh mapping computing between adapted voloctree meshes.
+ * <b>To run</b>: ./mapper_voloctree_example_00002 \n
  */ 
 
 #include <array>
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #include <mpi.h>
 #endif
 
-#include "pod.hpp"
-#include "mesh_mapper.hpp"
+#include "bitpit_POD.hpp"
 #include "bitpit_patchkernel.hpp"
 #include "bitpit_voloctree.hpp"
 
@@ -77,9 +76,10 @@ void run()
 
     patch_2D_original->update();
 
-//    /** Partition the patch */
-//    patch_2D_original->partition(true);
-
+#if BITPIT_ENABLE_MPI==1
+    /** Partition the patch */
+    patch_2D_original->partition(true);
+#endif
 
     /**
      * Create the new tree
@@ -95,10 +95,14 @@ void run()
 
     /** Create a new patch */
     VolOctree *patch_2D = new VolOctree(std::move(treePointer2), &treePointer2);
+#if BITPIT_ENABLE_MPI==1
     patch_2D->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
 
-//    /** Partition the patch */
-//    patch_2D->partition(true);
+    /** Partition the patch */
+    patch_2D->partition(true);
+#endif
+
+    srand(1);
 
     /** Refine the patch */
     for (int k = 0; k < 4; ++k) {
@@ -143,19 +147,23 @@ void run()
     log::cout() << "Cell count:   " << patch_2D->getCellCount() << std::endl;
     log::cout() << "Vertex count: " << patch_2D->getVertexCount() << std::endl;
 
+    patch_2D->getVTK().setName("mesh_random.0");
+#if BITPIT_ENABLE_MPI==1
+    patch_2D->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
+#endif
+    patch_2D->write();
+
     /** Create mapper object */
-    MeshMapper mapobject;
+    MapperVolOctree mapobject(patch_2D_original, patch_2D);
 
     /** Map the two meshes */
-    mapobject.mapMeshes(patch_2D_original, patch_2D, true);
+    mapobject.initialize(true);
 
-
-
-
-
-
-
-
+    patch_2D_original->getVTK().setName("mesh_original.0");
+#if BITPIT_ENABLE_MPI==1
+    patch_2D_original->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
+#endif
+    patch_2D_original->write();
 
     std::vector<uint64_t> refineList;
     refineList.push_back(  7);
@@ -203,26 +211,32 @@ void run()
 
 
     for (uint64_t ind : refineList) {
+#if BITPIT_ENABLE_MPI==1
         int owner = patch_2D_original->getTree().getOwnerRank(ind);
         if (patch_2D_original->getRank() == owner){
             uint32_t lind = patch_2D_original->getTree().getLocalIdx(ind, owner);
+#else
+            uint32_t lind = patch_2D_original->getTree().getLocalIdx(ind);
+#endif
             VolOctree::OctantInfo octinfo(lind, true);
             long id = patch_2D_original->getOctantId(octinfo);
             patch_2D_original->markCellForRefinement(id);
+#if BITPIT_ENABLE_MPI==1
         }
+#endif
     }
-
 
     std::vector<adaption::Info> infoAdapt = patch_2D_original->adaptionPrepare(true);
 
-    mapobject.mappingAdaptionPreparare(infoAdapt, true);
+    mapobject.adaptionPrepare(infoAdapt, true);
 
     infoAdapt = patch_2D_original->adaptionAlter(true);
 
-    mapobject.mappingAdaptionUpdate(infoAdapt, true, true);
+    mapobject.adaptionAlter(infoAdapt, true, true);
 
     patch_2D_original->adaptionCleanup();
 
+    mapobject.adaptionCleanup();
 
     /** Show patch info */
     log::cout() << "Cell count:   " << patch_2D_original->getCellCount() << std::endl;
@@ -243,15 +257,16 @@ void run()
 
     patch_2D_original->getVTK().setName("mesh_original.0");
     patch_2D_original->getVTK().addData("data", VTKFieldType::SCALAR, VTKLocation::CELL, vdata);
+#if BITPIT_ENABLE_MPI==1
     patch_2D_original->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
+#endif
     patch_2D_original->write();
-
 
     /** Map data on second mesh and write */
     PiercedStorage<double> data2(1, &patch_2D->getCells());
     data2.fill(0.0);
     {
-    const PiercedStorage<mapping::mInfo> & mapper = mapobject.getInverseMapping();
+    const PiercedStorage<mapping::MappingInfo> & mapper = mapobject.getInverseMapping();
     std::vector<double> vdata2(patch_2D->getInternalCount());
     count = 0;
     for (Cell & cell : patch_2D->getCells()){
@@ -287,7 +302,7 @@ void run()
 
     /** Re-Map data on first mesh with inverse mapping and write */
     {
-    const PiercedStorage<mapping::mInfo> & invmapper = mapobject.getMapping();
+    const PiercedStorage<mapping::MappingInfo> & invmapper = mapobject.getMapping();
     PiercedStorage<double> data3(1, &patch_2D_original->getCells());
     std::vector<double> vdata3(patch_2D_original->getInternalCount());
     count = 0;
@@ -328,7 +343,7 @@ void run()
 
 int main(int argc, char *argv[]) 
 {
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Init(&argc,&argv);
 #endif    
 
@@ -340,7 +355,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Finalize();
 #endif
 
