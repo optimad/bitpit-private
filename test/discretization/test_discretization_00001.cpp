@@ -104,6 +104,10 @@ int subtest_001()
         stencil.compute(equations);
 
         stencil.display( log::cout() );
+
+        std::array<double,3> point = {{0.,0.,0.}};
+        bitpit::StencilVector pointGradientStencil = stencil.computePointGradientStencil(point);
+        pointGradientStencil.display( log::cout() );
     }
 
 

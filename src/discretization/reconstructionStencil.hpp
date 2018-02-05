@@ -32,6 +32,7 @@
 namespace bitpit {
 
 class StencilScalar;
+class StencilVector;
 
 class ReconstructionStencil {
 
@@ -77,6 +78,7 @@ public:
 
     bitpit::StencilScalar computePointValueStencil( const std::array<double,3> &point );
     bitpit::StencilScalar computePointDerivativeStencil( const std::array<double,3> &point, const std::array<double,3> &direction );
+    bitpit::StencilVector computePointGradientStencil( const std::array<double,3> &point );
 
     std::vector<double> getWeights( const Coefficient &coeff ) const;
     void display(std::ostream &out, double tollerance = 1.e-10) const;

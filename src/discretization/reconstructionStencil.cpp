@@ -280,6 +280,57 @@ bitpit::StencilScalar ReconstructionStencil::computePointDerivativeStencil( cons
 }
 
 /*!
+   Computes the stencil of the reconstructed gradient in a given point
+   In other words, when multiplying the function values according to
+   the pattern of the stencil times their corrisponding the weights,
+   the gradient at point is obtained
+   \param[in] point the coordinates of the point
+   \return the stencil responsabile for determing the gradient at the point
+ */
+bitpit::StencilVector ReconstructionStencil::computePointGradientStencil( const std::array<double,3> &point)
+{
+
+    StencilVector stencil;
+
+    int nCoeff = getCoefficientCount();
+    int nEquat = m_pattern.size();
+
+    std::vector<double> weights0(nEquat);
+    std::vector<double> weights1(nEquat);
+    std::vector<double> weights2(nEquat);
+
+    std::vector<double> csi;
+
+    { //x-direction
+        csi = getPointDerivativeEquation(point,{{1.,0.,0.}});
+        cblas_dgemv( CBLAS_ORDER::CblasColMajor, CBLAS_TRANSPOSE::CblasTrans, 
+                nCoeff, nEquat, 1., m_coefficientWeights.data(), nCoeff, 
+                csi.data(), 1, 0, weights0.data(), 1);
+    }
+
+    { //y-direction
+        csi = getPointDerivativeEquation(point,{{0.,1.,0.}});
+        cblas_dgemv( CBLAS_ORDER::CblasColMajor, CBLAS_TRANSPOSE::CblasTrans, 
+                nCoeff, nEquat, 1., m_coefficientWeights.data(), nCoeff, 
+                csi.data(), 1, 0, weights1.data(), 1);
+    }
+
+    { //z-direction
+        csi = getPointDerivativeEquation(point,{{0.,0.,1.}});
+        cblas_dgemv( CBLAS_ORDER::CblasColMajor, CBLAS_TRANSPOSE::CblasTrans, 
+                nCoeff, nEquat, 1., m_coefficientWeights.data(), nCoeff, 
+                csi.data(), 1, 0, weights2.data(), 1);
+    }
+
+    for( int i=0; i< nEquat; ++i){
+        stencil.addWeight( m_pattern[i], {{weights0[i],weights1[i],weights2[i] }});
+    }
+
+    return stencil;
+
+}
+
+/*!
   Returns the weight to be used in order to calculate the polynomial coefficient
   \param[in] coeff polynomial coefficient
   \return weights that should multiply the given data
