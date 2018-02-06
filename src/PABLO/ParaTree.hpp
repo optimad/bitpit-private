@@ -32,7 +32,7 @@
 #include <mpi.h>
 #include "DataLBInterface.hpp"
 #include "DataCommInterface.hpp"
-#include "communications.hpp"
+#include "bitpit_communications.hpp"
 #endif
 #include "Global.hpp"
 #include "Octant.hpp"
