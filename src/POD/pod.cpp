@@ -360,7 +360,7 @@ double POD::getErrorThreshold()
  * Set the target error fields used in the error bounding box evaluation.
  *
  * \param[in] namesf is the vector of scalar fields names.
- * \param[in] namsvf is the vector of vector fields names, arranged in vector components.
+ * \param[in] namevf is the vector of vector fields names, arranged in vector components.
  */
 void POD::setTargetErrorFields(std::vector<std::string> &namesf, std::vector<std::array<std::string,3>> &namevf)
 {

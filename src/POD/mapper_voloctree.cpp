@@ -824,11 +824,9 @@ std::map<int, std::vector<long> > MapperVolOctree::getSentMappedID()
 
 
 /**
- * Map an input VolOctree mesh on a VolOctree reference mesh.
+ * Map an input VolOctree mesh on a VolOctree reference mesh already set in constructor.
  * Requirement : the meshes have to be defined on the same identical domain.
  *
- * \param[in] meshReference Pointer to reference mesh
- * \param[in] meshMapped Pointer to input mesh to map
  * \param[in] fillInv If true even the inverse mapping (reference mesh to input mesh) is filled.
  */
 void MapperVolOctree::_mapMeshes(bool fillInv)
