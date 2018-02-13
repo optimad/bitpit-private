@@ -115,9 +115,11 @@ public:
     void adaptionCleanup();
 
 #if BITPIT_ENABLE_MPI==1
+    bool checkPartition();
     void clearPartitionMapping();
     std::map<int, std::vector<long> > getReceivedMappedID();
     std::map<int, std::vector<long> > getSentMappedID();
+    std::map<int, std::vector<long> > getSentReferenceID();
 #endif
 
 
@@ -250,7 +252,6 @@ protected:
     void freeCommunicator();
 
     void clearPartitionMappingLists();
-    bool _checkPartition(VolOctree * meshA, VolOctree * meshB);
     void _mapMeshPartitioned(bool fillInv);
     bool _recoverPartition();
 

@@ -222,16 +222,16 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
     VolOctree* meshMapped;
     PiercedStorage<mapping::MappingInfo>* mapperMapped;
 
-    meshAdapted = dynamic_cast<VolOctree*>(m_referenceMesh);
+    meshAdapted = m_referenceMesh;
     mapperAdapted = &m_mapper;
-    meshMapped = dynamic_cast<VolOctree*>(m_mappedMesh);
+    meshMapped = m_mappedMesh;
     mapperMapped = &m_invmapper;
 
-    bool checkPartition = true;
+    bool checkPart = true;
     bool changedPartition = false;
 #if BITPIT_ENABLE_MPI==1
-    checkPartition = _checkPartition(meshAdapted, meshMapped);
-    if (!checkPartition)
+    checkPart = checkPartition();
+    if (!checkPart)
         changedPartition = _recoverPartition();
 #endif
 
@@ -257,7 +257,7 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                         std::size_t imapped = 0;
                         for (long idp : _mapped){
 #if BITPIT_ENABLE_MPI==1
-                            if (checkPartition
+                            if (checkPart
                                     || m_previousmapper[idprevious].rank[imapped] == m_rank
                             ){
 #endif
@@ -300,7 +300,7 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                         std::size_t imapped = 0;
                         for (long idp : (*mapperAdapted)[id].mapped){
 #if BITPIT_ENABLE_MPI==1
-                            if (checkPartition
+                            if (checkPart
                                     || (*mapperAdapted)[id].rank[imapped] == m_rank
                             ){
 #endif
@@ -351,7 +351,7 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                             int rankmapped;
 
 #if BITPIT_ENABLE_MPI==1
-                            if (checkPartition
+                            if (checkPart
                                     || _rankmapped[imapped] == m_rank
                             ){
 #endif
@@ -397,7 +397,7 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                                         (*mapperAdapted)[id].rank.push_back(rankmapped);
 
                                         if (fillInv){
-                                            if (checkPartition
+                                            if (checkPart
                                                     || rankmapped == m_rank
                                             ){
 #endif
@@ -422,7 +422,7 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                                         (*mapperAdapted)[id].rank.push_back(rankmapped);
 
                                         if (fillInv){
-                                            if (checkPartition
+                                            if (checkPart
                                                     || rankmapped == m_rank
                                             ){
 #endif
@@ -446,7 +446,7 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                                         (*mapperAdapted)[id].rank.push_back(rankmapped);
 
                                         if (fillInv){
-                                            if (checkPartition
+                                            if (checkPart
                                                     || rankmapped == m_rank
                                             ){
 #endif
@@ -504,16 +504,16 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
     VolOctree* meshReference;
     PiercedStorage<mapping::MappingInfo>* mapperReference;
 
-    meshAdapted = dynamic_cast<VolOctree*>(m_mappedMesh);
+    meshAdapted = m_mappedMesh;
     mapperAdapted = &m_invmapper;
-    meshReference = dynamic_cast<VolOctree*>(m_referenceMesh);
+    meshReference = m_referenceMesh;
     mapperReference = &m_mapper;
 
-    bool checkPartition = true;
+    bool checkPart = true;
     bool changedPartition = false;
 #if BITPIT_ENABLE_MPI==1
-    checkPartition = _checkPartition(meshReference, meshAdapted);
-    if (!checkPartition)
+    checkPart = checkPartition();
+    if (!checkPart)
         changedPartition = _recoverPartition();
 #endif
 
@@ -524,7 +524,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
 
         std::vector<adaption::Info> MappingInfoAdapt;
 #if BITPIT_ENABLE_MPI==1
-        if (!checkPartition)
+        if (!checkPart)
             _communicateMappedAdaptionInfo(infoAdapt, MappingInfoAdapt);
         else
 #endif
@@ -547,7 +547,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                 for (long idprevious : info.previous){
                     std::vector<long> _mapped;
 #if BITPIT_ENABLE_MPI==1
-                    if (checkPartition
+                    if (checkPart
                             || info.rank == m_rank
                     ){
 #endif
@@ -574,7 +574,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                     long id = info.current[0];
                     std::vector<long> _mapped;
 #if BITPIT_ENABLE_MPI==1
-                    if (checkPartition
+                    if (checkPart
                             || info.rank == m_rank
                     ){
 #endif
@@ -615,7 +615,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                     for (long id : info.current){
 
 #if BITPIT_ENABLE_MPI==1
-                        if (checkPartition
+                        if (checkPart
                                 || info.rank == m_rank
                         ){
 #endif
@@ -636,7 +636,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                         std::vector<long> _mapped;
                         std::vector<int> _rankmapped;
 #if BITPIT_ENABLE_MPI==1
-                        if (checkPartition
+                        if (checkPart
                                 || info.rank == m_rank
                         ){
 #endif
@@ -667,7 +667,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                                 uint8_t level;
                                 uint64_t morton, mortonlastdesc;
 #if BITPIT_ENABLE_MPI==1
-                                if (checkPartition
+                                if (checkPart
                                         || info.rank == m_rank
                                 ){
 #endif
@@ -695,7 +695,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
 
                                     if (level == levelreference){
 #if BITPIT_ENABLE_MPI==1
-                                        if (checkPartition
+                                        if (checkPart
                                                 || info.rank == m_rank
                                         ){
 #endif
@@ -717,7 +717,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                                     }
                                     else if (level > levelreference){
 #if BITPIT_ENABLE_MPI==1
-                                        if (checkPartition
+                                        if (checkPart
                                                 || info.rank == m_rank
                                         ){
 #endif
@@ -739,7 +739,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                                     else if (level < levelreference){
 
 #if BITPIT_ENABLE_MPI==1
-                                        if (checkPartition
+                                        if (checkPart
                                                 || info.rank == m_rank
                                         ){
 #endif
@@ -804,6 +804,47 @@ std::map<int, std::vector<long> > MapperVolOctree::getReceivedMappedID()
 }
 
 /**
+ * Get the list of the octants of the local partition of the reference mesh overlapped
+ * to a different partition of the mapped mesh.
+ *
+ * return Map with for each rank (key) the list of the octants (argument) of the reference mesh overlapped with the partition (rank) of the mapped mesh.
+ */
+std::map<int, std::vector<long> > MapperVolOctree::getSentReferenceID()
+{
+    std::map<int, std::vector<long> > sent;
+
+    {
+        // recover id to be rec/sent
+        std::map<int, std::set<long> > rankIDsend;
+
+        for (Cell & cell : m_referenceMesh->getCells()){
+            long ID = cell.getId();
+            auto info = m_mapper[ID];
+            int i = 0;
+            for (int rank : info.rank){
+                if (rank != m_referenceMesh->getRank()){
+                    rankIDsend[rank].insert(ID);
+                }
+                i++;
+            }
+        }
+
+        for (int irank=0; irank<m_nProcs; irank++){
+            sent[irank].reserve(rankIDsend[irank].size());
+        }
+
+        for (std::map<int, std::set<long> >::iterator it=rankIDsend.begin(); it!=rankIDsend.end(); it++)
+        {
+            for (long id : it->second)
+                sent[it->first].push_back(id);
+        }
+    }
+
+    return sent;
+
+}
+
+/**
  * Get the list of the octants of the local partition of the mapped mesh overlapped to a different partition of the reference mesh.
  *
  * return Map with for each rank (key) the list of the octants (argument) of the mapped mesh overlapped with the partition (rank) of the reference mesh.
@@ -846,7 +887,7 @@ void MapperVolOctree::_mapMeshes(bool fillInv)
         clearInverseMapping();
 
 
-    bool checkPartition = true;
+    bool checkPart = true;
 
 #if BITPIT_ENABLE_MPI==1
 
@@ -861,9 +902,9 @@ void MapperVolOctree::_mapMeshes(bool fillInv)
     }
     else{
 
-        checkPartition = _checkPartition(m_referenceMesh, m_mappedMesh);
+        checkPart = checkPartition();
 
-        if (checkPartition){
+        if (checkPart){
             long indRef = 0;
             _mapMeshesSamePartition(nullptr, nullptr, fillInv, indRef);
         }
@@ -893,8 +934,8 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
 {
 
     //VolOctree specialization
-    bitpit::VolOctree* meshReference = static_cast<VolOctree*>(m_referenceMesh);
-    bitpit::VolOctree* meshMapped = static_cast<VolOctree*>(m_mappedMesh);
+    bitpit::VolOctree* meshReference = m_referenceMesh;
+    bitpit::VolOctree* meshMapped = m_mappedMesh;
 
     //Fill IR with meshes if list pointer is null
     std::vector<OctantIR> tempOctantsIRReference;
@@ -1040,7 +1081,7 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
     }
 
 #if BITPIT_ENABLE_MPI==1
-    if (meshMapped->isPartitioned() && !localMapped && !_checkPartition(meshReference, meshMapped))
+    if (meshMapped->isPartitioned() && !localMapped && !checkPartition())
         _communicateInverseMapper(_invmapper, octantsIRMapped);
     //After communication _invmapper is changed and it has info for each local ID as in serial
 #endif
@@ -1113,19 +1154,17 @@ void MapperVolOctree::freeCommunicator()
 }
 
 /**
- * Check if two meshes have the same geometric partitioning
+ * Check if the reference and the mapped meshes have the same geometric partitioning
  *
- * \param[in] meshA First VolOctree input mesh
- * \param[in] meshB Second VolOctree input mesh
  * \return True if the meshes have identical geometric partitioning, false otherwise
  *
  */
-bool MapperVolOctree::_checkPartition(bitpit::VolOctree * meshA, bitpit::VolOctree * meshB)
+bool MapperVolOctree::checkPartition()
 {
     bool check;
 
-    std::vector<uint64_t> partitionReference = meshA->getTree().getPartitionLastDesc();
-    std::vector<uint64_t> partitionMapped = meshB->getTree().getPartitionLastDesc();
+    std::vector<uint64_t> partitionReference = m_referenceMesh->getTree().getPartitionLastDesc();
+    std::vector<uint64_t> partitionMapped = m_mappedMesh->getTree().getPartitionLastDesc();
 
     check = true;
     for (int irank = 0; irank < m_nProcs; irank++){

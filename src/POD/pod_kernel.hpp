@@ -62,7 +62,7 @@ public:
     void evalCellsVolume();
     double getCellVolume(long id);
     double getRawCellVolume(long rawIndex);
-    MeshMapper & getMapper();
+    MapperVolOctree* getMapper();
 
     bool isMapperDirty();
     void computeMapper(VolumeKernel * mesh, bool fillInv = true);

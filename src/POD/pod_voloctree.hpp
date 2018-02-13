@@ -37,7 +37,7 @@
 
 namespace bitpit {
 
-class PODVolOctree: private PODKernel {
+class PODVolOctree: public PODKernel {
 
     friend class POD;
 
@@ -56,7 +56,7 @@ public:
      */
     PODVolOctree(PODVolOctree&& other) = default;
 
-private:
+protected:
 
     VolumeKernel* createMesh() override;
 
@@ -80,6 +80,15 @@ private:
     std::unordered_set<long> mapCellsToPOD(const std::unordered_set<long> * targetCells);
 
     void adaptMeshToMesh(VolumeKernel* meshToAdapt, VolumeKernel * meshReference);
+
+# if BITPIT_ENABLE_MPI==1
+    void communicatePODField(const pod::PODField & field, std::map<int, std::map<long, bool> > & dataBrec, std::map<int, std::map<long, std::vector<double> > > & dataSrec, std::map<int, std::map<long, std::vector<std::array<double,3> > > > & dataVrec, std::map<int, std::map<long, double> > & volrec);
+    void communicatePODFieldFromPOD(const pod::PODField & field, std::map<int, std::map<long, bool> > & dataBrec, std::map<int, std::map<long, std::vector<double> > > & dataSrec, std::map<int, std::map<long, std::vector<std::array<double,3> > > > & dataVrec, std::map<int, std::map<long, double> > & volrec);
+    void communicateBoolField(const PiercedStorage<bool> & field, std::map<int, std::map<long, bool> > & dataBrec);
+    void communicateField(const PiercedStorage<double> & field, const VolumeKernel * mesh, std::map<int, std::map<long, std::vector<double> > > & datarec, std::map<int, std::map<long, double> > & volrec);
+    void communicateFieldFromPOD(const PiercedStorage<double> & field, const VolumeKernel * mesh, std::map<int, std::map<long, std::vector<double> > > & datarec, std::map<int, std::map<long, double> > & volrec);
+#endif
+
 
 };
 
