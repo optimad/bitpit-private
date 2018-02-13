@@ -25,7 +25,7 @@
 #ifndef __BITPIT_POD_VOLOCTREE_HPP__
 #define __BITPIT_POD_VOLOCTREE_HPP__
 
-#if BITPIT_ENABLE_MPI==1
+#if BITPIT_ENABLE_MPI
 #    include <mpi.h>
 #endif
 #include <string>
@@ -37,12 +37,12 @@
 
 namespace bitpit {
 
-class PODVolOctree: private PODKernel {
+class PODVolOctree: public PODKernel {
 
     friend class POD;
 
 public:
-# if BITPIT_ENABLE_MPI==1
+# if BITPIT_ENABLE_MPI
     PODVolOctree(MPI_Comm comm = MPI_COMM_WORLD);
 # else
     PODVolOctree();
@@ -56,7 +56,7 @@ public:
      */
     PODVolOctree(PODVolOctree&& other) = default;
 
-private:
+protected:
 
     VolumeKernel* createMesh() override;
 
@@ -80,6 +80,15 @@ private:
     std::unordered_set<long> mapCellsToPOD(const std::unordered_set<long> * targetCells) override;
 
     void adaptMeshToMesh(VolumeKernel* meshToAdapt, VolumeKernel * meshReference) override;
+
+# if BITPIT_ENABLE_MPI
+    void communicatePODField(const pod::PODField & field, std::map<int, std::map<long, bool> > & dataBrec, std::map<int, std::map<long, std::vector<double> > > & dataSrec, std::map<int, std::map<long, std::vector<std::array<double,3> > > > & dataVrec, std::map<int, std::map<long, double> > & volrec);
+    void communicatePODFieldFromPOD(const pod::PODField & field, std::map<int, std::map<long, bool> > & dataBrec, std::map<int, std::map<long, std::vector<double> > > & dataSrec, std::map<int, std::map<long, std::vector<std::array<double,3> > > > & dataVrec, std::map<int, std::map<long, double> > & volrec);
+    void communicateBoolField(const PiercedStorage<bool> & field, std::map<int, std::map<long, bool> > & dataBrec);
+    void communicateField(const PiercedStorage<double> & field, const VolumeKernel * mesh, std::map<int, std::map<long, std::vector<double> > > & datarec, std::map<int, std::map<long, double> > & volrec);
+    void communicateFieldFromPOD(const PiercedStorage<double> & field, const VolumeKernel * mesh, std::map<int, std::map<long, std::vector<double> > > & datarec, std::map<int, std::map<long, double> > & volrec);
+#endif
+
 
 };
 
