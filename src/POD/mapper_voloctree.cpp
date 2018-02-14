@@ -32,7 +32,19 @@ namespace bitpit {
  *
  * \brief The MapperVolOctree is the class to map two meshes of class VolOctree.
  *
- * The MapperVolOctree allows to map meshes of class VolOctree.
+ * The MapperVolOctree allows to map meshes of class VolOctree. The meshes are defined as
+ * a reference mesh and a mapped mesh.
+ * The object can provide a direct mapper and a inverse mapper between only the Cells of the meshes.
+ * The information given by a mapper object is analogous to an adaptation info to adapt the mapped mesh
+ * to the reference one (or vice versa in case of inverse mapper).
+ * The two meshes have to be imperatively linked at declaration of the mapper object.
+ * To compute the mapper the first time call initialize method.
+ * Then, if the reference mesh OR the mapped mesh (one at a time) is adapted,
+ * the mapper can be adapted together by passing the adaptation information to the
+ * prepare and alter methods. A load-balancing procedure is not allowed, i.e. the mapper
+ * has to be entirely recomputed after a load-balance of a mesh.
+ *
+ * Note. The domain of the two meshes has to be the same, i.e. the meshes must have same origin and length.
  *
  */
 
@@ -72,7 +84,7 @@ MapperVolOctree::~MapperVolOctree()
 }
 
 /**
- * Clear mapping members
+ * Clear all mapping members
  */
 void MapperVolOctree::clear()
 {
@@ -111,7 +123,7 @@ void MapperVolOctree::clearPartitionMapping()
 }
 
 /**
- * Clear partition mapping lists
+ * Clear only partition mapping lists
  */
 void MapperVolOctree::clearPartitionMappingLists()
 {
@@ -136,10 +148,10 @@ const bitpit::PiercedStorage<mapping::MappingInfo> & MapperVolOctree::getInverse
 }
 
 /**
- * Initialize the mapper of the mapped mesh on the reference mesh.
+ * Initialize (compute for the first time) the mapper of the mapped mesh on the reference mesh.
  * The two VolOctree meshes are set in the constructor of the object.
  *
- * \param[in] fillInv True if inverse mapper has to be computed
+ * \param[in] fillInv True if even the inverse mapper has to be computed
  */
 void MapperVolOctree::initialize(bool fillInv)
 {
@@ -149,7 +161,8 @@ void MapperVolOctree::initialize(bool fillInv)
 
 /**
  * Prepare the mapper for an adaption of the reference OR the mapped mesh.
- * The adaptation of only one mesh is allowed.
+ * The adaptation of only one mesh at time is allowed. Calling this method
+ * is mandatory to perform an update of the mapper after an adaptation.
  *
  * \param[in] infoAdapt Structure of adaptation info given by adaptionPrepare method of a patch
  * \param[in] reference True if the reference mesh will be adapted, false if the mapped one
@@ -187,11 +200,14 @@ void MapperVolOctree::adaptionPrepare(const std::vector<adaption::Info> & infoAd
 
 /**
  * Update the mapper after an adaption of the reference OR the mapped mesh.
+ * The adaptationPrepare method of the mapper has to called before the adaptation
+ * of the mesh.
  *
  * \param[in] infoAdapt Structure of adaptation info given by adaptionAlter method of a patch
  * \param[in] reference True if the reference mesh is adapted, false if the mapped one
  * \param[in] fillInv True if the inverse mapped was filled during the mesh mapper computing
- * (Note: if the adapted mesh is the mapped one, the inverse mapper has to be filled inevitably).
+ * (Note: if the adapted mesh is the mapped one, the inverse mapper has to be necessarily
+ * filled during the first computation in initialization).
  */
 void MapperVolOctree::adaptionAlter(const std::vector<adaption::Info> & infoAdapt, bool reference, bool fillInv)
 {
@@ -202,7 +218,7 @@ void MapperVolOctree::adaptionAlter(const std::vector<adaption::Info> & infoAdap
 }
 
 /**
- * Clear the mapper internal structures.
+ * Clear the mapper updating internal structures.
  */
 void MapperVolOctree::adaptionCleanup(){
     m_previousmapper.clear();
@@ -211,7 +227,7 @@ void MapperVolOctree::adaptionCleanup(){
 /**
  * Update the mapper after an adaption of the reference mesh.
  *
- * \param[in] infoAdapt Structure of adaptation info given by adaptionAlter method of a patch
+ * \param[in] infoAdapt Structure of adaptation info given by adaptionAlter method of the patch
  * \param[in] fillInv True if the inverse mapped was filled during the mesh mapper computing
  */
 void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption::Info> & infoAdapt, bool fillInv)
@@ -492,9 +508,9 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
 }
 
 /**
- * Update the mapper after an adaption of the reference OR the mapped mesh.
+ * Update the mapper after an adaption of the mapped mesh.
  *
- * \param[in] infoAdapt Structure of adaptation info given by adaptionAlter method of a patch
+ * \param[in] infoAdapt Structure of adaptation info given by adaptionAlter method of the patch
  */
 void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::Info> & infoAdapt)
 {
@@ -784,7 +800,8 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
 #if BITPIT_ENABLE_MPI==1
 
 /**
- * Get the list of the octants of the partitions, different from the local one, of the mapped mesh overlapped to the local partition of the reference mesh.
+ * Get the list of the octants of the partitions of the mapped mesh, different from the local rank,
+ * overlapped to the local partition of the reference mesh.
  *
  * return Map with for each rank (key) the list of the octants (argument) of the mapped mesh overlapped with the local partition of the reference mesh.
  */

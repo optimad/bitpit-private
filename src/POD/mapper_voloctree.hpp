@@ -39,16 +39,24 @@ namespace bitpit {
 namespace mapping
 {
 
+/*!
+*\enum Type
+*\brief Type of mapping relationship between elements.
+*/
 enum Type {
-    TYPE_UNKNOWN = 0,
-    TYPE_REFINEMENT,
-    TYPE_COARSENING,
-    TYPE_RENUMBERING
+    TYPE_UNKNOWN = 0 /**<Uknown mapping. Normally used only to initialize the type. */,
+    TYPE_REFINEMENT /**<Refinement mapping type. The reference element is refined in respect to the mapped one. */,
+    TYPE_COARSENING /**<Coarsening mapping type. The reference element is coarsen in respect to the mapped elements. */,
+    TYPE_RENUMBERING /**<Renumbering mapping type. The reference element is equal to the mapped element but it has different local ID or it belongs to a different rank.*/
 };
 
+/*!
+*\enum Entity
+*\brief Entity involved in a mapping relationship.
+*/
 enum Entity {
-    ENTITY_UNKNOWN = -1,
-    ENTITY_CELL,
+    ENTITY_UNKNOWN = -1 /**<Uknown entity. Normally used only to initialize the entity. */,
+    ENTITY_CELL /**<Cell entity.*/
 };
 
 /**
@@ -81,9 +89,9 @@ struct MappingInfo
 
     Type type;                  /**< Type of mapping item. */
     Entity entity;              /**< Mapped entity. */
-    std::vector<long> mapped;   /**< ID of mapped elements. */
+    std::vector<long> mapped;   /**< Local ID of mapped elements. */
 # if BITPIT_ENABLE_MPI==1
-    std::vector<int> rank;      /**< Rank of mapped elements. */
+    std::vector<int> rank;      /**< Ranks owner of mapped elements. */
 # endif
 };
 
@@ -123,13 +131,13 @@ public:
 #endif
 
 
-protected:
+private:
 
     /**
      * \class OctantIR
      * \ingroup Ref
      *
-     * \brief The OctantIR is the structure to store info about an octant in a mapper object.
+     * \brief The OctantIR is an internal structure used by a mapper object to store info about an octant.
      *
      */
     struct OctantIR{
@@ -163,7 +171,7 @@ protected:
      * \class PartitionMapper
      * \ingroup Ref
      *
-     * \brief The PartitionMapper is the structure to store info about the partitioning of two VolOctree mapped meshes.
+     * \brief The PartitionMapper is an internal structure of a mapper object used to store info about the partitioning of two VolOctree mapped meshes.
      *
      */
     struct PartitionMapper {
