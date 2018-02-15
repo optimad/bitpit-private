@@ -1299,7 +1299,7 @@ void PODVolOctree::communicatePODField(const pod::PODField & field, std::map<int
 
         //build send buffers
         DataCommunicator dataCommunicator(m_communicator);
-        std::size_t bytes = uint8_t(sizeof(bool) + (nsf+nvf+1)*sizeof(double));
+        std::size_t bytes = std::size_t(sizeof(bool) + (nsf+(3*nvf)+1)*sizeof(double));
         for (std::pair<const int, std::vector<long int> > val : rankIDsend){
             int rank = val.first;
             //set size
@@ -1308,15 +1308,21 @@ void PODVolOctree::communicatePODField(const pod::PODField & field, std::map<int
             //fill buffer with octants
             SendBuffer &sendBuffer = dataCommunicator.getSendBuffer(rank);
             for (long & ID : val.second){
-                sendBuffer << field.mask->at(ID);
+                bool mask = field.mask->at(ID);
+                sendBuffer << mask;
                 for (std::size_t i=0; i<nsf; i++)
                     sendBuffer << field.scalar->at(ID,i);
-                for (std::size_t i=0; i<nvf; i++)
-                    sendBuffer << field.vector->at(ID,i);
+                for (std::size_t i=0; i<nvf; i++){
+                    for (std::size_t j=0; j<3; j++){
+                        double temp = field.vector->at(ID,i)[j];
+                        sendBuffer << field.vector->at(ID,i)[j];
+                    }
+                }
                 sendBuffer << field.mesh->evalCellVolume(ID);
             }
         }
 
+        dataCommunicator.discoverRecvs();
         dataCommunicator.startAllRecvs();
         dataCommunicator.startAllSends();
 
@@ -1360,7 +1366,7 @@ void PODVolOctree::communicatePODFieldFromPOD(const pod::PODField & field, std::
 
         //build send buffers
         DataCommunicator dataCommunicator(m_communicator);
-        std::size_t bytes = uint8_t(sizeof(long) + sizeof(bool) + (nsf+nvf+1)*sizeof(double));
+        std::size_t bytes = uint8_t(sizeof(long) + sizeof(bool) + (nsf+3*nvf+1)*sizeof(double));
         for (std::pair<const int, std::vector<long int> > val : rankIDsend){
             int rank = val.first;
             //set size
@@ -1370,11 +1376,15 @@ void PODVolOctree::communicatePODFieldFromPOD(const pod::PODField & field, std::
             SendBuffer &sendBuffer = dataCommunicator.getSendBuffer(rank);
             for (long & ID : val.second){
                 sendBuffer << ID;
-                sendBuffer << field.mask->at(ID);
+                bool mask = field.mask->at(ID);
+                sendBuffer << mask;
                 for (std::size_t i=0; i<nsf; i++)
                     sendBuffer << field.scalar->at(ID,i);
-                for (std::size_t i=0; i<nvf; i++)
-                    sendBuffer << field.vector->at(ID,i);
+                for (std::size_t i=0; i<nvf; i++){
+                    for (std::size_t j=0; j<3; j++){
+                    sendBuffer << field.vector->at(ID,i)[j];
+                    }
+                }
                 sendBuffer << field.mesh->evalCellVolume(ID);
             }
         }
@@ -1437,6 +1447,7 @@ void PODVolOctree::communicateBoolField(const PiercedStorage<bool> & field, std:
         }
     }
 
+    dataCommunicator.discoverRecvs();
     dataCommunicator.startAllRecvs();
     dataCommunicator.startAllSends();
 
@@ -1479,6 +1490,7 @@ void PODVolOctree::communicateField(const PiercedStorage<double> & field, const 
         }
     }
 
+    dataCommunicator.discoverRecvs();
     dataCommunicator.startAllRecvs();
     dataCommunicator.startAllSends();
 

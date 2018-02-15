@@ -1103,8 +1103,10 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
     //After communication _invmapper is changed and it has info for each local ID as in serial
 #endif
 
-    for (pair<const long, mapping::MappingInfo> & val : _invmapper){
-        m_invmapper[val.first] = val.second;
+    if (fillInv){
+        for (pair<const long, mapping::MappingInfo> & val : _invmapper){
+            m_invmapper[val.first] = val.second;
+        }
     }
 
 }
