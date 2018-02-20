@@ -272,7 +272,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
                     (*datamappedVi) = std::array<double,3>{0.0, 0.0, 0.0};
                 }
 
-                bool dataB, dataMappedB = false;
+                bool dataB, dataMappedB = true;
                 double *dataS;
                 std::array<double,3> *dataV;
                 double vol;
@@ -1092,7 +1092,7 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
             }
             else if (m_mapper[id].type == mapping::Type::TYPE_COARSENING){
                 mappedField.set(id, true);
-                bool dataB, dataMappedB = false;
+                bool dataB, dataMappedB = true;
                 int ii = 0;
                 for (long idd : m_mapper[id].mapped){
                     int rank = m_mapper[id].rank[ii];
