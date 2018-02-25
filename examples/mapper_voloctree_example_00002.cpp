@@ -23,19 +23,18 @@
 \*---------------------------------------------------------------------------*/
 
 /**
- * \example meshmapper_example_00001.cpp
+ * \example mapper_voloctree_example_00002.cpp
  * 
- * \brief Mesh mapping computing between voloctree meshes.
- * <b>To run</b>: ./meshmapper_example_00001 \n
+ * \brief Mesh mapping computing between adapted voloctree meshes.
+ * <b>To run</b>: ./mapper_voloctree_example_00002 \n
  */ 
 
 #include <array>
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #include <mpi.h>
 #endif
 
-#include "pod.hpp"
-#include "mesh_mapper.hpp"
+#include "bitpit_POD.hpp"
 #include "bitpit_patchkernel.hpp"
 #include "bitpit_voloctree.hpp"
 
@@ -77,9 +76,94 @@ void run()
 
     patch_2D_original->update();
 
+#if BITPIT_ENABLE_MPI==1
     /** Partition the patch */
     patch_2D_original->partition(true);
+#endif
 
+    /**
+     * Create the new tree
+     */
+    std::unique_ptr<PabloUniform> treePointer2 = std::unique_ptr<PabloUniform>(new PabloUniform(x_0, y_0, z_0, l, 2));
+    PabloUniform &octree2 = *treePointer2;
+
+    /** Refine and write the octree */
+    octree2.adaptGlobalRefine();
+    octree2.adaptGlobalRefine();
+    octree2.adaptGlobalRefine();
+    octree2.adaptGlobalRefine();
+
+    /** Create a new patch */
+    VolOctree *patch_2D = new VolOctree(std::move(treePointer2), &treePointer2);
+#if BITPIT_ENABLE_MPI==1
+    patch_2D->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
+
+    /** Partition the patch */
+    patch_2D->partition(true);
+#endif
+
+    srand(1);
+
+    /** Refine the patch */
+    for (int k = 0; k < 4; ++k) {
+        long nCells = patch_2D->getCellCount();
+        log::cout() << std::endl;
+        log::cout() << ">> Marking the cells to adapt... " << std::endl;
+
+        for (int i = 0; i < 100; ++i) {
+            long cellId = rand() % nCells * 2;
+            if (!patch_2D->getCells().exists(cellId)) {
+                continue;
+            }
+
+            patch_2D->markCellForRefinement(cellId);
+            for (auto neighId : patch_2D->findCellNeighs(cellId)) {
+                patch_2D->markCellForRefinement(neighId);
+            }
+        }
+
+        for (int i = 0; i < 50; ++i) {
+            long cellId = rand() % nCells * 2;
+            if (!patch_2D->getCells().exists(cellId)) {
+                continue;
+            }
+
+            patch_2D->markCellForCoarsening(cellId);
+            for (auto neighId : patch_2D->findCellNeighs(cellId)) {
+                patch_2D->markCellForCoarsening(neighId);
+            }
+        }
+
+        log::cout() << std::endl;
+        log::cout() << ">> Initial number of cells... " << nCells << std::endl;
+
+        patch_2D->update();
+
+        nCells = patch_2D->getCellCount();
+        log::cout() << ">> Final number of cells... " << nCells << std::endl;
+    }
+
+    /** Show patch info */
+    log::cout() << "Cell count:   " << patch_2D->getCellCount() << std::endl;
+    log::cout() << "Vertex count: " << patch_2D->getVertexCount() << std::endl;
+
+    patch_2D->getVTK().setName("mesh_random.0");
+#if BITPIT_ENABLE_MPI==1
+    patch_2D->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
+#endif
+    patch_2D->write();
+
+    /** Create mapper object */
+    MapperVolOctree mapobject(patch_2D_original, patch_2D);
+
+    /** Map the two meshes */
+    mapobject.initialize(true);
+
+    patch_2D_original->getVTK().setName("mesh_original.0");
+#if BITPIT_ENABLE_MPI==1
+    patch_2D_original->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
+#endif
+    patch_2D_original->write();
 
     std::vector<uint64_t> refineList;
     refineList.push_back(  7);
@@ -125,16 +209,34 @@ void run()
     refineList.push_back(229);
     refineList.push_back(230);
 
+
     for (uint64_t ind : refineList) {
+#if BITPIT_ENABLE_MPI==1
         int owner = patch_2D_original->getTree().getOwnerRank(ind);
         if (patch_2D_original->getRank() == owner){
             uint32_t lind = patch_2D_original->getTree().getLocalIdx(ind, owner);
+#else
+            uint32_t lind = patch_2D_original->getTree().getLocalIdx(ind);
+#endif
             VolOctree::OctantInfo octinfo(lind, true);
             long id = patch_2D_original->getOctantId(octinfo);
             patch_2D_original->markCellForRefinement(id);
+#if BITPIT_ENABLE_MPI==1
         }
+#endif
     }
-    patch_2D_original->update();
+
+    std::vector<adaption::Info> infoAdapt = patch_2D_original->adaptionPrepare(true);
+
+    mapobject.adaptionPrepare(infoAdapt, true);
+
+    infoAdapt = patch_2D_original->adaptionAlter(true);
+
+    mapobject.adaptionAlter(infoAdapt, true, true);
+
+    patch_2D_original->adaptionCleanup();
+
+    mapobject.adaptionCleanup();
 
     /** Show patch info */
     log::cout() << "Cell count:   " << patch_2D_original->getCellCount() << std::endl;
@@ -155,99 +257,35 @@ void run()
 
     patch_2D_original->getVTK().setName("mesh_original.0");
     patch_2D_original->getVTK().addData("data", VTKFieldType::SCALAR, VTKLocation::CELL, vdata);
+#if BITPIT_ENABLE_MPI==1
     patch_2D_original->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
+#endif
     patch_2D_original->write();
-
-    /**
-     * Create the new tree
-     */
-    std::unique_ptr<PabloUniform> treePointer2 = std::unique_ptr<PabloUniform>(new PabloUniform(x_0, y_0, z_0, l, 2));
-    PabloUniform &octree2 = *treePointer2;
-
-    /** Refine and write the octree */
-    octree2.adaptGlobalRefine();
-    octree2.adaptGlobalRefine();
-    octree2.adaptGlobalRefine();
-    octree2.adaptGlobalRefine();
-
-    /** Create a new patch */
-    VolOctree *patch_2D = new VolOctree(std::move(treePointer2), &treePointer2);
-    patch_2D->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
-
-    /** Partition the patch */
-    patch_2D->partition(true);
-
-    /** Refine the patch */
-    for (int k = 0; k < 4; ++k) {
-        long nCells = patch_2D->getCellCount();
-        log::cout() << std::endl;
-        log::cout() << ">> Marking the cells to adapt... " << std::endl;
-
-        for (int i = 0; i < 100; ++i) {
-            long cellId = rand() % nCells * 2;
-            if (!patch_2D->getCells().exists(cellId)) {
-                continue;
-            }
-
-            for (auto neighId : patch_2D->findCellNeighs(cellId)) {
-                patch_2D->markCellForRefinement(neighId);
-            }
-        }
-
-        for (int i = 0; i < 50; ++i) {
-            long cellId = rand() % nCells * 2;
-            if (!patch_2D->getCells().exists(cellId)) {
-                continue;
-            }
-
-            patch_2D->markCellForCoarsening(cellId);
-            for (auto neighId : patch_2D->findCellNeighs(cellId)) {
-                patch_2D->markCellForCoarsening(neighId);
-            }
-        }
-
-        log::cout() << std::endl;
-        log::cout() << ">> Initial number of cells... " << nCells << std::endl;
-
-        patch_2D->update();
-
-        nCells = patch_2D->getCellCount();
-        log::cout() << ">> Final number of cells... " << nCells << std::endl;
-    }
-
-    /** Show patch info */
-    log::cout() << "Cell count:   " << patch_2D->getCellCount() << std::endl;
-    log::cout() << "Vertex count: " << patch_2D->getVertexCount() << std::endl;
-
-    /** Create mapper object */
-    MeshMapper mapobject;
-
-    /** Map the two meshes */
-    mapobject.mapMeshes(patch_2D, patch_2D_original, true);
 
     /** Map data on second mesh and write */
     PiercedStorage<double> data2(1, &patch_2D->getCells());
+    data2.fill(0.0);
     {
-    const PiercedStorage<mapping::Info> & mapper = mapobject.getMapping();
+    const PiercedStorage<mapping::MappingInfo> & mapper = mapobject.getInverseMapping();
     std::vector<double> vdata2(patch_2D->getInternalCount());
     count = 0;
     for (Cell & cell : patch_2D->getCells()){
         if (cell.isInterior()){
             long id = cell.getId();
-            if (mapper[id].type == adaption::Type::TYPE_RENUMBERING){
-                data2[id] = data[mapper[id].previous[0]];
+            if (mapper[id].type == mapping::Type::TYPE_RENUMBERING){
+                data2[id] = data[mapper[id].mapped[0]];
                 vdata2[count] = data2[id];
             }
-            else if (mapper[id].type == adaption::Type::TYPE_COARSENING){
+            else if (mapper[id].type == mapping::Type::TYPE_COARSENING){
                 data2[id] = 0.0;
-                int n = mapper[id].previous.size();
-                for (long idd : mapper[id].previous){
+                int n = mapper[id].mapped.size();
+                for (long idd : mapper[id].mapped){
                     data2[id] += data[idd] / n;
                 }
                 vdata2[count] = data2[id];
             }
-            else if (mapper[id].type == adaption::Type::TYPE_REFINEMENT){
-                data2[id] = data[mapper[id].previous[0]];
+            else if (mapper[id].type == mapping::Type::TYPE_REFINEMENT){
+                data2[id] = data[mapper[id].mapped[0]];
                 vdata2[count] = data2[id];
             }
             count++;
@@ -264,27 +302,27 @@ void run()
 
     /** Re-Map data on first mesh with inverse mapping and write */
     {
-    const PiercedStorage<mapping::Info> & invmapper = mapobject.getInverseMapping();
+    const PiercedStorage<mapping::MappingInfo> & invmapper = mapobject.getMapping();
     PiercedStorage<double> data3(1, &patch_2D_original->getCells());
     std::vector<double> vdata3(patch_2D_original->getInternalCount());
     count = 0;
     for (Cell & cell : patch_2D_original->getCells()){
         if (cell.isInterior()){
             long id = cell.getId();
-            if (invmapper[id].type == adaption::Type::TYPE_RENUMBERING){
-                data3[id] = data2[invmapper[id].previous[0]];
+            if (invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
+                data3[id] = data2[invmapper[id].mapped[0]];
                 vdata3[count] = data3[id];
             }
-            else if (invmapper[id].type == adaption::Type::TYPE_COARSENING){
+            else if (invmapper[id].type == mapping::Type::TYPE_COARSENING){
                 data3[id] = 0.0;
-                int n = invmapper[id].previous.size();
-                for (long idd : invmapper[id].previous){
+                int n = invmapper[id].mapped.size();
+                for (long idd : invmapper[id].mapped){
                     data3[id] += data2[idd] / n;
                 }
                 vdata3[count] = data3[id];
             }
-            else if (invmapper[id].type == adaption::Type::TYPE_REFINEMENT){
-                data3[id] = data2[invmapper[id].previous[0]];
+            else if (invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
+                data3[id] = data2[invmapper[id].mapped[0]];
                 vdata3[count] = data3[id];
             }
             count++;
@@ -305,7 +343,7 @@ void run()
 
 int main(int argc, char *argv[]) 
 {
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Init(&argc,&argv);
 #endif    
 
@@ -317,7 +355,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Finalize();
 #endif
 

@@ -25,14 +25,13 @@
 #ifndef __BITPIT_POD_HPP__
 #define __BITPIT_POD_HPP__
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #    include <mpi.h>
 #endif
 #include <string>
 #include <vector>
 #include <unordered_map>
 
-#include "mesh_mapper.hpp"
 #include "pod_kernel.hpp"
 #include "pod_voloctree.hpp"
 
@@ -101,7 +100,7 @@ public:
     };
 
 public:
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     POD(MPI_Comm comm = MPI_COMM_WORLD);
 # else
     POD();
@@ -185,8 +184,8 @@ public:
     void evalReconstruction();
     void evalErrorBoundingBox();
     void computeMapper(VolumeKernel * mesh);
-    void prepareMapper(const std::vector<adaption::Info> & info);
-    void updateMapper(const std::vector<adaption::Info> & info);
+    void adaptionPrepare(const std::vector<adaption::Info> & info);
+    void adaptionAlter(const std::vector<adaption::Info> & info);
 
     void reconstructFields(pod::PODField &field, pod::PODField &recon);
     void dumpField(const std::string &name, const pod::PODField &field) const;
@@ -233,7 +232,7 @@ private:
     std::vector<std::size_t>                       m_listActiveIDsLeave1out;  /**<List of the active snapshots used in the leave-1-out method*/  
     std::size_t                                    m_sizeInternal;            /**<Number of internal cells in the list of ID of active cells [the internal cells are placed first in the list of active IDs].*/
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Comm            m_communicator; /**< MPI communicator */
 #endif
     int                 m_rank;         /**< Local rank of process. */
@@ -282,7 +281,7 @@ private:
     std::vector<double> fieldsl2norm(pod::PODField &snap);
     std::vector<double> fieldsMax(pod::PODField &snap);    
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     void initializeCommunicator(MPI_Comm communicator);
     MPI_Comm getCommunicator() const;
     bool isCommunicatorSet() const;
@@ -305,7 +304,7 @@ private:
             const std::unordered_set<long> *targetCells = nullptr);
 
     void _computeMapper(VolumeKernel * mesh);
-    void _updateMapper(const std::vector<adaption::Info> & info);
+    void _adaptionAlter(const std::vector<adaption::Info> & info);
 
     void diff(PiercedStorage<double> &fields, const pod::PODMode &mode,
             const std::vector<std::size_t> &scalarIds, const std::vector<std::size_t> &podscalarIds,

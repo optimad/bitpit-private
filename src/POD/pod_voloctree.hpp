@@ -25,7 +25,7 @@
 #ifndef __BITPIT_POD_VOLOCTREE_HPP__
 #define __BITPIT_POD_VOLOCTREE_HPP__
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #    include <mpi.h>
 #endif
 #include <string>
@@ -42,7 +42,7 @@ class PODVolOctree: public PODKernel {
     friend class POD;
 
 public:
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     PODVolOctree(MPI_Comm comm = MPI_COMM_WORLD);
 # else
     PODVolOctree();
@@ -56,10 +56,11 @@ public:
      */
     PODVolOctree(PODVolOctree&& other) = default;
 
-private:
+protected:
 
     VolumeKernel* createMesh() override;
 
+    void _computeMapper(VolumeKernel * mesh, MapperVolOctree* & mapper, bool fillInv) override;
 
     bitpit::PiercedStorage<bitpit::adaption::Info> mapMesh(bitpit::VolOctree * mesh);
     void mapMeshSamePartition(bitpit::VolOctree * mesh, bitpit::PiercedStorage<bitpit::adaption::Info> & mapper);
@@ -79,6 +80,15 @@ private:
     std::unordered_set<long> mapCellsToPOD(const std::unordered_set<long> * targetCells);
 
     void adaptMeshToMesh(VolumeKernel* meshToAdapt, VolumeKernel * meshReference);
+
+# if BITPIT_ENABLE_MPI==1
+    void communicatePODField(const pod::PODField & field, std::map<int, std::map<long, bool> > & dataBrec, std::map<int, std::map<long, std::vector<double> > > & dataSrec, std::map<int, std::map<long, std::vector<std::array<double,3> > > > & dataVrec, std::map<int, std::map<long, double> > & volrec);
+    void communicatePODFieldFromPOD(const pod::PODField & field, std::map<int, std::map<long, bool> > & dataBrec, std::map<int, std::map<long, std::vector<double> > > & dataSrec, std::map<int, std::map<long, std::vector<std::array<double,3> > > > & dataVrec, std::map<int, std::map<long, double> > & volrec);
+    void communicateBoolField(const PiercedStorage<bool> & field, std::map<int, std::map<long, bool> > & dataBrec);
+    void communicateField(const PiercedStorage<double> & field, const VolumeKernel * mesh, std::map<int, std::map<long, std::vector<double> > > & datarec, std::map<int, std::map<long, double> > & volrec);
+    void communicateFieldFromPOD(const PiercedStorage<double> & field, const VolumeKernel * mesh, std::map<int, std::map<long, std::vector<double> > > & datarec, std::map<int, std::map<long, double> > & volrec);
+#endif
+
 
 };
 

@@ -125,9 +125,8 @@ private:
 public:
 	Octant();
 	Octant(const Octant &octant);
-private:
-	Octant(uint8_t dim);
-	Octant(uint8_t dim, uint8_t level, int32_t x, int32_t y, int32_t z = 0);
+    Octant(uint8_t dim);
+    Octant(uint8_t dim, uint8_t level, int32_t x, int32_t y, int32_t z = 0);
 	Octant(bool bound, uint8_t dim, uint8_t level, int32_t x, int32_t y, int32_t z = 0);
 	bool operator ==(const Octant & oct2);
 
@@ -161,6 +160,7 @@ private:
 	bool		getBalance() const;
 	void		setMarker(int8_t marker);
 	void		setBalance(bool balance);
+private:
 	void		setLevel(uint8_t level);
 	void 		setPbound(uint8_t face, bool flag);
 
@@ -178,6 +178,7 @@ private:
 	void			getNode(u32array3 & node, uint8_t inode) const;
 	u32array3		getNode(uint8_t inode) const;
 	void			getNormal(uint8_t iface, i8array3 & normal, const int8_t (&normals)[6][3]) const;
+public:
 	uint64_t		computeMorton() const;
 	uint64_t		computeNodeMorton(uint8_t inode) const;
 
@@ -185,6 +186,7 @@ private:
 	// OTHER METHODS												    			   //
 	// =================================================================================== //
 	Octant					buildLastDesc() const;
+private:
 	Octant					buildFather() const;
 	std::vector< Octant >	buildChildren() const;
 	std::vector<uint64_t> 		computeHalfSizeMorton(uint8_t iface, uint32_t & sizehf) const;

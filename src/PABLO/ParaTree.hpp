@@ -325,6 +325,7 @@ namespace bitpit {
         int8_t 		getMarker(const Octant* oct) const;
         uint8_t 	getLevel(const Octant* oct) const;
         uint64_t 	getMorton(const Octant* oct) const;
+        uint64_t    getLastDescMorton(const Octant* oct) const;
         uint64_t 	getNodeMorton(const Octant* oct, uint8_t inode) const;
         bool 		getBalance(const Octant* oct) const;
         bool		getBound(const Octant* oct, uint8_t iface) const;
@@ -333,6 +334,7 @@ namespace bitpit {
         bool		getPbound(const Octant* oct) const;
         bool 		getIsNewR(const Octant* oct) const;
         bool 		getIsNewC(const Octant* oct) const;
+        std::bitset<17> getInfo(const Octant* oct) const;
         uint32_t 	getIdx(const Octant* oct) const;
         uint64_t 	getGlobalIdx(const Octant* oct) const;
         octantID	getPersistentIdx(const Octant* oct) const;
@@ -353,8 +355,9 @@ namespace bitpit {
         uint8_t 	getBalanceCodimension() const;
         uint64_t 	getFirstDescMorton() const;
         uint64_t 	getLastDescMorton() const;
-        uint64_t 	getLastDescMorton(uint32_t idx) const;
-        octantIterator	getInternalOctantsBegin();
+        uint64_t    getLastDescMorton(uint32_t idx) const;
+        const octvector* getInternalOctants();
+        octantIterator  getInternalOctantsBegin();
         octantIterator	getInternalOctantsEnd();
         octantIterator	getPboundOctantsBegin();
         octantIterator	getPboundOctantsEnd();

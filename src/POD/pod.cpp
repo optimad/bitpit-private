@@ -30,7 +30,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #   include <mpi.h>
 #endif
 
@@ -60,7 +60,7 @@ namespace bitpit {
 /**
  * Creates a new POD object.
  */
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
 /**
  * \param[in] comm The MPI communicator used by the pod object. MPI_COMM_WORLD is the default value.
  */
@@ -71,7 +71,7 @@ POD::POD()
 : m_filter(1), m_sensorMask(1)
 {
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     m_communicator = MPI_COMM_NULL;
 #endif
 
@@ -90,7 +90,7 @@ POD::POD()
     m_sizeInternal = 0;
     m_errorThreshold = 0;
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     initializeCommunicator(comm);
     MPI_Comm_size(m_communicator, &m_nProcs);
     MPI_Comm_rank(m_communicator, &m_rank);
@@ -145,7 +145,7 @@ void POD::clear()
 
     m_podkernel->clearMapper();
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     freeCommunicator();
 # endif
 }
@@ -360,7 +360,7 @@ double POD::getErrorThreshold()
  * Set the target error fields used in the error bounding box evaluation.
  *
  * \param[in] namesf is the vector of scalar fields names.
- * \param[in] namsvf is the vector of vector fields names, arranged in vector components.
+ * \param[in] namevf is the vector of vector fields names, arranged in vector components.
  */
 void POD::setTargetErrorFields(std::vector<std::string> &namesf, std::vector<std::array<std::string,3>> &namevf)
 {
@@ -395,7 +395,7 @@ void POD::setMeshType(POD::MeshType type)
     switch (type)
     {
     case POD::MeshType::VOLOCTREE:
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
         m_podkernel = std::unique_ptr<PODKernel>(new PODVolOctree(m_communicator));
 #else
         m_podkernel = std::unique_ptr<PODKernel>(new PODVolOctree());
@@ -695,7 +695,6 @@ void POD::setSensorMask(const PiercedStorage<bool> & mask, VolumeKernel * mesh)
                 trueCells.insert(id);
         }
 
-
         //Map true cells
         std::unordered_set<long> mappedCells = m_podkernel->mapCellsToPOD(&trueCells);
 
@@ -944,7 +943,6 @@ void POD::leave1out()
     //dump error
     if (m_writeMode != WriteMode::NONE){    
         std::string ename = m_name + ".error";
-        std::cout<< ename << endl;
         dumpField(ename, m_errorMap);
     }
     m_nSnapshots=h_nSnapshots;
@@ -964,7 +962,7 @@ void POD::evalMeanMesh()
     _evalMeanMesh();
 
     // Set mesh POD to write only internal cells
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     m_podkernel->getMesh()->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
 #else
     m_podkernel->getMesh()->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_ALL);
@@ -1027,8 +1025,7 @@ void POD::_evalMeanMesh()
                 //Compute mapping of read mesh on pod mesh
                 _computeMapper(readf.mesh);
                 _readf = new pod::PODField(m_podkernel->mapPODFieldToPOD(readf, nullptr));
-                m_podkernel->getMeshMapper().clear();
-                m_podkernel->setMapperDirty(true);
+                m_podkernel->clearMapper();
             }
 
             for (const Cell &cell : m_podkernel->getMesh()->getCells()) {
@@ -1062,8 +1059,7 @@ void POD::_evalMeanMesh()
             }else{
                 _computeMapper(readf.mesh);
                 _readf = new pod::PODField(m_podkernel->mapPODFieldToPOD(readf, nullptr));
-                m_podkernel->getMeshMapper().clear();
-                m_podkernel->setMapperDirty(true);
+                m_podkernel->clearMapper();
             }
 
             for (const Cell &cell : m_podkernel->getMesh()->getCells())
@@ -1125,7 +1121,7 @@ void POD::evalCorrelation()
         else{
             _computeMapper(snapi.mesh);
             _snapi = new pod::PODField(m_podkernel->mapPODFieldToPOD(snapi, nullptr));
-            m_podkernel->getMeshMapper().clear();
+            m_podkernel->clearMapper();
         }
 
         if (m_useMean)
@@ -1142,7 +1138,7 @@ void POD::evalCorrelation()
             else{
                 _computeMapper(snapj.mesh);
                 _snapj = new pod::PODField(m_podkernel->mapPODFieldToPOD(snapj, nullptr));
-                m_podkernel->getMeshMapper().clear();
+                m_podkernel->clearMapper();
             }
 
             if (m_useMean)
@@ -1153,7 +1149,7 @@ void POD::evalCorrelation()
         }
     }
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     for (std::size_t i = 0; i < m_nFields; i++ )
         MPI_Allreduce(MPI_IN_PLACE, m_correlationMatrices[i].data(), m_nSnapshots*m_nSnapshots, MPI_DOUBLE, MPI_SUM, m_communicator);
 # endif
@@ -1243,7 +1239,7 @@ void POD::evalReconstruction()
 
             // Map snapshot on pod mesh
             pod::PODField mappedSnapi = m_podkernel->mapPODFieldToPOD(snapi, nullptr);
-            m_podkernel->getMeshMapper().clear();
+            m_podkernel->clearMapper();
 
             reconstructFields(mappedSnapi, reconi);
         }
@@ -1368,7 +1364,7 @@ void POD::evalErrorBoundingBox()
         }  
     }
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     MPI_Allreduce(MPI_IN_PLACE, maxBoxes.data(), m_nFields*3, MPI_DOUBLE, MPI_MAX, m_communicator);
     MPI_Allreduce(MPI_IN_PLACE, minBoxes.data(), m_nFields*3, MPI_DOUBLE, MPI_MIN, m_communicator);    
 # endif  
@@ -1389,7 +1385,7 @@ void POD::evalErrorBoundingBox()
     log::cout()<< "("<< minBox << ") ("<< maxBox << ")"<< endl;
 
     bool runSolver;
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     runSolver = (m_rank == 0);
 #else
     runSolver = true;
@@ -1433,7 +1429,7 @@ void POD::evalReconstructionCoeffs(pod::PODField & field)
 {
     _evalReconstructionCoeffs(field);
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     for (std::size_t i = 0; i < m_nFields; i++)
         MPI_Allreduce(MPI_IN_PLACE, m_reconstructionCoeffs[i].data(), m_nModes, MPI_DOUBLE, MPI_SUM, m_communicator);
 # endif
@@ -1485,7 +1481,7 @@ void POD::_evalReconstructionCoeffs(pod::PODField & field)
         }
     }
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     for (std::size_t i = 0; i < m_nFields; i++)
         MPI_Allreduce(MPI_IN_PLACE, m_reconstructionCoeffs[i].data(), m_nModes, MPI_DOUBLE, MPI_SUM, m_communicator);
 # endif
@@ -1656,7 +1652,7 @@ void POD::evalMinimizationMatrices()
                 }
             }
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
             for (std::size_t i = 0; i < m_nFields; i++ )
                 MPI_Allreduce(MPI_IN_PLACE, m_minimizationMatrices[i].data(), m_nModes*m_nModes, MPI_DOUBLE, MPI_SUM, m_communicator);
 # endif
@@ -1674,7 +1670,7 @@ void POD::evalMinimizationMatrices()
 void POD::solveMinimization(std::vector<std::vector<double> > & rhs)
 {
     bool runSolver;
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     runSolver = (m_rank == 0);
 #else
     runSolver = true;
@@ -1714,7 +1710,7 @@ void POD::evalEigen()
     m_podCoeffs.resize(m_nFields, std::vector<std::vector<double>>(m_nSnapshots, std::vector<double>(m_nSnapshots,0.0)));
 
     bool runSolver;
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     runSolver = (m_rank == 0);
 #else
     runSolver = true;
@@ -1763,7 +1759,7 @@ void POD::evalEigen()
         }
     }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     long bufferSize = m_nModes;
     MPI_Bcast(&bufferSize, 1, MPI_LONG, 0, m_communicator);
     m_nModes = bufferSize;
@@ -1844,7 +1840,7 @@ void POD::_evalModes()
         else{
             _computeMapper(snapi.mesh);
             _snapi = new pod::PODField(m_podkernel->mapPODFieldToPOD(snapi, nullptr));
-            m_podkernel->getMeshMapper().clear();
+            m_podkernel->clearMapper();
         }
 
         if (m_useMean)    
@@ -1989,7 +1985,7 @@ void POD::readSnapshot(pod::SnapshotFile snap, pod::PODField & fieldr)
 
     // Reset temporary write internal cells only if meshPOD
     if (mesh == m_podkernel->getMesh()){
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
         mesh->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_INTERNAL);
 #else
         mesh->setVTKWriteTarget(PatchKernel::WriteTarget::WRITE_TARGET_CELLS_ALL);
@@ -2602,7 +2598,7 @@ std::vector<double> POD::fieldsl2norm(pod::PODField & snap)
         }
     }
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     MPI_Allreduce(MPI_IN_PLACE, norm.data(), m_nFields, MPI_DOUBLE, MPI_SUM, m_communicator);
 # endif    
 
@@ -2641,14 +2637,14 @@ std::vector<double> POD::fieldsMax(pod::PODField & snap)
         }
     }
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     MPI_Allreduce(MPI_IN_PLACE, max.data(), m_nFields, MPI_DOUBLE, MPI_MAX, m_communicator);
 # endif    
 
     return max;
 }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 /**
  * Initializes the MPI communicator to be used for parallel communications.
  *
@@ -2824,7 +2820,7 @@ void POD::evalReconstructionCoeffs(PiercedStorage<double> &fields,
         const std::vector<std::array<std::size_t, 3>> & vectorIds, const std::vector<std::size_t> & podvectorIds)
 {
     _evalReconstructionCoeffs(fields, scalarIds, podscalarIds, vectorIds, podvectorIds);
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     for (std::size_t i = 0; i < m_nFields; i++)
         MPI_Allreduce(MPI_IN_PLACE, m_reconstructionCoeffs[i].data(), m_nModes, MPI_DOUBLE, MPI_SUM, m_communicator);
 #endif
@@ -2886,7 +2882,7 @@ void POD::_evalReconstructionCoeffs(PiercedStorage<double> &fields,
         }
     }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     for (std::size_t i = 0; i < m_nFields; i++)
         MPI_Allreduce(MPI_IN_PLACE, m_reconstructionCoeffs[i].data(), m_nModes, MPI_DOUBLE, MPI_SUM, m_communicator);
 #endif
@@ -3016,11 +3012,11 @@ void POD::computeMapper(VolumeKernel * mesh)
  * Can be called only if expert mode is active.
  * \param[in] info Info vector result of adaptation of the input mesh
  */
-void POD::updateMapper(const std::vector<adaption::Info> & info)
+void POD::adaptionAlter(const std::vector<adaption::Info> & info)
 {
     if (!m_expert)
         throw std::runtime_error("POD: update mapper can be called only in expert mode");
-    _updateMapper(info);
+    _adaptionAlter(info);
 }
 
 /**
@@ -3038,9 +3034,9 @@ void POD::_computeMapper(VolumeKernel * mesh)
  * the info given before an adaptation of the input mesh (internal method).
  * \param[in] info Info vector result of adaptation prepare of the input mesh
  */
-void POD::prepareMapper(const std::vector<adaption::Info> & info)
+void POD::adaptionPrepare(const std::vector<adaption::Info> & info)
 {
-    m_podkernel->prepareMapper(info);
+    m_podkernel->adaptionPrepare(info);
 }
 
 /**
@@ -3048,9 +3044,9 @@ void POD::prepareMapper(const std::vector<adaption::Info> & info)
  * the info given after an adaptation of the input mesh (internal method).
  * \param[in] info Info vector result of adaptation of the input mesh
  */
-void POD::_updateMapper(const std::vector<adaption::Info> & info)
+void POD::_adaptionAlter(const std::vector<adaption::Info> & info)
 {
-    m_podkernel->updateMapper(info);
+    m_podkernel->adaptionAlter(info);
 }
 
 /**

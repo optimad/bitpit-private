@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #	include <mpi.h>
 #endif
 
@@ -51,7 +51,7 @@ namespace bitpit {
 /**
  * Creates a new PODKernel object.
  */
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
 /**
  * \param[in] comm The MPI communicator used by the pod object. MPI_COMM_WORLD is the default value.
  */
@@ -62,13 +62,14 @@ PODKernel::PODKernel()
 :m_cellsVolume(1)
 {
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     m_communicator = MPI_COMM_NULL;
 #endif  
 
     m_meshPOD = nullptr;
+    m_meshmap = nullptr;
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     initializeCommunicator(comm);
     MPI_Comm_size(m_communicator, &m_nProcs);
     MPI_Comm_rank(m_communicator, &m_rank);
@@ -77,7 +78,7 @@ PODKernel::PODKernel()
     m_nProcs = 1;
 #endif
 
-    m_dirtymap = true;
+    setMapperDirty(true);
 
 }
 
@@ -94,9 +95,10 @@ PODKernel::~PODKernel()
  */
 void PODKernel::clear()
 {
+    clearMapper();
     delete m_meshPOD;
 
-# if BITPIT_ENABLE_MPI
+# if BITPIT_ENABLE_MPI==1
     freeCommunicator();
 # endif
 }
@@ -187,11 +189,20 @@ double PODKernel::getRawCellVolume(long rawIndex)
 /**
  * Compute the mapping of an input mesh on the pod mesh.
  * \param[in] mesh Pointer to input mesh.
- * \param[in] fillInv If true even the inverse mapping is computed.
+* \param[in] fillInv If true even the inverse mapping is computed.
  */
 void PODKernel::computeMapper(VolumeKernel * mesh, bool fillInv)
 {
-    m_meshmap.mapMeshes(m_meshPOD, mesh, fillInv);
+    if (m_meshPOD == nullptr)
+        throw std::runtime_error ("PODKernel: no pod mesh set in compute Mapper");
+
+    if (mesh == nullptr)
+        throw std::runtime_error ("PODKernel: no valid input mesh in compute Mapper");
+
+    clearMapper();
+
+    _computeMapper(mesh, m_meshmap, fillInv);
+
     setMapperDirty(false);
 }
 
@@ -200,9 +211,9 @@ void PODKernel::computeMapper(VolumeKernel * mesh, bool fillInv)
  * the info given before an adaptation of the input mesh (internal method).
  * \param[in] info Info vector result of adaptation prepare of the input mesh
  */
-void PODKernel::prepareMapper(const std::vector<adaption::Info> & info)
+void PODKernel::adaptionPrepare(const std::vector<adaption::Info> & info)
 {
-    m_meshmap.mappingAdaptionPreparare(info, false);
+    m_meshmap->adaptionPrepare(info, false);
     setMapperDirty(true);
 }
 
@@ -212,9 +223,9 @@ void PODKernel::prepareMapper(const std::vector<adaption::Info> & info)
  * \param[in] info Info vector result of adaptation of the input mesh
  * \param[in] fillInv If true even the inverse mapping is computed.
  */
-void PODKernel::updateMapper(const std::vector<adaption::Info> & info, bool fillInv)
+void PODKernel::adaptionAlter(const std::vector<adaption::Info> & info, bool fillInv)
 {
-    m_meshmap.mappingAdaptionUpdate(info, false, fillInv);
+    m_meshmap->adaptionAlter(info, false, fillInv);
     setMapperDirty(false);
 }
 
@@ -222,19 +233,24 @@ void PODKernel::updateMapper(const std::vector<adaption::Info> & info, bool fill
  * Get the stored pre-computed mapping.
  * \return mesh mapper.
  */
-MeshMapper & PODKernel::getMeshMapper()
+MapperVolOctree* PODKernel::getMapper()
 {
     return m_meshmap;
 }
+
 
 /**
  * Clear the mapping info.
  */
 void PODKernel::clearMapper()
 {
-    m_meshmap.clear();
-    m_dirtymap = true;
+    if (m_meshmap != nullptr){
+        delete m_meshmap;
+        m_meshmap = nullptr;
+    }
+    setMapperDirty(true);
 }
+
 /**
  * Set if the mapper has to be recomputed.
  * param[in] Dirty mapping flag
@@ -253,7 +269,7 @@ bool PODKernel::isMapperDirty()
     return m_dirtymap;
 }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 /**
  * Initializes the MPI communicator to be used for parallel communications.
  *
