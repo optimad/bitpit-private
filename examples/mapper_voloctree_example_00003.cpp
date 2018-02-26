@@ -298,7 +298,6 @@ void run()
                 int rank = val.first;
                 dataCommunicator.waitRecv(rank);
                 RecvBuffer & recvBuffer = dataCommunicator.getRecvBuffer(rank);
-                long bufferSize = recvBuffer.getSize();
                 for (long & ID : val.second){
                     recvBuffer >> datarec[rank][ID];
                 }

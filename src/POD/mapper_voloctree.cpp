@@ -497,6 +497,10 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                     } //idprevious
                     break;
 
+                    //DEFAULT
+                default:
+                    break;
+
                 }//end switch
             }//if deletion
         }//end info
@@ -626,7 +630,6 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                         _mapped = m_partitionIR.map_rank_invmapper[info.rank][id].mapped;
                     }
 #endif
-                    std::size_t imapped = 0;
                     for (long idp : _mapped){
                         (*mapperReference)[idp].mapped.push_back(id);
 #if BITPIT_ENABLE_MPI
@@ -1345,8 +1348,6 @@ bool MapperVolOctree::_recoverPartition()
 
         //fill buffer with octants
         SendBuffer &sendBuffer = octCommunicator.getSendBuffer(reference_rank);
-        int8_t m;
-        bool info[17];
         uint32_t ii = 0;
         for(Octant & octant : list_octant[reference_rank]){
             x = octant.getX();
@@ -1392,7 +1393,7 @@ bool MapperVolOctree::_recoverPartition()
         else
             break;
 
-        for(int i = 0; i < nof; i++){
+        for(uint32_t i = 0; i < nof; i++){
             recvBuffer >> x;
             recvBuffer >> y;
             recvBuffer >> z;
@@ -1458,9 +1459,6 @@ void MapperVolOctree::_communicateInverseMapper(std::unordered_map<long, mapping
 
         //fill buffer with octants and local map for inverse mapper in PartitionMapper member
         SendBuffer &sendBuffer = mapCommunicator.getSendBuffer(rank);
-        mapping::Type type;
-        mapping::Entity entity;
-        std::vector<long> mapped;
         sendBuffer << int(toRankgID[rank].size());
         for (long & gID : toRankgID[rank]){
             mapping::Info _info = _invmapper[gID];
@@ -1492,12 +1490,11 @@ void MapperVolOctree::_communicateInverseMapper(std::unordered_map<long, mapping
         mapCommunicator.waitRecv(rank);
 
         RecvBuffer & recvBuffer = mapCommunicator.getRecvBuffer(rank);
-        long bufferSize = recvBuffer.getSize();
 
         int nof;
         recvBuffer >> nof;
 
-        for(std::size_t i = 0; i < nof; i++){
+        for(int i = 0; i < nof; i++){
             mapping::Info _info;
             long localID;
             long globalID;
@@ -1514,7 +1511,7 @@ void MapperVolOctree::_communicateInverseMapper(std::unordered_map<long, mapping
             _info.entity = mapping::Entity(entity);
             int nmap;
             recvBuffer >> nmap;
-            for (std::size_t j=0; j<nmap; j++){
+            for (int j=0; j<nmap; j++){
                 long idref;
                 recvBuffer >> idref;
                 _info.mapped.push_back(idref);
@@ -1598,7 +1595,7 @@ void MapperVolOctree::_communicateInverseMapperBack()
         RecvBuffer & recvBuffer = mapCommunicator.getRecvBuffer(rank);
         int nof;
         recvBuffer >> nof;
-        for(std::size_t i = 0; i < nof; i++){
+        for(int i = 0; i < nof; i++){
             mapping::Info _info;
             long localID;
             int type;
@@ -1610,7 +1607,7 @@ void MapperVolOctree::_communicateInverseMapperBack()
             _info.entity = mapping::Entity(entity);
             int nmap;
             recvBuffer >> nmap;
-            for (std::size_t j=0; j<nmap; j++){
+            for (int j=0; j<nmap; j++){
                 long idref;
                 recvBuffer >> idref;
                 _info.mapped.push_back(idref);
@@ -1731,7 +1728,7 @@ void MapperVolOctree::_communicateMappedAdaptionInfo(const std::vector<adaption:
         RecvBuffer & recvBuffer = mapCommunicator.getRecvBuffer(rank);
         int nofMapper;
         recvBuffer >> nofMapper;
-        for(std::size_t i = 0; i < nofMapper; i++){
+        for(int i = 0; i < nofMapper; i++){
             mapping::Info _info;
             long localID;
             int mtype;
@@ -1743,7 +1740,7 @@ void MapperVolOctree::_communicateMappedAdaptionInfo(const std::vector<adaption:
             _info.entity = mapping::Entity(mentity);
             int nmap;
             recvBuffer >> nmap;
-            for (std::size_t j=0; j<nmap; j++){
+            for (int j=0; j<nmap; j++){
                 long idref;
                 recvBuffer >> idref;
                 _info.mapped.push_back(idref);
@@ -1755,7 +1752,7 @@ void MapperVolOctree::_communicateMappedAdaptionInfo(const std::vector<adaption:
 
         int nofInfo;
         recvBuffer >> nofInfo;
-        for(std::size_t i = 0; i < nofInfo; i++){
+        for(int i = 0; i < nofInfo; i++){
             adaption::Info _info;
             int type;
             int entity;
@@ -1765,14 +1762,14 @@ void MapperVolOctree::_communicateMappedAdaptionInfo(const std::vector<adaption:
             _info.entity = adaption::Entity(entity);
             int ncurrent;
             recvBuffer >> ncurrent;
-            for (std::size_t j=0; j<ncurrent; j++){
+            for (int j=0; j<ncurrent; j++){
                 long id;
                 recvBuffer >> id;
                 _info.current.push_back(id);
             }
             int nprevious;
             recvBuffer >> nprevious;
-            for (std::size_t j=0; j<nprevious; j++){
+            for (int j=0; j<nprevious; j++){
                 long id;
                 recvBuffer >> id;
                 _info.previous.push_back(id);

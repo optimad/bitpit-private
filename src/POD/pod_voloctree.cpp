@@ -1314,7 +1314,6 @@ void PODVolOctree::communicatePODField(const pod::PODField & field, std::map<int
                     sendBuffer << field.scalar->at(ID,i);
                 for (std::size_t i=0; i<nvf; i++){
                     for (std::size_t j=0; j<3; j++){
-                        double temp = field.vector->at(ID,i)[j];
                         sendBuffer << field.vector->at(ID,i)[j];
                     }
                 }
@@ -1330,7 +1329,6 @@ void PODVolOctree::communicatePODField(const pod::PODField & field, std::map<int
             int rank = val.first;
             dataCommunicator.waitRecv(rank);
             RecvBuffer & recvBuffer = dataCommunicator.getRecvBuffer(rank);
-            long bufferSize = recvBuffer.getSize();
             for (long & ID : val.second){
                 recvBuffer >> dataBrec[rank][ID];
                 for (std::size_t i=0; i<nsf; i++){
@@ -1455,7 +1453,6 @@ void PODVolOctree::communicateBoolField(const PiercedStorage<bool> & field, std:
         int rank = val.first;
         dataCommunicator.waitRecv(rank);
         RecvBuffer & recvBuffer = dataCommunicator.getRecvBuffer(rank);
-        long bufferSize = recvBuffer.getSize();
         for (long & ID : val.second){
             recvBuffer >> dataBrec[rank][ID];
         }
@@ -1498,7 +1495,6 @@ void PODVolOctree::communicateField(const PiercedStorage<double> & field, const 
         int rank = val.first;
         dataCommunicator.waitRecv(rank);
         RecvBuffer & recvBuffer = dataCommunicator.getRecvBuffer(rank);
-        long bufferSize = recvBuffer.getSize();
         for (long & ID : val.second){
             datarec[rank][ID].resize(nf);
             for (std::size_t ifield=0; ifield<nf; ifield++)
