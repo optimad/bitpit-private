@@ -40,6 +40,7 @@
 #include "bitpit_voloctree.hpp"
 
 using namespace bitpit;
+using namespace pod;
 
 /**
  * Run the examples.

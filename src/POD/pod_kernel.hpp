@@ -62,7 +62,7 @@ public:
     void evalCellsVolume();
     double getCellVolume(long id);
     double getRawCellVolume(long rawIndex);
-    MapperVolOctree* getMapper();
+    pod::MapperVolOctree* getMapper();
 
     bool isMapperDirty();
     void computeMapper(VolumeKernel * mesh, bool fillInv = true);
@@ -86,7 +86,7 @@ protected:
     int                     m_rank;         /**< Local rank of process. */
     int                     m_nProcs;       /**< Number of processes. */
 
-    MapperVolOctree*        m_meshmap;      /**< Mapping object TO pod mesh.*/
+    pod::MapperVolOctree*        m_meshmap;      /**< Mapping object TO pod mesh.*/
 
     bool                    m_dirtymap;     /**< True if mapping has to be recomputed/updated [to be set by set method]. */
 
@@ -102,7 +102,7 @@ protected:
 
     virtual VolumeKernel* createMesh() = 0;
 
-    virtual void _computeMapper(VolumeKernel * mesh, MapperVolOctree* & mapper, bool fillInv) = 0;
+    virtual void _computeMapper(VolumeKernel * mesh, pod::MapperVolOctree* & mapper, bool fillInv) = 0;
 
     virtual pod::PODField mapPODFieldToPOD(const pod::PODField & field, const std::unordered_set<long> * targetCells) = 0;
     virtual void mapPODFieldFromPOD(pod::PODField & field, const std::unordered_set<long> * targetCells, const pod::PODField & mappedField) = 0;

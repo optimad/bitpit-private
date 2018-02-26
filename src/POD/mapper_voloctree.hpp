@@ -36,6 +36,12 @@
 
 namespace bitpit {
 
+namespace pod {
+
+/*!
+    \ingroup mapping
+    \brief The namespace 'mapping' contains structures for working with the MapperVolOctree class.
+ */
 namespace mapping
 {
 
@@ -270,6 +276,8 @@ private:
 #endif
 
 };
+
+}
 
 }
 #endif

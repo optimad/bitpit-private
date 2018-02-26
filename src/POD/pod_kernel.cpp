@@ -243,7 +243,7 @@ void PODKernel::adaptionCleanUp(const std::vector<adaption::Info> & info)
  * Get the stored pre-computed mapping.
  * \return mesh mapper.
  */
-MapperVolOctree* PODKernel::getMapper()
+pod::MapperVolOctree* PODKernel::getMapper()
 {
     return m_meshmap;
 }
@@ -342,3 +342,4 @@ void PODKernel::freeCommunicator()
 #endif
 
 }
+

@@ -41,6 +41,7 @@
 #include "pod.hpp"
 
 using namespace bitpit;
+using namespace pod;
 
 /**
  * Run the example.

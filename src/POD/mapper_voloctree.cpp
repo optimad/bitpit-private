@@ -26,6 +26,8 @@
 
 namespace bitpit {
 
+namespace pod {
+
 /**
  * \class MapperVolOctree
  * \ingroup Ref
@@ -1025,20 +1027,20 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
         long gidMap = octantsIRMapped->at(indMap).globalID;
         int rank = octantsIRMapped->at(indMap).rank;
 
-        m_mapper[idRef].entity = bitpit::mapping::Entity::ENTITY_CELL;
+        m_mapper[idRef].entity = mapping::Entity::ENTITY_CELL;
         if (fillInv){
-            _invmapper[gidMap].entity = bitpit::mapping::Entity::ENTITY_CELL;
+            _invmapper[gidMap].entity = mapping::Entity::ENTITY_CELL;
         }
 
         if (octantsIRMapped->at(indMap).octant.getLevel() == octantsIRReference->at(indRef).octant.getLevel()){
             m_mapper[idRef].mapped.push_back(idMap);
-            m_mapper[idRef].type = bitpit::mapping::Type::TYPE_RENUMBERING;
+            m_mapper[idRef].type = mapping::Type::TYPE_RENUMBERING;
 #if BITPIT_ENABLE_MPI
             m_mapper[idRef].rank.push_back(rank);
 #endif
             if (fillInv){
                 _invmapper[gidMap].mapped.push_back(idRef);
-                _invmapper[gidMap].type = bitpit::mapping::Type::TYPE_RENUMBERING;
+                _invmapper[gidMap].type = mapping::Type::TYPE_RENUMBERING;
 #if BITPIT_ENABLE_MPI
                 _invmapper[gidMap].rank.push_back(m_rank);
 #endif
@@ -1047,7 +1049,7 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
             indMap++;
         }
         else if (octantsIRMapped->at(indMap).octant.getLevel() > octantsIRReference->at(indRef).octant.getLevel()){
-            m_mapper[idRef].type = bitpit::mapping::Type::TYPE_COARSENING;
+            m_mapper[idRef].type = mapping::Type::TYPE_COARSENING;
 
             uint64_t mortonlastdesc = meshReference->getTree().getLastDescMorton(&octantsIRReference->at(indRef).octant);
             uint64_t mortonMap = meshMapped->getTree().getMorton(&octantsIRMapped->at(indMap).octant);
@@ -1058,7 +1060,7 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
                 m_mapper[idRef].rank.push_back(rank);
 #endif
                 if (fillInv){
-                    _invmapper[gidMap].type = bitpit::mapping::Type::TYPE_REFINEMENT;
+                    _invmapper[gidMap].type = mapping::Type::TYPE_REFINEMENT;
                     _invmapper[gidMap].mapped.push_back(idRef);
 #if BITPIT_ENABLE_MPI
                     _invmapper[gidMap].rank.push_back(m_rank);
@@ -1082,11 +1084,11 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
             uint64_t mortonlastdescmesh = meshMapped->getTree().getLastDescMorton(&octantsIRMapped->at(indMap).octant);
 
             if (fillInv){
-                _invmapper[gidMap].type = bitpit::mapping::Type::TYPE_COARSENING;
+                _invmapper[gidMap].type = mapping::Type::TYPE_COARSENING;
             }
 
             while (morton <= mortonlastdescmesh){
-                m_mapper[idRef].type = bitpit::mapping::Type::TYPE_REFINEMENT;
+                m_mapper[idRef].type = mapping::Type::TYPE_REFINEMENT;
                 m_mapper[idRef].mapped.push_back(idMap);
 #if BITPIT_ENABLE_MPI
                 m_mapper[idRef].rank.push_back(rank);
@@ -1788,5 +1790,7 @@ void MapperVolOctree::_communicateMappedAdaptionInfo(const std::vector<adaption:
 }
 
 #endif
+
+}
 
 }
