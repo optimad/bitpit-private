@@ -56,7 +56,7 @@ public:
      */
     PODVolOctree(PODVolOctree&& other) = default;
 
-protected:
+private:
 
     VolumeKernel* createMesh() override;
 
