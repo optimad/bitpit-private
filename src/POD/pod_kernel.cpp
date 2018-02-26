@@ -230,6 +230,16 @@ void PODKernel::adaptionAlter(const std::vector<adaption::Info> & info, bool fil
 }
 
 /**
+ * Clean up the mapping internal structures.
+ * \param[in] info Info vector result of adaptation of the input mesh
+ */
+void PODKernel::adaptionCleanUp(const std::vector<adaption::Info> & info)
+{
+    BITPIT_UNUSED(info);
+    m_meshmap->adaptionCleanup();
+}
+
+/**
  * Get the stored pre-computed mapping.
  * \return mesh mapper.
  */

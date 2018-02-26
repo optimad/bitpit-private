@@ -278,17 +278,23 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                             ){
 #endif
                                 std::vector<long>::iterator it = std::find((*mapperMapped)[idp].mapped.begin(), (*mapperMapped)[idp].mapped.end(), idprevious);
-                                int dist = std::distance((*mapperMapped)[idp].mapped.begin(), it);
-                                (*mapperMapped)[idp].mapped.erase(it);
+                                if (it != (*mapperMapped)[idp].mapped.end()){
+                                    int dist = std::distance((*mapperMapped)[idp].mapped.begin(), it);
+                                    (*mapperMapped)[idp].mapped.erase(it);
 #if BITPIT_ENABLE_MPI
-                                (*mapperMapped)[idp].rank.erase((*mapperMapped)[idp].rank.begin()+dist);
+                                    (*mapperMapped)[idp].rank.erase((*mapperMapped)[idp].rank.begin()+dist);
+#endif
+                                }
+#if BITPIT_ENABLE_MPI
                             }
                             else{
                                 mapping::Info & Info = m_partitionIR.map_rank_invmapper[m_previousmapper[idprevious].rank[imapped]][idp];
                                 std::vector<long>::iterator it = std::find(Info.mapped.begin(), Info.mapped.end(), idprevious);
-                                int dist = std::distance(Info.mapped.begin(), it);
-                                Info.mapped.erase(it);
-                                Info.rank.erase(Info.rank.begin()+dist);
+                                if (it != Info.mapped.end()){
+                                    int dist = std::distance(Info.mapped.begin(), it);
+                                    Info.mapped.erase(it);
+                                    Info.rank.erase(Info.rank.begin()+dist);
+                                }
                             }
 #endif
                             imapped++;
@@ -576,11 +582,13 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
 #endif
                     for (long idp : _mapped){
                         std::vector<long>::iterator it = std::find((*mapperReference)[idp].mapped.begin(), (*mapperReference)[idp].mapped.end(), idprevious);
-                        int dist = std::distance((*mapperReference)[idp].mapped.begin(), it);
-                        (*mapperReference)[idp].mapped.erase(it);
+                        if (it != (*mapperReference)[idp].mapped.end()){
+                            int dist = std::distance((*mapperReference)[idp].mapped.begin(), it);
+                            (*mapperReference)[idp].mapped.erase(it);
 #if BITPIT_ENABLE_MPI
-                        (*mapperReference)[idp].rank.erase((*mapperReference)[idp].rank.begin()+dist);
+                            (*mapperReference)[idp].rank.erase((*mapperReference)[idp].rank.begin()+dist);
 #endif
+                        }
                     }
                 }
 
@@ -604,7 +612,8 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                     }
                     else{
                         for (const long & _idp : info.previous){
-                            m_partitionIR.map_rank_invmapper[info.rank].erase(_idp);
+                            if (m_partitionIR.map_rank_invmapper[info.rank].count(_idp))
+                                m_partitionIR.map_rank_invmapper[info.rank].erase(_idp);
                         }
 
                         m_partitionIR.map_rank_invmapper[info.rank][id].mapped.clear();
@@ -646,7 +655,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                             m_partitionIR.map_rank_invmapper[info.rank][id].entity = mapping::Entity::ENTITY_CELL;
                         }
 #endif
-                    }
+                    } // end id current
 
                     for (long idprevious : info.previous){
                         std::vector<long> _mapped;

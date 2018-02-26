@@ -504,7 +504,7 @@ void runReferenceAdaptation()
                         vdata2[count] = data2[id];
                     }
 #endif
-                    }
+                }
                 else if (mapper[id].type == mapping::Type::TYPE_COARSENING){
                     data2[id] = 0.0;
                     double Volume = 0.0;
@@ -989,7 +989,7 @@ void runMappedAdaptation()
                         vdata2[count] = data2[id];
                     }
 #endif
-                    }
+                }
                 else if (mapper[id].type == mapping::Type::TYPE_COARSENING){
                     data2[id] = 0.0;
                     double Volume = 0.0;
@@ -1035,6 +1035,7 @@ void runMappedAdaptation()
         patch_2D->write();
 
     }
+
 
     /** Adapt again and update the mapper */
     long nCells = patch_2D->getCellCount();
@@ -1191,7 +1192,7 @@ void runMappedAdaptation()
                         vdata2[count] = data2[id];
                     }
 #endif
-                    }
+                }
                 else if (mapper[id].type == mapping::Type::TYPE_COARSENING){
                     data2[id] = 0.0;
                     double Volume = 0.0;
@@ -1345,7 +1346,7 @@ void runMappedAdaptation()
                         vdata2inv[count] = data2inv[id];
                     }
 #endif
-                    }
+                }
                 count++;
             }
         }
@@ -1375,12 +1376,12 @@ int main(int argc, char *argv[])
 
 
     /** Run the examples **/
-    try {
-        runReferenceAdaptation();
-    } catch (const std::exception &exception) {
-        log::cout() << exception.what();
-        exit(1);
-    }
+    //    try {
+    //        runReferenceAdaptation();
+    //    } catch (const std::exception &exception) {
+    //        log::cout() << exception.what();
+    //        exit(1);
+    //    }
 
     try {
         runMappedAdaptation();

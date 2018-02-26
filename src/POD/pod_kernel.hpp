@@ -68,6 +68,7 @@ public:
     void computeMapper(VolumeKernel * mesh, bool fillInv = true);
     void adaptionPrepare(const std::vector<adaption::Info> & info);
     void adaptionAlter(const std::vector<adaption::Info> & info, bool fillInv = true);
+    void adaptionCleanUp(const std::vector<adaption::Info> & info);
 
 #if BITPIT_ENABLE_MPI
     MPI_Comm getCommunicator() const;

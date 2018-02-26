@@ -186,6 +186,7 @@ public:
     void computeMapper(VolumeKernel * mesh);
     void adaptionPrepare(const std::vector<adaption::Info> & info);
     void adaptionAlter(const std::vector<adaption::Info> & info);
+    void adaptionCleanUp(const std::vector<adaption::Info> & info);
 
     void reconstructFields(pod::PODField &field, pod::PODField &recon);
     void dumpField(const std::string &name, const pod::PODField &field) const;

@@ -209,7 +209,6 @@ void run()
     refineList.push_back(229);
     refineList.push_back(230);
 
-
     for (uint64_t ind : refineList) {
 #if BITPIT_ENABLE_MPI==1
         int owner = patch_2D_original->getTree().getOwnerRank(ind);
@@ -266,72 +265,72 @@ void run()
     PiercedStorage<double> data2(1, &patch_2D->getCells());
     data2.fill(0.0);
     {
-    const PiercedStorage<mapping::Info> & mapper = mapobject.getInverseMapping();
-    std::vector<double> vdata2(patch_2D->getInternalCount());
-    count = 0;
-    for (Cell & cell : patch_2D->getCells()){
-        if (cell.isInterior()){
-            long id = cell.getId();
-            if (mapper[id].type == mapping::Type::TYPE_RENUMBERING){
-                data2[id] = data[mapper[id].mapped[0]];
-                vdata2[count] = data2[id];
-            }
-            else if (mapper[id].type == mapping::Type::TYPE_COARSENING){
-                data2[id] = 0.0;
-                int n = mapper[id].mapped.size();
-                for (long idd : mapper[id].mapped){
-                    data2[id] += data[idd] / n;
+        const PiercedStorage<mapping::Info> & mapper = mapobject.getInverseMapping();
+        std::vector<double> vdata2(patch_2D->getInternalCount());
+        count = 0;
+        for (Cell & cell : patch_2D->getCells()){
+            if (cell.isInterior()){
+                long id = cell.getId();
+                if (mapper[id].type == mapping::Type::TYPE_RENUMBERING){
+                    data2[id] = data[mapper[id].mapped[0]];
+                    vdata2[count] = data2[id];
                 }
-                vdata2[count] = data2[id];
+                else if (mapper[id].type == mapping::Type::TYPE_COARSENING){
+                    data2[id] = 0.0;
+                    int n = mapper[id].mapped.size();
+                    for (long idd : mapper[id].mapped){
+                        data2[id] += data[idd] / n;
+                    }
+                    vdata2[count] = data2[id];
+                }
+                else if (mapper[id].type == mapping::Type::TYPE_REFINEMENT){
+                    data2[id] = data[mapper[id].mapped[0]];
+                    vdata2[count] = data2[id];
+                }
+                count++;
             }
-            else if (mapper[id].type == mapping::Type::TYPE_REFINEMENT){
-                data2[id] = data[mapper[id].mapped[0]];
-                vdata2[count] = data2[id];
-            }
-            count++;
         }
-    }
 
-    patch_2D->getVTK().setName("mesh_random.0");
-    patch_2D->getVTK().addData("data", VTKFieldType::SCALAR, VTKLocation::CELL, vdata2);
-    patch_2D->write();
-    patch_2D->getVTK().setName("mesh_random.1");
-    patch_2D->write();
+        patch_2D->getVTK().setName("mesh_random.0");
+        patch_2D->getVTK().addData("data", VTKFieldType::SCALAR, VTKLocation::CELL, vdata2);
+        patch_2D->write();
+        patch_2D->getVTK().setName("mesh_random.1");
+        patch_2D->write();
 
     }
 
     /** Re-Map data on first mesh with inverse mapping and write */
     {
-    const PiercedStorage<mapping::Info> & invmapper = mapobject.getMapping();
-    PiercedStorage<double> data3(1, &patch_2D_original->getCells());
-    std::vector<double> vdata3(patch_2D_original->getInternalCount());
-    count = 0;
-    for (Cell & cell : patch_2D_original->getCells()){
-        if (cell.isInterior()){
-            long id = cell.getId();
-            if (invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
-                data3[id] = data2[invmapper[id].mapped[0]];
-                vdata3[count] = data3[id];
-            }
-            else if (invmapper[id].type == mapping::Type::TYPE_COARSENING){
-                data3[id] = 0.0;
-                int n = invmapper[id].mapped.size();
-                for (long idd : invmapper[id].mapped){
-                    data3[id] += data2[idd] / n;
+        const PiercedStorage<mapping::Info> & invmapper = mapobject.getMapping();
+        PiercedStorage<double> data3(1, &patch_2D_original->getCells());
+        std::vector<double> vdata3(patch_2D_original->getInternalCount());
+        count = 0;
+        for (Cell & cell : patch_2D_original->getCells()){
+            if (cell.isInterior()){
+                long id = cell.getId();
+                if (invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
+                    data3[id] = data2[invmapper[id].mapped[0]];
+                    vdata3[count] = data3[id];
                 }
-                vdata3[count] = data3[id];
+                else if (invmapper[id].type == mapping::Type::TYPE_COARSENING){
+                    data3[id] = 0.0;
+                    int n = invmapper[id].mapped.size();
+                    for (long idd : invmapper[id].mapped){
+                        data3[id] += data2[idd] / n;
+                    }
+                    vdata3[count] = data3[id];
+                }
+                else if (invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
+                    data3[id] = data2[invmapper[id].mapped[0]];
+                    vdata3[count] = data3[id];
+                }
+                count++;
             }
-            else if (invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
-                data3[id] = data2[invmapper[id].mapped[0]];
-                vdata3[count] = data3[id];
-            }
-            count++;
         }
-    }
 
-    patch_2D_original->getVTK().setName("mesh_original.1");
-    patch_2D_original->getVTK().addData("data", VTKFieldType::SCALAR, VTKLocation::CELL, vdata3);
-    patch_2D_original->write();
+        patch_2D_original->getVTK().setName("mesh_original.1");
+        patch_2D_original->getVTK().addData("data", VTKFieldType::SCALAR, VTKLocation::CELL, vdata3);
+        patch_2D_original->write();
 
     }
 

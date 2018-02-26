@@ -3027,6 +3027,15 @@ void POD::_adaptionAlter(const std::vector<adaption::Info> & info)
 }
 
 /**
+ * Clean up the pre-computed internal structures of mapping.
+ * \param[in] info Info vector result of adaptation prepare of the input mesh
+ */
+void POD::adaptionCleanUp(const std::vector<adaption::Info> & info)
+{
+    m_podkernel->adaptionCleanUp(info);
+}
+
+/**
  * Perform difference between a PiercedStorage fields and a POD mode.
  *
  * \param[in/out] fields Fields as PiercedStorage object original / result.
