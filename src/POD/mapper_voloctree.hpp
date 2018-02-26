@@ -46,8 +46,7 @@ namespace mapping
 {
 
 /*!
-*\enum Type
-*\brief Type of mapping relationship between elements.
+* Type of mapping relationship between elements.
 */
 enum Type {
     TYPE_UNKNOWN = 0 /**<Uknown mapping. Normally used only to initialize the type. */,
@@ -57,8 +56,7 @@ enum Type {
 };
 
 /*!
-*\enum Entity
-*\brief Entity involved in a mapping relationship.
+* Entity involved in a mapping relationship.
 */
 enum Entity {
     ENTITY_UNKNOWN = -1 /**<Uknown entity. Normally used only to initialize the entity. */,
