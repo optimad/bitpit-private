@@ -31,7 +31,7 @@
  * <b>To print the usage</b>: ./POD_application_example_00001 --help \n
  */ 
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #include <mpi.h>
 #endif
 
@@ -798,7 +798,7 @@ void podcore(const InfoBitpodPP & info) {
 
 int main( int argc, char *argv[] ) {
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Init(&argc, &argv);
 
     {
@@ -813,7 +813,7 @@ int main( int argc, char *argv[] ) {
             return 1;
         }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     }
 
     MPI_Finalize();

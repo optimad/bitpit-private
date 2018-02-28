@@ -37,7 +37,7 @@
  */ 
 
 #include <array>
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #include <mpi.h>
 #endif
 
@@ -93,7 +93,7 @@ void run(int rank, int nProcs)
         int dumpBlock = (nProcs > 1) ? rank : -1;
         std::string filename = "./data/test.0.mesh";
         IBinaryArchive binaryReader(filename, dumpBlock);
-#if BITPIT_ENABLE_MPI	
+#if BITPIT_ENABLE_MPI==1
         meshr->setCommunicator(MPI_COMM_WORLD);
 #endif
         meshr->restore(binaryReader.getStream());
@@ -346,14 +346,14 @@ void run(int rank, int nProcs)
 
 int main(int argc, char *argv[]) 
 {
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Init(&argc,&argv);
 #endif 
 
     int nProcs;
     int rank;
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Comm_size(MPI_COMM_WORLD, &nProcs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #else
@@ -369,7 +369,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Finalize();
 #endif
 

@@ -34,7 +34,7 @@
  */ 
 
 #include <array>
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
 #include <mpi.h>
 #endif
 
@@ -92,7 +92,7 @@ void run()
 
 int main(int argc, char *argv[]) 
 {
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Init(&argc,&argv);
 #endif    
 
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-#if BITPIT_ENABLE_MPI
+#if BITPIT_ENABLE_MPI==1
     MPI_Finalize();
 #endif
 

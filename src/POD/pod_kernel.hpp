@@ -33,7 +33,7 @@
 #include <unordered_map>
 
 #include "pod_common.hpp"
-#include "mesh_mapper.hpp"
+#include "mapper_voloctree.hpp"
 #include "bitpit_patchkernel.hpp"
 #include "bitpit_IO.hpp"
 
@@ -62,11 +62,12 @@ public:
     void evalCellsVolume();
     double getCellVolume(long id);
     double getRawCellVolume(long rawIndex);
-    MeshMapper & getMeshMapper();
+    MapperVolOctree* getMapper();
+
     bool isMapperDirty();
     void computeMapper(VolumeKernel * mesh, bool fillInv = true);
-    void prepareMapper(const std::vector<adaption::Info> & info);
-    void updateMapper(const std::vector<adaption::Info> & info, bool fillInv = true);
+    void adaptionPrepare(const std::vector<adaption::Info> & info);
+    void adaptionAlter(const std::vector<adaption::Info> & info, bool fillInv = true);
 
 #if BITPIT_ENABLE_MPI
     MPI_Comm getCommunicator() const;
@@ -84,7 +85,7 @@ protected:
     int                     m_rank;         /**< Local rank of process. */
     int                     m_nProcs;       /**< Number of processes. */
 
-    MeshMapper              m_meshmap;      /**< Mapping object TO/FROM pod mesh.*/
+    MapperVolOctree*        m_meshmap;      /**< Mapping object TO pod mesh.*/
 
     bool                    m_dirtymap;     /**< True if mapping has to be recomputed/updated [to be set by set method]. */
 
@@ -99,6 +100,8 @@ protected:
     void setMapperDirty(bool dirty = true);
 
     virtual VolumeKernel* createMesh() = 0;
+
+    virtual void _computeMapper(VolumeKernel * mesh, MapperVolOctree* & mapper, bool fillInv) = 0;
 
     virtual pod::PODField mapPODFieldToPOD(const pod::PODField & field, const std::unordered_set<long> * targetCells) = 0;
     virtual void mapPODFieldFromPOD(pod::PODField & field, const std::unordered_set<long> * targetCells, const pod::PODField & mappedField) = 0;

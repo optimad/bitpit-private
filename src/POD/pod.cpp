@@ -944,7 +944,6 @@ void POD::leave1out()
     //dump error
     if (m_writeMode != WriteMode::NONE){    
         std::string ename = m_name + ".error";
-        std::cout<< ename << endl;
         dumpField(ename, m_errorMap);
     }
     m_nSnapshots=h_nSnapshots;
@@ -2991,11 +2990,11 @@ void POD::computeMapper(VolumeKernel * mesh)
  * Can be called only if expert mode is active.
  * \param[in] info Info vector result of adaptation of the input mesh
  */
-void POD::updateMapper(const std::vector<adaption::Info> & info)
+void POD::adaptionAlter(const std::vector<adaption::Info> & info)
 {
     if (!m_expert)
         throw std::runtime_error("POD: update mapper can be called only in expert mode");
-    _updateMapper(info);
+    _adaptionAlter(info);
 }
 
 /**
@@ -3013,9 +3012,9 @@ void POD::_computeMapper(VolumeKernel * mesh)
  * the info given before an adaptation of the input mesh (internal method).
  * \param[in] info Info vector result of adaptation prepare of the input mesh
  */
-void POD::prepareMapper(const std::vector<adaption::Info> & info)
+void POD::adaptionPrepare(const std::vector<adaption::Info> & info)
 {
-    m_podkernel->prepareMapper(info);
+    m_podkernel->adaptionPrepare(info);
 }
 
 /**
@@ -3023,9 +3022,9 @@ void POD::prepareMapper(const std::vector<adaption::Info> & info)
  * the info given after an adaptation of the input mesh (internal method).
  * \param[in] info Info vector result of adaptation of the input mesh
  */
-void POD::_updateMapper(const std::vector<adaption::Info> & info)
+void POD::_adaptionAlter(const std::vector<adaption::Info> & info)
 {
-    m_podkernel->updateMapper(info);
+    m_podkernel->adaptionAlter(info);
 }
 
 /**

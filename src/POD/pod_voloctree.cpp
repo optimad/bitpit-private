@@ -73,6 +73,20 @@ VolumeKernel* PODVolOctree::createMesh()
 }
 
 /**
+ * Compute the mapping of an input mesh on the pod mesh.
+ * \param[in] mesh Pointer to input mesh.
+* \param[in] fillInv If true even the inverse mapping is computed.
+ */
+void PODVolOctree::_computeMapper(VolumeKernel* mesh, MapperVolOctree* & mapper, bool fillInv)
+{
+    VolOctree* meshPOD = static_cast<VolOctree*>(getMesh());
+    VolOctree* _mesh = static_cast<VolOctree*>(mesh);
+
+    mapper = new MapperVolOctree(meshPOD, _mesh, getCommunicator());
+    mapper->initialize(fillInv);
+}
+
+/**
  * Map a POD Field TO the POD mesh.
  *
  * \param[in] field Input POD Field
@@ -95,8 +109,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
     std::size_t nsf = field.scalar->getFieldCount();
     std::size_t nvf = field.vector->getFieldCount();
 
-    const PiercedStorage<mapping::Info> & m_mapper = getMeshMapper().getMapping();
-    const PiercedStorage<mapping::Info> & m_invmapper = getMeshMapper().getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_mapper = getMapper()->getMapping();
 
     pod::PODField mappedField(nsf, nvf, getMesh(), &getMesh()->getCells());
 
@@ -209,8 +222,7 @@ void PODVolOctree::mapPODFieldFromPOD(pod::PODField & field, const std::unordere
     std::size_t nsf = field.scalar->getFieldCount();
     std::size_t nvf = field.vector->getFieldCount();
 
-    const PiercedStorage<mapping::Info> & m_mapper = getMeshMapper().getMapping();
-    const PiercedStorage<mapping::Info> & m_invmapper = getMeshMapper().getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
 
     for (long id : *targetCells){
         double *dataS = field.scalar->data(id);
@@ -314,8 +326,7 @@ PiercedStorage<double> PODVolOctree::mapFieldsToPOD(const PiercedStorage<double>
     std::size_t nsf = scalarIds.size();
     std::size_t nvf = vectorIds.size();
 
-    const PiercedStorage<mapping::Info> & m_mapper = getMeshMapper().getMapping();
-    const PiercedStorage<mapping::Info> & m_invmapper = getMeshMapper().getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_mapper = getMapper()->getMapping();
 
     PiercedStorage<double> mappedFields(fields.getFieldCount(), &getMesh()->getCells());
 
@@ -417,8 +428,7 @@ void PODVolOctree::mapFieldsFromPOD(PiercedStorage<double> & fields, const Volum
     std::size_t nsf = scalarIds.size();
     std::size_t nvf = vectorIds.size();
 
-    const PiercedStorage<mapping::Info> & m_mapper = getMeshMapper().getMapping();
-    const PiercedStorage<mapping::Info> & m_invmapper = getMeshMapper().getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
 
     for (long id : *targetCells){
         double *data = fields.data(id);
@@ -529,8 +539,7 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
     }
 
     // Map bool field (number of fields = 1) on pod mesh
-    const PiercedStorage<mapping::Info> & m_mapper = getMeshMapper().getMapping();
-    const PiercedStorage<mapping::Info> & m_invmapper = getMeshMapper().getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_mapper = getMapper()->getMapping();
 
     mappedField.setStaticKernel(&getMesh()->getCells());
     mappedField.fill(false);
@@ -565,7 +574,7 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
 std::unordered_set<long> PODVolOctree::mapCellsToPOD(const std::unordered_set<long> * targetCells)
 {
     std::unordered_set<long> mappedCells;
-    const PiercedStorage<mapping::Info> & m_invmapper = getMeshMapper().getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
     for (const long & id : *targetCells){
         if (m_invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
             mappedCells.insert(m_invmapper[id].mapped[0]);
@@ -587,7 +596,7 @@ void PODVolOctree::adaptMeshToMesh(VolumeKernel* meshToAdapt, VolumeKernel * mes
 {
     BITPIT_UNUSED(meshToAdapt);
 
-    computeMapper(meshReference);
+    computeMapper(meshReference, false);
 
     bool adapt = true;
 
@@ -595,8 +604,7 @@ void PODVolOctree::adaptMeshToMesh(VolumeKernel* meshToAdapt, VolumeKernel * mes
 
         adapt = false;
 
-        const PiercedStorage<mapping::Info> & m_mapper = getMeshMapper().getMapping();
-        const PiercedStorage<mapping::Info> & m_invmapper = getMeshMapper().getInverseMapping();
+        const PiercedStorage<mapping::Info> & m_mapper = getMapper()->getMapping();
 
         for (Cell & cell : getMesh()->getCells()){
             long id = cell.getId();
@@ -606,19 +614,21 @@ void PODVolOctree::adaptMeshToMesh(VolumeKernel* meshToAdapt, VolumeKernel * mes
             }
         }
 
-#if BITPIT_ENABLE_MPI==1
+#if BITPIT_ENABLE_MPI
         MPI_Allreduce(MPI_IN_PLACE, &adapt, 1, MPI_C_BOOL, MPI_LOR, m_communicator);
 #endif
 
         std::vector<adaption::Info> infoAdapt = getMesh()->adaptionPrepare(true);
 
-        getMeshMapper().mappingAdaptionPreparare(infoAdapt, true);
+        getMapper()->adaptionPrepare(infoAdapt);
 
         infoAdapt = getMesh()->adaptionAlter(true);
 
-        getMeshMapper().mappingAdaptionUpdate(infoAdapt, true, true);
+        getMapper()->adaptionAlter(infoAdapt, true, false);
 
         getMesh()->adaptionCleanup();
+
+        getMapper()->adaptionCleanup();
 
     }
 
