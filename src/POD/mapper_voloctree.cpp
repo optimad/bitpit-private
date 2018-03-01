@@ -415,11 +415,14 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                                 if (checkmorton){
 
                                     if (level == levelmapped){
-                                        (*mapperAdapted)[id].type = mapping::Type::TYPE_RENUMBERING;
-                                        (*mapperAdapted)[id].mapped.push_back(idpmapped);
+                                        if ((*mapperAdapted)[id].mapped.size()==0){
+                                            (*mapperAdapted)[id].type = mapping::Type::TYPE_RENUMBERING;
+                                            (*mapperAdapted)[id].mapped.push_back(idpmapped);
 #if BITPIT_ENABLE_MPI
-                                        (*mapperAdapted)[id].rank.push_back(rankmapped);
-
+                                            (*mapperAdapted)[id].rank.push_back(rankmapped);
+#endif
+                                        }
+#if BITPIT_ENABLE_MPI
                                         if (fillInv){
                                             if (checkPart
                                                     || rankmapped == m_rank
@@ -440,20 +443,27 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
 #endif
                                     }
                                     else if (level > levelmapped){
-                                        (*mapperAdapted)[id].type = mapping::Type::TYPE_REFINEMENT;
-                                        (*mapperAdapted)[id].mapped.push_back(idpmapped);
+                                        if ((*mapperAdapted)[id].mapped.size()==0){
+                                            (*mapperAdapted)[id].type = mapping::Type::TYPE_REFINEMENT;
+                                            (*mapperAdapted)[id].mapped.push_back(idpmapped);
 #if BITPIT_ENABLE_MPI
-                                        (*mapperAdapted)[id].rank.push_back(rankmapped);
-
+                                            (*mapperAdapted)[id].rank.push_back(rankmapped);
+#endif
+                                        }
+#if BITPIT_ENABLE_MPI
                                         if (fillInv){
                                             if (checkPart
                                                     || rankmapped == m_rank
                                             ){
 #endif
+                                                if (std::find((*mapperMapped)[idpmapped].mapped.begin(), (*mapperMapped)[idpmapped].mapped.end(), id) == (*mapperMapped)[idpmapped].mapped.end()){
                                                 (*mapperMapped)[idpmapped].mapped.push_back(id);
                                                 (*mapperMapped)[idpmapped].type = mapping::Type::TYPE_COARSENING;
 #if BITPIT_ENABLE_MPI
                                                 (*mapperMapped)[idpmapped].rank.push_back(info.rank);
+#endif
+                                                }
+#if BITPIT_ENABLE_MPI
                                             }
                                             else{
                                                 m_partitionIR.map_rank_invmapper[rankmapped][idpmapped].type = mapping::Type::TYPE_COARSENING;
@@ -464,25 +474,34 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
 #endif
                                     }
                                     else if (level < levelmapped){
+                                        if (std::find((*mapperAdapted)[id].mapped.begin(), (*mapperAdapted)[id].mapped.end(), idpmapped) == (*mapperAdapted)[id].mapped.end()){
                                         (*mapperAdapted)[id].type = mapping::Type::TYPE_COARSENING;
                                         (*mapperAdapted)[id].mapped.push_back(idpmapped);
 #if BITPIT_ENABLE_MPI
                                         (*mapperAdapted)[id].rank.push_back(rankmapped);
-
+#endif
+                                        }
+#if BITPIT_ENABLE_MPI
                                         if (fillInv){
                                             if (checkPart
                                                     || rankmapped == m_rank
                                             ){
 #endif
+                                                if ((*mapperMapped)[idpmapped].mapped.size() == 0){
                                                 (*mapperMapped)[idpmapped].type = mapping::Type::TYPE_REFINEMENT;
                                                 (*mapperMapped)[idpmapped].mapped.push_back(id);
 #if BITPIT_ENABLE_MPI
                                                 (*mapperMapped)[idpmapped].rank.push_back(info.rank);
+#endif
+                                                }
+#if BITPIT_ENABLE_MPI
                                             }
                                             else{
+                                                if (m_partitionIR.map_rank_invmapper[rankmapped][idpmapped].mapped.size() == 0){
                                                 m_partitionIR.map_rank_invmapper[rankmapped][idpmapped].type = mapping::Type::TYPE_REFINEMENT;
                                                 m_partitionIR.map_rank_invmapper[rankmapped][idpmapped].mapped.push_back(id);
                                                 m_partitionIR.map_rank_invmapper[rankmapped][idpmapped].rank.push_back(info.rank);
+                                                }
                                             }
                                         }
 #endif
@@ -560,6 +579,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
 
         for (const adaption::Info & info : InfoAdapt){
 
+
             if (info.type == adaption::Type::TYPE_PARTITION_SEND ||
                     info.type == adaption::Type::TYPE_PARTITION_RECV ||
                     info.type == adaption::Type::TYPE_PARTITION_NOTICE){
@@ -597,7 +617,6 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                         }
                     }
                 }
-
 
                 //RENUMBERING
                 if (info.type == adaption::Type::TYPE_RENUMBERING){
@@ -729,21 +748,29 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                                                 || info.rank == m_rank
                                         ){
 #endif
-                                            (*mapperAdapted)[id].type = mapping::Type::TYPE_RENUMBERING;
-                                            (*mapperAdapted)[id].mapped.push_back(idpmapped);
+                                            if ((*mapperAdapted)[id].mapped.size() == 0){
+                                                (*mapperAdapted)[id].type = mapping::Type::TYPE_RENUMBERING;
+                                                (*mapperAdapted)[id].mapped.push_back(idpmapped);
 #if BITPIT_ENABLE_MPI
-                                            (*mapperAdapted)[id].rank.push_back(info.rank);
+                                                (*mapperAdapted)[id].rank.push_back(info.rank);
+#endif
+                                            }
+#if BITPIT_ENABLE_MPI
                                         }
                                         else{
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].type = mapping::Type::TYPE_RENUMBERING;
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].mapped.push_back(idpmapped);
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].rank.push_back(rankmapped);
+                                            if (m_partitionIR.map_rank_invmapper[info.rank][id].mapped.size() == 0){
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].type = mapping::Type::TYPE_RENUMBERING;
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].mapped.push_back(idpmapped);
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].rank.push_back(rankmapped);
+                                            }
                                         }
-                                        (*mapperReference)[idpmapped].rank.push_back(info.rank);
 #endif
                                         (*mapperReference)[idpmapped].type = mapping::Type::TYPE_RENUMBERING;
                                         (*mapperReference)[idpmapped].mapped.clear();
                                         (*mapperReference)[idpmapped].mapped.push_back(id);
+#if BITPIT_ENABLE_MPI
+                                        (*mapperReference)[idpmapped].rank.push_back(info.rank);
+#endif
                                     }
                                     else if (level > levelreference){
 #if BITPIT_ENABLE_MPI
@@ -751,20 +778,30 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                                                 || info.rank == m_rank
                                         ){
 #endif
-                                            (*mapperAdapted)[id].type = mapping::Type::TYPE_REFINEMENT;
-                                            (*mapperAdapted)[id].mapped.push_back(idpmapped);
+                                            if ((*mapperAdapted)[id].mapped.size() == 0){
+                                                (*mapperAdapted)[id].type = mapping::Type::TYPE_REFINEMENT;
+                                                (*mapperAdapted)[id].mapped.push_back(idpmapped);
 #if BITPIT_ENABLE_MPI
-                                            (*mapperAdapted)[id].rank.push_back(rankmapped);
+                                                (*mapperAdapted)[id].rank.push_back(rankmapped);
+#endif
+                                            }
+#if BITPIT_ENABLE_MPI
                                         }
                                         else{
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].type = mapping::Type::TYPE_REFINEMENT;
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].mapped.push_back(idpmapped);
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].rank.push_back(rankmapped);
+                                            if (m_partitionIR.map_rank_invmapper[info.rank][id].mapped.size() == 0){
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].type = mapping::Type::TYPE_REFINEMENT;
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].mapped.push_back(idpmapped);
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].rank.push_back(rankmapped);
+                                            }
                                         }
-                                        (*mapperReference)[idpmapped].rank.push_back(info.rank);
 #endif
+                                        if (std::find((*mapperReference)[idpmapped].mapped.begin(), (*mapperReference)[idpmapped].mapped.end(), id) == (*mapperReference)[idpmapped].mapped.end()){
                                         (*mapperReference)[idpmapped].mapped.push_back(id);
                                         (*mapperReference)[idpmapped].type = mapping::Type::TYPE_COARSENING;
+#if BITPIT_ENABLE_MPI
+                                        (*mapperReference)[idpmapped].rank.push_back(info.rank);
+#endif
+                                        }
                                     }
                                     else if (level < levelreference){
 
@@ -773,21 +810,30 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                                                 || info.rank == m_rank
                                         ){
 #endif
-                                            (*mapperAdapted)[id].type = mapping::Type::TYPE_COARSENING;
-                                            (*mapperAdapted)[id].mapped.push_back(idpmapped);
+                                            if (std::find((*mapperAdapted)[id].mapped.begin(), (*mapperAdapted)[id].mapped.end(), idpmapped) == (*mapperAdapted)[id].mapped.end()){
+                                                (*mapperAdapted)[id].type = mapping::Type::TYPE_COARSENING;
+                                                (*mapperAdapted)[id].mapped.push_back(idpmapped);
 #if BITPIT_ENABLE_MPI
-                                            (*mapperAdapted)[id].rank.push_back(rankmapped);
+                                                (*mapperAdapted)[id].rank.push_back(rankmapped);
+#endif
+                                            }
+#if BITPIT_ENABLE_MPI
                                         }
                                         else{
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].type = mapping::Type::TYPE_COARSENING;
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].mapped.push_back(idpmapped);
-                                            m_partitionIR.map_rank_invmapper[info.rank][id].rank.push_back(rankmapped);
+                                            if (std::find(m_partitionIR.map_rank_invmapper[info.rank][id].mapped.begin(), m_partitionIR.map_rank_invmapper[info.rank][id].mapped.end(), idpmapped) == m_partitionIR.map_rank_invmapper[info.rank][id].mapped.end()){
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].type = mapping::Type::TYPE_COARSENING;
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].mapped.push_back(idpmapped);
+                                                m_partitionIR.map_rank_invmapper[info.rank][id].rank.push_back(rankmapped);
+                                            }
                                         }
-                                        (*mapperReference)[idpmapped].rank.push_back(info.rank);
 #endif
+                                        if ((*mapperReference)[idpmapped].mapped.size() == 0){
                                         (*mapperReference)[idpmapped].type = mapping::Type::TYPE_REFINEMENT;
                                         (*mapperReference)[idpmapped].mapped.push_back(id);
-
+#if BITPIT_ENABLE_MPI
+                                        (*mapperReference)[idpmapped].rank.push_back(info.rank);
+#endif
+                                    }
                                     } //end level < levelreference
                                 } //end checkmorton
                             } //end id current

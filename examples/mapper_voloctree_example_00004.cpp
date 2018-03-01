@@ -859,6 +859,7 @@ void runMappedAdaptation()
         log::cout() << ">> Final number of cells... " << nCells << std::endl;
     }
 
+
 #if BITPIT_ENABLE_MPI==1
     /** Partition the patch */
     patch_2D->partition(true);
@@ -1197,6 +1198,12 @@ void runMappedAdaptation()
                     double Volume = 0.0;
                     int i = 0;
                     for (long idd : mapper[id].mapped){
+
+                        if (id == 348){
+                            std::cout << "mapped id : " << idd << std::endl;
+                        }
+
+
 #if BITPIT_ENABLE_MPI==1
                         if (mapper[id].rank[i] == patch_2D->getRank()){
 #endif
@@ -1374,12 +1381,12 @@ int main(int argc, char *argv[])
 
 
     /** Run the examples **/
-    //    try {
-    //        runReferenceAdaptation();
-    //    } catch (const std::exception &exception) {
-    //        log::cout() << exception.what();
-    //        exit(1);
-    //    }
+    try {
+        runReferenceAdaptation();
+    } catch (const std::exception &exception) {
+        log::cout() << exception.what();
+        exit(1);
+    }
 
     try {
         runMappedAdaptation();
