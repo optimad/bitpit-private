@@ -82,7 +82,14 @@ void PODVolOctree::_computeMapper(VolumeKernel* mesh, pod::MapperVolOctree* & ma
     VolOctree* meshPOD = static_cast<VolOctree*>(getMesh());
     VolOctree* _mesh = static_cast<VolOctree*>(mesh);
 
-    mapper = new pod::MapperVolOctree(meshPOD, _mesh, getCommunicator());
+#if BITPIT_ENABLE_MPI
+            mapper = new pod::MapperVolOctree(meshPOD, _mesh, getCommunicator());
+#else
+            mapper = new pod::MapperVolOctree(meshPOD, _mesh);
+#endif
+
+
+
     mapper->initialize(fillInv);
 }
 
