@@ -112,11 +112,6 @@ public:
 
     ~MapperVolOctree();
 
-    /**
-     * Copy constructor.
-     */
-    MapperVolOctree(MapperVolOctree&& other) = default;
-
     const bitpit::PiercedStorage<mapping::Info> & getMapping();
     const bitpit::PiercedStorage<mapping::Info> & getInverseMapping();
 
