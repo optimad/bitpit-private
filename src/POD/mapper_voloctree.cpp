@@ -950,7 +950,13 @@ std::map<int, std::vector<long> > MapperVolOctree::getSentMappedID()
 void MapperVolOctree::_mapMeshes(bool fillInv)
 {
 
-    if ( (m_referenceMesh->getLength() != m_mappedMesh->getLength()) || (m_referenceMesh->getOrigin() != m_mappedMesh->getOrigin()) )
+    std::array<double,3> originR = m_referenceMesh->getOrigin();
+    std::array<double,3> originM = m_mappedMesh->getOrigin();
+
+    if (!(utils::DoubleFloatingEqual()(m_referenceMesh->getLength(),m_mappedMesh->getLength()))
+            || !(utils::DoubleFloatingEqual()(originR[0],originM[0]))
+            || !(utils::DoubleFloatingEqual()(originR[1],originM[1]))
+            || !(utils::DoubleFloatingEqual()(originR[2],originM[2])))
         throw std::runtime_error ("mesh mapper: different domain of VolOctree meshes not allowed.");
 
 #if BITPIT_ENABLE_MPI
