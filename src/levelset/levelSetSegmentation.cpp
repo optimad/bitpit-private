@@ -382,7 +382,7 @@ void LevelSetSegmentation::setSegmentation( const SurfUnstructured *surface, dou
  */
 void LevelSetSegmentation::setSegmentation( std::unique_ptr<const SurfUnstructured> &&surface, double featureAngle){
 
-    m_segmentation = std::make_shared<const SegmentationKernel>(std::move(surface), featureAngle);
+    m_segmentation = std::make_shared<const SegmentationKernel>(surface.release(), featureAngle);
 }
 
 /*!
