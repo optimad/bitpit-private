@@ -2381,11 +2381,9 @@ namespace bitpit {
     LocalTree::preBalance21(bool internal){
 
         uint64_t 		fatherMorton;
-        uint64_t 		mortonld;
         uint32_t 		nocts;
         uint32_t 		idx, idx2, idx0, last_idx;
         uint32_t 		idx1_gh, idx2_gh;
-        int8_t 			marker;
         uint8_t 		nbro;
 
         //------------------------------------------ //
@@ -2429,7 +2427,7 @@ namespace bitpit {
                     fatherMorton = m_ghosts[idx1_gh].computeFatherMorton();
                     nbro = 0;
                     idx = idx1_gh;
-                    marker = m_ghosts[idx].getMarker();
+                    int8_t marker = m_ghosts[idx].getMarker();
                     while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
 
                         //Add ghost index to structure for mapper in case of coarsening a broken family
@@ -2471,7 +2469,7 @@ namespace bitpit {
                         checklocal = true;
                     }
                     idx = idx2_gh;
-                    marker = m_ghosts[idx].getMarker();
+                    int8_t marker = m_ghosts[idx].getMarker();
                     while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
 
                         //Add ghost index to structure for mapper in case of coarsening a broken family
@@ -2514,12 +2512,12 @@ namespace bitpit {
             if (internal){
                 Octant father = m_octants[0].buildFather();
                 fatherMorton = father.computeMorton();
-                mortonld = father.computeLastDescMorton();
+                uint64_t lastDescMorton = father.computeLastDescMorton();
                 nbro = 0;
                 for (idx=0; idx<m_global.m_nchildren; idx++){
                     if (idx<nocts){
                         // Check if family is complete or to be checked in the internal loop (some brother refined)
-                        if (m_octants[idx].computeMorton() <= mortonld){
+                        if (m_octants[idx].computeMorton() <= lastDescMorton){
                             nbro++;
                         }
                     }
@@ -2564,11 +2562,9 @@ namespace bitpit {
     LocalTree::preBalance21(u32vector& newmodified){
 
         uint64_t 			fatherMorton;
-        uint64_t 			mortonld;
         uint32_t 			nocts;
         uint32_t 			idx, idx2, idx0, last_idx;
         uint32_t 			idx1_gh, idx2_gh;
-        int8_t 			marker;
         uint8_t 			nbro;
 
         //------------------------------------------ //
@@ -2613,7 +2609,7 @@ namespace bitpit {
                     fatherMorton = m_ghosts[idx1_gh].computeFatherMorton();
                     nbro = 0;
                     idx = idx1_gh;
-                    marker = m_ghosts[idx].getMarker();
+                    int8_t marker = m_ghosts[idx].getMarker();
                     while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
 
                         //Add ghost index to structure for mapper in case of coarsening a broken family
@@ -2656,7 +2652,7 @@ namespace bitpit {
                         checklocal = true;
                     }
                     idx = idx2_gh;
-                    marker = m_ghosts[idx].getMarker();
+                    int8_t marker = m_ghosts[idx].getMarker();
                     while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
 
                         //Add ghost index to structure for mapper in case of coarsening a broken family
@@ -2698,12 +2694,12 @@ namespace bitpit {
         // Check first internal octants
         Octant father = m_octants[0].buildFather();
         fatherMorton = father.computeMorton();
-        mortonld = father.computeLastDescMorton();
+        uint64_t lastDescMorton = father.computeLastDescMorton();
         nbro = 0;
         for (idx=0; idx<m_global.m_nchildren; idx++){
             // Check if family is complete or to be checked in the internal loop (some brother refined)
             if (idx<nocts){
-                if (m_octants[idx].computeMorton() <= mortonld){
+                if (m_octants[idx].computeMorton() <= lastDescMorton){
                     nbro++;
                 }
             }
