@@ -185,6 +185,7 @@ private:
 	// =================================================================================== //
 	// OTHER METHODS												    			   //
 	// =================================================================================== //
+	uint64_t				computeLastDescMorton() const;
 	Octant					buildLastDesc() const;
 	Octant					buildFather() const;
 	std::vector< Octant >	buildChildren() const;

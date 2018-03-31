@@ -539,6 +539,16 @@ uint64_t	Octant::computeNodeMorton(uint8_t inode) const{
 // OTHER METHODS
 // =================================================================================== //
 
+/** Evaluate the Morton of the last descendant octant of this octant.
+ * \return The Morton of the last descendant octant of this octant.
+ */
+uint64_t	Octant::computeLastDescMorton() const {
+	std::array<uint32_t, 3> lastDescCentroid = computeLastDescCentroid();
+	uint64_t lastDescMorton = PABLO::computeCentroidMorton(lastDescCentroid[0], lastDescCentroid[1], lastDescCentroid[2]);
+
+	return lastDescMorton;
+}
+
 /** Build the last descendant octant of this octant.
  * \return Last descendant octant.
  */
