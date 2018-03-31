@@ -240,8 +240,7 @@ namespace bitpit {
             x = lastOctant->m_x + delta;
             y = lastOctant->m_y + delta;
             z = lastOctant->m_z + (m_dim-2)*delta;
-            Octant lastDesc = Octant(m_dim, m_global.m_maxLevel,x,y,z);
-            m_lastDescMorton = lastDesc.computeMorton();
+            m_lastDescMorton = PABLO::computeCentroidMorton(x, y, z);
         }
     };
 
@@ -304,15 +303,11 @@ namespace bitpit {
         if (createRoot) {
             m_octants.push_back(Octant(m_dim));
 
-            Octant firstDesc(m_global.m_maxLevel,0,0,0);
-            m_firstDescMorton = firstDesc.computeMorton();
-
-            Octant lastDesc(m_dim,m_global.m_maxLevel,m_global.m_maxLength-1,m_global.m_maxLength-1,(m_dim-2)*(m_global.m_maxLength-1));
-            m_lastDescMorton = lastDesc.computeMorton();
+            m_firstDescMorton = PABLO::computeCentroidMorton(0, 0, 0);
+            m_lastDescMorton  = PABLO::computeCentroidMorton(m_global.m_maxLength-1, m_global.m_maxLength-1, (m_dim-2)*(m_global.m_maxLength-1));
         } else {
-            Octant octDesc(m_dim,m_global.m_maxLevel,pow(2,m_global.m_maxLevel),pow(2,m_global.m_maxLevel),(m_dim > 2 ? pow(2,m_global.m_maxLevel) : 0));
-            m_lastDescMorton  = octDesc.computeMorton();
             m_firstDescMorton = std::numeric_limits<uint64_t>::max();
+            m_lastDescMorton  = PABLO::computeCentroidMorton(pow(2,m_global.m_maxLevel), pow(2,m_global.m_maxLevel), (m_dim > 2 ? pow(2,m_global.m_maxLevel) : 0));
         }
 
         m_sizeGhosts  = m_ghosts.size();
@@ -971,8 +966,7 @@ namespace bitpit {
                 return;
             }
             // Compute Last discendent of virtual octant of same size
-            Octant last_desc = samesizeoct.buildLastDesc();
-            uint64_t Mortonlast = last_desc.computeMorton();
+            uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
             int32_t Dx[3] = {0,0,0};
             int32_t Dxstar[3] = {0,0,0};
             u32array3 coord = oct->getCoord();
@@ -1099,8 +1093,7 @@ namespace bitpit {
                         return;
                     }
                     // Compute Last discendent of virtual octant of same size
-                    Octant last_desc = samesizeoct.buildLastDesc();
-                    uint64_t Mortonlast = last_desc.computeMorton();
+                    uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                     int32_t Dx[3] = {0,0,0};
                     int32_t Dxstar[3] = {0,0,0};
                     u32array3 coord = oct->getCoord();
@@ -1245,8 +1238,7 @@ namespace bitpit {
                             return;
                         }
                         // Compute Last discendent of virtual octant of same size
-                        Octant last_desc = samesizeoct.buildLastDesc();
-                        uint64_t Mortonlast = last_desc.computeMorton();
+                        uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                         Mortontry = m_ghosts[idxtry].computeMorton();
                         while(Mortontry <= Mortonlast && idxtry < m_ghosts.size()){
                             Dx = int32_t(abs(cx))*(-int32_t(oct->m_x) + int32_t(m_ghosts[idxtry].m_x));
@@ -1355,8 +1347,7 @@ namespace bitpit {
                         return;
                     }
                     // Compute Last discendent of virtual octant of same size
-                    Octant last_desc = samesizeoct.buildLastDesc();
-                    uint64_t Mortonlast = last_desc.computeMorton();
+                    uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                     Mortontry = m_octants[idxtry].computeMorton();
                     while(Mortontry <= Mortonlast && idxtry <= noctants-1){
                         Dx = int32_t(abs(cx))*(-int32_t(oct->m_x) + int32_t(m_octants[idxtry].m_x));
@@ -1515,8 +1506,7 @@ namespace bitpit {
                             return;
                         }
                         // Compute Last discendent of virtual octant of same size
-                        Octant last_desc = samesizeoct.buildLastDesc();
-                        uint64_t Mortonlast = last_desc.computeMorton();
+                        uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                         Mortontry = m_ghosts[idxtry].computeMorton();
                         int32_t Dx[3] = {0,0,0};
                         int32_t Dxstar[3] = {0,0,0};
@@ -1606,8 +1596,7 @@ namespace bitpit {
                         return;
                     }
                     // Compute Last discendent of virtual octant of same size
-                    Octant last_desc = samesizeoct.buildLastDesc();
-                    uint64_t Mortonlast = last_desc.computeMorton();
+                    uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                     Mortontry = m_octants[idxtry].computeMorton();
                     int32_t Dx[3] = {0,0,0};
                     int32_t Dxstar[3] = {0,0,0};
@@ -1999,8 +1988,7 @@ namespace bitpit {
                     return;
                 }
                 // Compute Last discendent of virtual octant of same size
-                Octant last_desc = samesizeoct.buildLastDesc();
-                uint64_t Mortonlast = last_desc.computeMorton();
+                uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                 Mortontry = m_octants[idxtry].computeMorton();
                 int64_t Dx[3] = {0,0,0};
                 int64_t Dxstar[3] = {0,0,0};
@@ -2106,8 +2094,7 @@ namespace bitpit {
 							return;
 						}
 						// Compute Last discendent of virtual octant of same size
-						Octant last_desc = samesizeoct.buildLastDesc();
-						uint64_t Mortonlast = last_desc.computeMorton();
+						uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
 						Mortontry = m_ghosts[idxtry].computeMorton();
 						int32_t Dx[3] = {0,0,0};
 						int32_t Dxstar[3] = {0,0,0};
@@ -2208,8 +2195,7 @@ namespace bitpit {
                             return;
                         }
                         // Compute Last discendent of virtual octant of same size
-                        Octant last_desc = samesizeoct.buildLastDesc();
-                        uint64_t Mortonlast = last_desc.computeMorton();
+                        uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                         Mortontry = m_octants[idxtry].computeMorton();
                         int32_t Dx[3] = {0,0,0};
                         int32_t Dxstar[3] = {0,0,0};
@@ -2338,8 +2324,7 @@ namespace bitpit {
                     return;
                 }
                 // Compute Last discendent of virtual octant of same size
-                Octant last_desc = samesizeoct.buildLastDesc();
-                uint64_t Mortonlast = last_desc.computeMorton();
+                uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                 Mortontry = m_octants[idxtry].computeMorton();
                 int32_t Dx[3] = {0,0,0};
                 int32_t Dxstar[3] = {0,0,0};
@@ -2525,8 +2510,7 @@ namespace bitpit {
         if(getNumOctants()){
             if (internal){
                 father = m_octants[0].buildFather();
-                lastdesc = father.buildLastDesc();
-                mortonld = lastdesc.computeMorton();
+                mortonld = father.computeLastDescMorton();
                 nbro = 0;
                 for (idx=0; idx<m_global.m_nchildren; idx++){
                     if (idx<nocts){
@@ -2709,8 +2693,7 @@ namespace bitpit {
 
         // Check first internal octants
         father = m_octants[0].buildFather();
-        lastdesc = father.buildLastDesc();
-        mortonld = lastdesc.computeMorton();
+        mortonld = father.computeLastDescMorton();
         nbro = 0;
         for (idx=0; idx<m_global.m_nchildren; idx++){
             // Check if family is complete or to be checked in the internal loop (some brother refined)
