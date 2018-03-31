@@ -553,12 +553,22 @@ uint64_t	Octant::computeLastDescMorton() const {
  * \return Last descendant octant.
  */
 Octant	Octant::buildLastDesc() const {
-	u32array3 delta = { {0,0,0} };
+	std::array<uint32_t, 3> lastDescCentroid = computeLastDescCentroid();
+	Octant lastDesc(m_dim, Global::getMaxLevel(), lastDescCentroid[0], lastDescCentroid[1], lastDescCentroid[2]);
+
+	return lastDesc;
+};
+
+/** Compute the centroid of the last descendant octant of this octant.
+ * \return Centroid of the last descendant octant.
+ */
+std::array<uint32_t, 3>	Octant::computeLastDescCentroid() const {
+	std::array<uint32_t, 3> centroid = {{m_x, m_y, m_z}};
 	for (int i=0; i<m_dim; i++){
-		delta[i] = (uint32_t(1) << (Global::getMaxLevel() - m_level)) - 1;
+		centroid[i] += (uint32_t(1) << (Global::getMaxLevel() - m_level)) - 1;
 	}
-	Octant last_desc(m_dim, Global::getMaxLevel(), (m_x+delta[0]), (m_y+delta[1]), (m_z+delta[2]));
-	return last_desc;
+
+	return centroid;
 };
 
 // =================================================================================== //

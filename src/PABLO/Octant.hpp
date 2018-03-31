@@ -187,6 +187,7 @@ private:
 	// =================================================================================== //
 	uint64_t				computeLastDescMorton() const;
 	Octant					buildLastDesc() const;
+	std::array<uint32_t, 3>	computeLastDescCentroid() const;
 	uint64_t				computeFatherMorton() const;
 	Octant					buildFather() const;
 	std::vector< Octant >	buildChildren() const;
