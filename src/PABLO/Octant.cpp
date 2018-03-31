@@ -563,6 +563,16 @@ Octant	Octant::buildLastDesc() const {
 
 // =================================================================================== //
 
+/** Evaluate the Morton of the father octant.
+ * \return The Morton of the father octant.
+ */
+uint64_t	Octant::computeFatherMorton() const {
+	std::array<uint32_t, 3> fatherCentroid = computeFatherCentroid();
+	uint64_t fatherMorton = PABLO::computeCentroidMorton(fatherCentroid[0], fatherCentroid[1], fatherCentroid[2]);
+
+	return fatherMorton;
+};
+
 /** Build the father octant of this octant.
  * \return Father octant.
  */
