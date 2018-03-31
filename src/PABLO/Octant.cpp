@@ -587,17 +587,22 @@ uint64_t	Octant::computeFatherMorton() const {
  * \return Father octant.
  */
 Octant	Octant::buildFather() const {
-	uint32_t delta[3];
-	uint32_t xx[3];
-	xx[0] = m_x;
-	xx[1] = m_y;
-	xx[2] = m_z;
-	delta[2] = 0;
-	for (int i=0; i<m_dim; i++){
-		delta[i] = xx[i]%(uint32_t(1) << (Global::getMaxLevel() - max(0,(m_level-1))));
-	}
-	Octant father(m_dim, max(0,m_level-1), m_x-delta[0], m_y-delta[1], m_z-delta[2]);
+	std::array<uint32_t, 3> fatherCentroid = computeFatherCentroid();
+	Octant father(m_dim, max(0, m_level-1), fatherCentroid[0], fatherCentroid[1], fatherCentroid[2]);
+
 	return father;
+};
+
+/** Compute the centroid of the father octant of this octant.
+ * \return Centroid of the father octant.
+ */
+std::array<uint32_t, 3>	Octant::computeFatherCentroid() const {
+	std::array<uint32_t, 3> centroid = {{m_x, m_y, m_z}};
+	for (int i=0; i<m_dim; i++){
+		centroid[i] -= centroid[i] % (uint32_t(1) << (Global::getMaxLevel() - max(0,(m_level-1))));
+	}
+
+	return centroid;
 };
 
 // =================================================================================== //

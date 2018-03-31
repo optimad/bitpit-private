@@ -190,6 +190,7 @@ private:
 	std::array<uint32_t, 3>	computeLastDescCentroid() const;
 	uint64_t				computeFatherMorton() const;
 	Octant					buildFather() const;
+	std::array<uint32_t, 3>	computeFatherCentroid() const;
 	std::vector< Octant >	buildChildren() const;
 	std::vector<uint64_t> 		computeHalfSizeMorton(uint8_t iface, uint32_t & sizehf) const;
 	std::vector<uint64_t>		computeMinSizeMorton(uint8_t iface, const uint8_t & maxdepth,
