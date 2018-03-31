@@ -2121,7 +2121,7 @@ namespace bitpit {
      */
     uint64_t
     ParaTree::getLastDescMorton(uint32_t idx) const {
-        return m_octree.m_octants[idx].buildLastDesc().computeMorton();
+        return m_octree.m_octants[idx].computeLastDescMorton();
     };
 
     /*!Get the begin position for the iterator of the local internal octants.
