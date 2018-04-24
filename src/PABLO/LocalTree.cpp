@@ -240,8 +240,7 @@ namespace bitpit {
             x = lastOctant->m_x + delta;
             y = lastOctant->m_y + delta;
             z = lastOctant->m_z + (m_dim-2)*delta;
-            Octant lastDesc = Octant(m_dim, m_global.m_maxLevel,x,y,z);
-            m_lastDescMorton = lastDesc.computeMorton();
+            m_lastDescMorton = PABLO::computeCentroidMorton(x, y, z);
         }
     };
 
@@ -304,15 +303,11 @@ namespace bitpit {
         if (createRoot) {
             m_octants.push_back(Octant(m_dim));
 
-            Octant firstDesc(m_global.m_maxLevel,0,0,0);
-            m_firstDescMorton = firstDesc.computeMorton();
-
-            Octant lastDesc(m_dim,m_global.m_maxLevel,m_global.m_maxLength-1,m_global.m_maxLength-1,(m_dim-2)*(m_global.m_maxLength-1));
-            m_lastDescMorton = lastDesc.computeMorton();
+            m_firstDescMorton = PABLO::computeCentroidMorton(0, 0, 0);
+            m_lastDescMorton  = PABLO::computeCentroidMorton(m_global.m_maxLength-1, m_global.m_maxLength-1, (m_dim-2)*(m_global.m_maxLength-1));
         } else {
-            Octant octDesc(m_dim,m_global.m_maxLevel,pow(2,m_global.m_maxLevel),pow(2,m_global.m_maxLevel),(m_dim > 2 ? pow(2,m_global.m_maxLevel) : 0));
-            m_lastDescMorton  = octDesc.computeMorton();
             m_firstDescMorton = std::numeric_limits<uint64_t>::max();
+            m_lastDescMorton  = PABLO::computeCentroidMorton(pow(2,m_global.m_maxLevel), pow(2,m_global.m_maxLevel), (m_dim > 2 ? pow(2,m_global.m_maxLevel) : 0));
         }
 
         m_sizeGhosts  = m_ghosts.size();
@@ -443,7 +438,7 @@ namespace bitpit {
     LocalTree::coarse(u32vector & mapidx){
 
         u32vector		first_child_index;
-        Octant			father(m_dim);
+        uint64_t 		fatherMorton;
         uint32_t 		idx, idx2;
         uint32_t 		offset;
         uint32_t 		idx1_gh;
@@ -497,11 +492,11 @@ namespace bitpit {
         for (idx=0; idx<m_sizeOctants; idx++){
             if(m_octants[idx].getMarker() < 0 && m_octants[idx].getLevel() > 0){
                 nbro = 0;
-                father = m_octants[idx].buildFather();
+                fatherMorton = m_octants[idx].computeFatherMorton();
                 // Check if family is to be refined
                 for (idx2=idx; idx2<idx+m_global.m_nchildren; idx2++){
                     if (idx2<m_sizeOctants){
-                        if(m_octants[idx2].getMarker() < 0 && m_octants[idx2].buildFather() == father){
+                        if(m_octants[idx2].getMarker() < 0 && m_octants[idx2].computeFatherMorton() == fatherMorton){
                             nbro++;
                         }
                     }
@@ -523,7 +518,8 @@ namespace bitpit {
                     if (nidx < nfchild){
                         if (idx+offset == first_child_index[nidx]){
                             markerfather = -m_global.m_maxLevel;
-                            father = m_octants[idx+offset].buildFather();
+                            Octant father = m_octants[idx+offset].buildFather();
+                            fatherMorton = father.computeMorton();
                             for (uint32_t iii=0; iii<17; iii++){
                                 father.m_info[iii] = false;
                             }
@@ -572,13 +568,13 @@ namespace bitpit {
         if (m_ghosts.size()){
             // Start on ghosts
             if (m_sizeOctants > 0 && idx1_gh < m_sizeGhosts){
-                if (m_ghosts[idx1_gh].buildFather() == m_octants[0].buildFather()){
-                    father = m_ghosts[idx1_gh].buildFather();
+                if (m_ghosts[idx1_gh].computeFatherMorton() == m_octants[0].computeFatherMorton()){
+                    fatherMorton = m_ghosts[idx1_gh].computeFatherMorton();
                     nbro = 0;
                     idx = idx1_gh;
                     marker = m_ghosts[idx].getMarker();
                     bool waszero = (idx == 0);
-                    while(marker < 0 && m_ghosts[idx].buildFather() == father){
+                    while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
                         nbro++;
                         if(waszero){
                             break;
@@ -593,7 +589,7 @@ namespace bitpit {
                     idx = 0;
                     marker = m_octants[idx].getMarker();
                     if (idx==m_sizeOctants-1) wstop = true;
-                    while(marker < 0 && m_octants[idx].buildFather() == father){
+                    while(marker < 0 && m_octants[idx].computeFatherMorton() == fatherMorton){
                         nbro++;
                         nstart++;
                         if (wstop){
@@ -632,13 +628,13 @@ namespace bitpit {
             //Verify family between more then two processes
             if (m_sizeOctants > 0 && idx2_gh < m_sizeGhosts){
 
-                if (m_ghosts[idx2_gh].buildFather() == father){
+                if (m_ghosts[idx2_gh].computeFatherMorton() == fatherMorton){
 
-                    if (m_ghosts[idx2_gh].buildFather() == m_octants[m_sizeOctants-1].buildFather()){
+                    if (m_ghosts[idx2_gh].computeFatherMorton() == m_octants[m_sizeOctants-1].computeFatherMorton()){
 
                         uint64_t idx22_gh = idx2_gh;
                         marker = m_ghosts[idx22_gh].getMarker();
-                        while(marker < 0 && m_ghosts[idx22_gh].buildFather() == father){
+                        while(marker < 0 && m_ghosts[idx22_gh].computeFatherMorton() == fatherMorton){
                             nbro++;
                             idx22_gh++;
                             if(idx22_gh == m_sizeGhosts){
@@ -663,8 +659,10 @@ namespace bitpit {
 
             // End on ghosts
             if (m_sizeOctants > 0 && idx2_gh < m_sizeGhosts){
-                if (m_ghosts[idx2_gh].buildFather() == m_octants[m_sizeOctants-1].buildFather()){
+                Octant father(m_dim);
+                if (m_ghosts[idx2_gh].computeFatherMorton() == m_octants[m_sizeOctants-1].computeFatherMorton()){
                     father = m_ghosts[idx2_gh].buildFather();
+                    fatherMorton = father.computeMorton();
                     for (uint32_t iii=0; iii<17; iii++){
                         father.m_info[iii] = false;
                     }
@@ -672,7 +670,7 @@ namespace bitpit {
                     nbro = 0;
                     idx = idx2_gh;
                     marker = m_ghosts[idx].getMarker();
-                    while(marker < 0 && m_ghosts[idx].buildFather() == father){
+                    while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
                         nbro++;
                         if (markerfather < m_ghosts[idx].getMarker()+1){
                             markerfather = m_ghosts[idx].getMarker()+1;
@@ -691,7 +689,7 @@ namespace bitpit {
                     idx = m_sizeOctants-1;
                     marker = m_octants[idx].getMarker();
                     if (idx==0) wstop = true;
-                    while(marker < 0 && m_octants[idx].buildFather() == father){
+                    while(marker < 0 && m_octants[idx].computeFatherMorton() == fatherMorton){
                         nbro++;
                         nend++;
                         if (markerfather < m_octants[idx].getMarker()+1){
@@ -812,13 +810,13 @@ namespace bitpit {
             idx = 0;
             if (m_octants[idx].computeMorton() < partLastDesc){
 
-                Octant father0 = m_octants[idx].buildFather();
-                Octant father = father0;
+                uint64_t fatherMorton0 = m_octants[idx].computeFatherMorton();
+                uint64_t fatherMorton  = fatherMorton0;
 
-                while(father == father0 && idx < m_sizeOctants){
+                while(fatherMorton == fatherMorton0 && idx < m_sizeOctants){
                     toDelete++;
                     idx++;
-                    if (idx<m_sizeOctants) father = m_octants[idx].buildFather();
+                    if (idx<m_sizeOctants) fatherMorton = m_octants[idx].computeFatherMorton();
                 }
 
                 if (m_sizeOctants>toDelete){
@@ -971,8 +969,7 @@ namespace bitpit {
                 return;
             }
             // Compute Last discendent of virtual octant of same size
-            Octant last_desc = samesizeoct.buildLastDesc();
-            uint64_t Mortonlast = last_desc.computeMorton();
+            uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
             int32_t Dx[3] = {0,0,0};
             int32_t Dxstar[3] = {0,0,0};
             u32array3 coord = oct->getCoord();
@@ -1099,8 +1096,7 @@ namespace bitpit {
                         return;
                     }
                     // Compute Last discendent of virtual octant of same size
-                    Octant last_desc = samesizeoct.buildLastDesc();
-                    uint64_t Mortonlast = last_desc.computeMorton();
+                    uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                     int32_t Dx[3] = {0,0,0};
                     int32_t Dxstar[3] = {0,0,0};
                     u32array3 coord = oct->getCoord();
@@ -1245,8 +1241,7 @@ namespace bitpit {
                             return;
                         }
                         // Compute Last discendent of virtual octant of same size
-                        Octant last_desc = samesizeoct.buildLastDesc();
-                        uint64_t Mortonlast = last_desc.computeMorton();
+                        uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                         Mortontry = m_ghosts[idxtry].computeMorton();
                         while(Mortontry <= Mortonlast && idxtry < m_ghosts.size()){
                             Dx = int32_t(abs(cx))*(-int32_t(oct->m_x) + int32_t(m_ghosts[idxtry].m_x));
@@ -1355,8 +1350,7 @@ namespace bitpit {
                         return;
                     }
                     // Compute Last discendent of virtual octant of same size
-                    Octant last_desc = samesizeoct.buildLastDesc();
-                    uint64_t Mortonlast = last_desc.computeMorton();
+                    uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                     Mortontry = m_octants[idxtry].computeMorton();
                     while(Mortontry <= Mortonlast && idxtry <= noctants-1){
                         Dx = int32_t(abs(cx))*(-int32_t(oct->m_x) + int32_t(m_octants[idxtry].m_x));
@@ -1515,8 +1509,7 @@ namespace bitpit {
                             return;
                         }
                         // Compute Last discendent of virtual octant of same size
-                        Octant last_desc = samesizeoct.buildLastDesc();
-                        uint64_t Mortonlast = last_desc.computeMorton();
+                        uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                         Mortontry = m_ghosts[idxtry].computeMorton();
                         int32_t Dx[3] = {0,0,0};
                         int32_t Dxstar[3] = {0,0,0};
@@ -1606,8 +1599,7 @@ namespace bitpit {
                         return;
                     }
                     // Compute Last discendent of virtual octant of same size
-                    Octant last_desc = samesizeoct.buildLastDesc();
-                    uint64_t Mortonlast = last_desc.computeMorton();
+                    uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                     Mortontry = m_octants[idxtry].computeMorton();
                     int32_t Dx[3] = {0,0,0};
                     int32_t Dxstar[3] = {0,0,0};
@@ -1999,8 +1991,7 @@ namespace bitpit {
                     return;
                 }
                 // Compute Last discendent of virtual octant of same size
-                Octant last_desc = samesizeoct.buildLastDesc();
-                uint64_t Mortonlast = last_desc.computeMorton();
+                uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                 Mortontry = m_octants[idxtry].computeMorton();
                 int64_t Dx[3] = {0,0,0};
                 int64_t Dxstar[3] = {0,0,0};
@@ -2106,8 +2097,7 @@ namespace bitpit {
 							return;
 						}
 						// Compute Last discendent of virtual octant of same size
-						Octant last_desc = samesizeoct.buildLastDesc();
-						uint64_t Mortonlast = last_desc.computeMorton();
+						uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
 						Mortontry = m_ghosts[idxtry].computeMorton();
 						int32_t Dx[3] = {0,0,0};
 						int32_t Dxstar[3] = {0,0,0};
@@ -2208,8 +2198,7 @@ namespace bitpit {
                             return;
                         }
                         // Compute Last discendent of virtual octant of same size
-                        Octant last_desc = samesizeoct.buildLastDesc();
-                        uint64_t Mortonlast = last_desc.computeMorton();
+                        uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                         Mortontry = m_octants[idxtry].computeMorton();
                         int32_t Dx[3] = {0,0,0};
                         int32_t Dxstar[3] = {0,0,0};
@@ -2338,8 +2327,7 @@ namespace bitpit {
                     return;
                 }
                 // Compute Last discendent of virtual octant of same size
-                Octant last_desc = samesizeoct.buildLastDesc();
-                uint64_t Mortonlast = last_desc.computeMorton();
+                uint64_t Mortonlast = samesizeoct.computeLastDescMorton();
                 Mortontry = m_octants[idxtry].computeMorton();
                 int32_t Dx[3] = {0,0,0};
                 int32_t Dxstar[3] = {0,0,0};
@@ -2392,12 +2380,10 @@ namespace bitpit {
     void
     LocalTree::preBalance21(bool internal){
 
-        Octant 			father(m_dim), lastdesc(m_dim);
-        uint64_t 		mortonld;
+        uint64_t 		fatherMorton;
         uint32_t 		nocts;
         uint32_t 		idx, idx2, idx0, last_idx;
         uint32_t 		idx1_gh, idx2_gh;
-        int8_t 			marker;
         uint8_t 		nbro;
 
         //------------------------------------------ //
@@ -2437,12 +2423,12 @@ namespace bitpit {
         // Start and End on ghosts
         if (m_ghosts.size() && nocts > 0){
             if (checkstart){
-                if (m_ghosts[idx1_gh].buildFather()==m_octants[0].buildFather()){
-                    father = m_ghosts[idx1_gh].buildFather();
+                if (m_ghosts[idx1_gh].computeFatherMorton() == m_octants[0].computeFatherMorton()){
+                    fatherMorton = m_ghosts[idx1_gh].computeFatherMorton();
                     nbro = 0;
                     idx = idx1_gh;
-                    marker = m_ghosts[idx].getMarker();
-                    while(marker < 0 && m_ghosts[idx].buildFather() == father){
+                    int8_t marker = m_ghosts[idx].getMarker();
+                    while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
 
                         //Add ghost index to structure for mapper in case of coarsening a broken family
                         m_firstGhostBros.push_back(idx);
@@ -2454,7 +2440,7 @@ namespace bitpit {
                         marker = m_ghosts[idx].getMarker();
                     }
                     idx = 0;
-                    while(idx<nocts && m_octants[idx].buildFather() == father){
+                    while(idx<nocts && m_octants[idx].computeFatherMorton() == fatherMorton){
                         if(m_octants[idx].getMarker()<0)
                             nbro++;
                         idx++;
@@ -2476,15 +2462,15 @@ namespace bitpit {
 
             if (checkend){
                 bool checklocal = false;
-                if (m_ghosts[idx2_gh].buildFather()==m_octants[nocts-1].buildFather()){
-                    father = m_ghosts[idx2_gh].buildFather();
+                if (m_ghosts[idx2_gh].computeFatherMorton() == m_octants[nocts-1].computeFatherMorton()){
+                    fatherMorton = m_ghosts[idx2_gh].computeFatherMorton();
                     if (idx!=nocts){
                         nbro = 0;
                         checklocal = true;
                     }
                     idx = idx2_gh;
-                    marker = m_ghosts[idx].getMarker();
-                    while(marker < 0 && m_ghosts[idx].buildFather() == father){
+                    int8_t marker = m_ghosts[idx].getMarker();
+                    while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
 
                         //Add ghost index to structure for mapper in case of coarsening a broken family
                         m_lastGhostBros.push_back(idx);
@@ -2498,7 +2484,7 @@ namespace bitpit {
                     }
                     idx = nocts-1;
                     if (checklocal){
-                        while(m_octants[idx].buildFather() == father ){
+                        while(m_octants[idx].computeFatherMorton() == fatherMorton ){
                             if (m_octants[idx].getMarker()<0)
                                 nbro++;
                             if (idx==0)
@@ -2524,14 +2510,14 @@ namespace bitpit {
         // Check first internal octants
         if(getNumOctants()){
             if (internal){
-                father = m_octants[0].buildFather();
-                lastdesc = father.buildLastDesc();
-                mortonld = lastdesc.computeMorton();
+                Octant father = m_octants[0].buildFather();
+                fatherMorton = father.computeMorton();
+                uint64_t lastDescMorton = father.computeLastDescMorton();
                 nbro = 0;
                 for (idx=0; idx<m_global.m_nchildren; idx++){
                     if (idx<nocts){
                         // Check if family is complete or to be checked in the internal loop (some brother refined)
-                        if (m_octants[idx].computeMorton() <= mortonld){
+                        if (m_octants[idx].computeMorton() <= lastDescMorton){
                             nbro++;
                         }
                     }
@@ -2543,11 +2529,11 @@ namespace bitpit {
                 for (idx=idx0; idx<nocts; idx++){
                     if(m_octants[idx].getMarker() < 0 && m_octants[idx].getLevel() > 0){
                         nbro = 0;
-                        father = m_octants[idx].buildFather();
+                        fatherMorton = m_octants[idx].computeFatherMorton();
                         // Check if family is to be coarsened
                         for (idx2=idx; idx2<idx+m_global.m_nchildren; idx2++){
                             if (idx2<nocts){
-                                if(m_octants[idx2].getMarker() < 0 && m_octants[idx2].buildFather() == father){
+                                if(m_octants[idx2].getMarker() < 0 && m_octants[idx2].computeFatherMorton() == fatherMorton){
                                     nbro++;
                                 }
                             }
@@ -2575,12 +2561,10 @@ namespace bitpit {
     void
     LocalTree::preBalance21(u32vector& newmodified){
 
-        Octant 				father(m_dim), lastdesc(m_dim);
-        uint64_t 			mortonld;
+        uint64_t 			fatherMorton;
         uint32_t 			nocts;
         uint32_t 			idx, idx2, idx0, last_idx;
         uint32_t 			idx1_gh, idx2_gh;
-        int8_t 			marker;
         uint8_t 			nbro;
 
         //------------------------------------------ //
@@ -2621,12 +2605,12 @@ namespace bitpit {
         // Start and End on ghosts
         if (m_ghosts.size() && nocts > 0){
             if (checkstart){
-                if (m_ghosts[idx1_gh].buildFather()==m_octants[0].buildFather()){
-                    father = m_ghosts[idx1_gh].buildFather();
+                if (m_ghosts[idx1_gh].computeFatherMorton() == m_octants[0].computeFatherMorton()){
+                    fatherMorton = m_ghosts[idx1_gh].computeFatherMorton();
                     nbro = 0;
                     idx = idx1_gh;
-                    marker = m_ghosts[idx].getMarker();
-                    while(marker < 0 && m_ghosts[idx].buildFather() == father){
+                    int8_t marker = m_ghosts[idx].getMarker();
+                    while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
 
                         //Add ghost index to structure for mapper in case of coarsening a broken family
                         m_firstGhostBros.push_back(idx);
@@ -2638,7 +2622,7 @@ namespace bitpit {
                         marker = m_ghosts[idx].getMarker();
                     }
                     idx = 0;
-                    while(idx<nocts && m_octants[idx].buildFather() == father){
+                    while(idx<nocts && m_octants[idx].computeFatherMorton() == fatherMorton){
                         if (m_octants[idx].getMarker()<0)
                             nbro++;
                         idx++;
@@ -2661,15 +2645,15 @@ namespace bitpit {
 
             if (checkend){
                 bool checklocal = false;
-                if (m_ghosts[idx2_gh].buildFather()==m_octants[nocts-1].buildFather()){
-                    father = m_ghosts[idx2_gh].buildFather();
+                if (m_ghosts[idx2_gh].computeFatherMorton() == m_octants[nocts-1].computeFatherMorton()){
+                    fatherMorton = m_ghosts[idx2_gh].computeFatherMorton();
                     if (idx!=nocts){
                         nbro = 0;
                         checklocal = true;
                     }
                     idx = idx2_gh;
-                    marker = m_ghosts[idx].getMarker();
-                    while(marker < 0 && m_ghosts[idx].buildFather() == father){
+                    int8_t marker = m_ghosts[idx].getMarker();
+                    while(marker < 0 && m_ghosts[idx].computeFatherMorton() == fatherMorton){
 
                         //Add ghost index to structure for mapper in case of coarsening a broken family
                         m_lastGhostBros.push_back(idx);
@@ -2683,7 +2667,7 @@ namespace bitpit {
                     }
                     idx = nocts-1;
                     if (checklocal){
-                        while(m_octants[idx].buildFather() == father){
+                        while(m_octants[idx].computeFatherMorton() == fatherMorton){
                             if (m_octants[idx].getMarker()<0)
                                 nbro++;
                             idx--;
@@ -2708,14 +2692,14 @@ namespace bitpit {
         }
 
         // Check first internal octants
-        father = m_octants[0].buildFather();
-        lastdesc = father.buildLastDesc();
-        mortonld = lastdesc.computeMorton();
+        Octant father = m_octants[0].buildFather();
+        fatherMorton = father.computeMorton();
+        uint64_t lastDescMorton = father.computeLastDescMorton();
         nbro = 0;
         for (idx=0; idx<m_global.m_nchildren; idx++){
             // Check if family is complete or to be checked in the internal loop (some brother refined)
             if (idx<nocts){
-                if (m_octants[idx].computeMorton() <= mortonld){
+                if (m_octants[idx].computeMorton() <= lastDescMorton){
                     nbro++;
                 }
             }
@@ -2727,11 +2711,11 @@ namespace bitpit {
         for (idx=idx0; idx<nocts; idx++){
             if(m_octants[idx].getMarker() < 0 && m_octants[idx].getLevel() > 0){
                 nbro = 0;
-                father = m_octants[idx].buildFather();
+                fatherMorton = m_octants[idx].computeFatherMorton();
                 // Check if family is to be coarsened
                 for (idx2=idx; idx2<idx+m_global.m_nchildren; idx2++){
                     if (idx2<nocts){
-                        if(m_octants[idx2].getMarker() < 0 && m_octants[idx2].buildFather() == father){
+                        if(m_octants[idx2].getMarker() < 0 && m_octants[idx2].computeFatherMorton() == fatherMorton){
                             nbro++;
                         }
                     }
@@ -4064,7 +4048,7 @@ namespace bitpit {
             }
 
             for (auto &node : octnodes){
-                uint64_t morton = keyXYZ(node[0], node[1], node[2], m_global.m_maxLevel);
+                uint64_t morton = PABLO::computeNodeMorton(node[0], node[1], node[2], m_global.m_maxLevel);
                 if (nodeCoords.count(morton) == 0) {
                     mortonList.push_back(morton);
                     nodeCoords.insert({{morton, std::move(node)}});

@@ -31,6 +31,7 @@
 #endif
 
 #include "ParaTree.hpp"
+#include <climits>
 #include <sstream>
 #include <iomanip>
 #include <fstream>
@@ -2120,7 +2121,7 @@ namespace bitpit {
      */
     uint64_t
     ParaTree::getLastDescMorton(uint32_t idx) const {
-        return m_octree.m_octants[idx].buildLastDesc().computeMorton();
+        return m_octree.m_octants[idx].computeLastDescMorton();
     };
 
     /*!Get the begin position for the iterator of the local internal octants.
@@ -2781,7 +2782,7 @@ namespace bitpit {
         if (x == m_global.m_maxLength) x = x - 1;
         if (y == m_global.m_maxLength) y = y - 1;
         if (z == m_global.m_maxLength) z = z - 1;
-        morton = mortonEncode_magicbits(x,y,z);
+        morton = PABLO::computeCentroidMorton(x,y,z);
 
 
         powner = 0;
@@ -2860,7 +2861,7 @@ namespace bitpit {
         if (x == m_global.m_maxLength) x = x - 1;
         if (y == m_global.m_maxLength) y = y - 1;
         if (z == m_global.m_maxLength) z = z - 1;
-        morton = mortonEncode_magicbits(x,y,z);
+        morton = PABLO::computeCentroidMorton(x,y,z);
 
 
         powner = 0;
