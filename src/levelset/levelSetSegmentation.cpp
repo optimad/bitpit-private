@@ -596,10 +596,10 @@ void LevelSetSegmentation::computeLSInNarrowBand(bool signd){
     log::cout() << "Computing levelset within the narrow band... " << std::endl;
 
     if( LevelSetCartesian* lsCartesian = dynamic_cast<LevelSetCartesian*>(m_kernelPtr) ){
-        computeLSInNarrowBand( lsCartesian, signd) ;
+        computeLSInNarrowBand(lsCartesian, signd, false) ;
 
     } else if ( LevelSetOctree* lsOctree = dynamic_cast<LevelSetOctree*>(m_kernelPtr) ){
-        computeLSInNarrowBand( lsOctree, signd) ;
+        computeLSInNarrowBand(lsOctree, signd, false) ;
 
     }
 }
@@ -615,8 +615,8 @@ void LevelSetSegmentation::updateLSInNarrowBand( const std::vector<adaption::Inf
     if( LevelSetCartesian* lsCartesian= dynamic_cast<LevelSetCartesian*>(m_kernelPtr) ){
 
         // Update is not implemented for Cartesian patches
-        clear( ) ;
-        computeLSInNarrowBand( lsCartesian, signd) ;
+        clear();
+        computeLSInNarrowBand(lsCartesian, signd, false) ;
         return;
     }
 
@@ -639,8 +639,9 @@ void LevelSetSegmentation::updateLSInNarrowBand( const std::vector<adaption::Inf
  * containing one cell on each side of the surface.
  * @param[in] visitee the octree LevelSetKernel
  * @param[in] signd whether signed distance should be calculated
+ * \param[in] purge whether entries outside the narrow band should be deleted
  */
-void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bool signd){
+void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bool signd, bool purge){
 
     VolCartesian &mesh = *(visitee->getCartesianMesh() ) ;
     const SurfUnstructured &m_surface = m_segmentation->getSurface();
@@ -659,6 +660,17 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
     std::vector<long> flag( mesh.getCellCount(), -1);
 
 
+    // For storage optimization identify the cells
+    // that iare already memorized and mark them as
+    // false. In case the narrow band falls within
+    // one of the cells, its storage will be reused
+    std::unordered_set<long> obsoleteList;
+    if(purge){
+        PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.begin();
+        while( lsInfoItr != m_ls.end() ){
+            obsoleteList.insert(lsInfoItr.getId());
+        }
+    }
 
     log::cout() << " Compute levelset on cartesian mesh"  << std::endl;
 
@@ -675,7 +687,6 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
         stack.reserve(128);
         temp.reserve(128);
         seedNarrowBand( visitee, VS, searchRadius, stack );
-
 
         // propagate from seed
         size_t stackSize = stack.size();
@@ -756,6 +767,11 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
                         infoItr->normal = normal;
                     }
 
+                    // Remove computed cell from list of obsolete entries
+                    if(purge){
+                        obsoleteList.erase(cellId);
+                    }
+
 
                     // the new stack is composed of all neighbours
                     // of the old stack. Attention must be paid in 
@@ -779,6 +795,13 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
         } //end while
     }
 
+    // Clean up unused memory positions
+    if(purge){
+        for( const long cellId : obsoleteList){
+            m_ls.erase(cellId);
+            m_surfaceInfo.erase(cellId);
+        }
+    }
 }
 
 /*!
@@ -792,8 +815,9 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
  * that intersect the surface and within their first neighbours,
  * \param[in] visitee the octree LevelSetKernel
  * \param[in] signd whether signed distance should be calculated
+ * \param[in] purge whether entries outside the narrow band should be deleted
  */
-void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool signd){
+void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool signd, bool purge){
 
     VolumeKernel &mesh = *(visitee->getMesh()) ;
 
@@ -806,7 +830,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
     std::array<double,3> gradient, normal;
     std::array<double,3> centroid, root;
 
-    std::unordered_set<long> intersects;
+    std::unordered_set<long> computed;
 
     for( const Cell &cell : mesh.getCells() ){
 
@@ -826,71 +850,137 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
             m_segmentation->getSegmentInfo(centroid, segmentId, signd, distance, gradient, normal);
 
             PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.find(cellId);
-            lsInfoItr = m_ls.emplace(cellId) ;
-            lsInfoItr->value    = distance;
-            lsInfoItr->gradient = gradient;
+            if(lsInfoItr==m_ls.end()){
+                m_ls.emplace(cellId, distance, gradient) ;
 
-            PiercedVector<SurfaceInfo>::iterator infoItr = m_surfaceInfo.emplace(cellId);
-            infoItr->support = segmentId;
-            infoItr->normal = normal;
+            } else {
+                lsInfoItr->value    = distance;
+                lsInfoItr->gradient = gradient;
 
-            if(adaptiveSearch){
-                intersects.insert(cellId);
             }
+
+            PiercedVector<SurfaceInfo>::iterator surfInfoItr = m_surfaceInfo.find(cellId);
+            if(surfInfoItr==m_surfaceInfo.end()){
+                m_surfaceInfo.emplace(cellId, segmentId, normal);
+
+            } else {
+                surfInfoItr->support = segmentId;
+                surfInfoItr->normal = normal;
+
+            }
+
+            if(!m_userDefinedNarrowBand || purge){
+                computed.insert(cellId);
+            }
+
 
         }
              
     }
 
-    if(!adaptiveSearch){
-        return;
-    }
+    if(adaptiveSearch){
     
-    for( const long &cellId : intersects){
+        std::unordered_set<long> intersects;
+        std::swap(computed,intersects);
 
-        Cell const &cell = mesh.getCell(cellId);
-        
-        centroid = visitee->computeCellCentroid(cellId);
-        root = computeProjectionPoint(cellId);
+        std::unordered_set<long>::iterator intersectsItr = intersects.begin();
+        while( intersectsItr != intersects.end() ){
 
-        const long *neighbours = cell.getAdjacencies() ;
-        int nNeighbours = cell.getAdjacencyCount() ;
-        for (int n = 0; n < nNeighbours; ++n) {
-            long neighId = neighbours[n];
+            // move item from intersect list to computed list
+            long cellId = *intersectsItr;
+            intersectsItr = intersects.erase(intersectsItr);
+            computed.insert(cellId);
 
-            if (neighId < 0) {
-                continue;
+            Cell const &cell = mesh.getCell(cellId);
+            
+            root = computeProjectionPoint(cellId);
+
+            const long *neighbours = cell.getAdjacencies() ;
+            int nNeighbours = cell.getAdjacencyCount() ;
+            for (int n = 0; n < nNeighbours; ++n) {
+                long neighId = neighbours[n];
+
+                if (neighId < 0) {
+                    continue;
+                }
+
+                // skip if neigh cell has already been processed
+                // either because it is intersected by surface or
+                // because it is a neigh to a previous intersect
+                if( computed.count(neighId) != 0 ){
+                    continue;
+                } else {
+                    computed.insert(neighId);
+                }
+
+                centroid = visitee->computeCellCentroid(neighId);
+                searchRadius =  1.05 *norm2(centroid-root);
+                m_segmentation->m_searchTreeUPtr->findPointClosestCell(centroid, searchRadius, &segmentId, &distance);
+
+                if(segmentId>=0){
+
+                    m_segmentation->getSegmentInfo(centroid, segmentId, signd, distance, gradient, normal);
+
+                    PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.find(neighId);
+                    if(lsInfoItr==m_ls.end()){
+                        m_ls.emplace(neighId, distance, gradient) ;
+
+                    } else {
+                        lsInfoItr->value    = distance;
+                        lsInfoItr->gradient = gradient;
+
+                    }
+
+
+                    PiercedVector<SurfaceInfo>::iterator surfInfoItr = m_surfaceInfo.find(neighId);
+                    if(surfInfoItr==m_surfaceInfo.end()){
+                        m_surfaceInfo.emplace(neighId, segmentId, normal);
+
+                    } else {
+                        surfInfoItr->support = segmentId;
+                        surfInfoItr->normal = normal;
+
+                    }
+
+
+                } else {
+                    assert(false && "Should not pass here");
+                }
+
             }
-
-            // skip if neigh cell has already been processed
-            // either because it is intersected by surface or
-            // because it is a neigh to a previous intersect
-            if( m_ls.count(neighId) != 0 ){
-                continue;
-            }
-
-            centroid = visitee->computeCellCentroid(neighId);
-            searchRadius =  1.05 *norm2(centroid-root);
-            m_segmentation->m_searchTreeUPtr->findPointClosestCell(centroid, searchRadius, &segmentId, &distance);
-
-            if(segmentId>=0){
-
-                m_segmentation->getSegmentInfo(centroid, segmentId, signd, distance, gradient, normal);
-
-                PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.emplace(neighId) ;
-                lsInfoItr->value    = distance;
-                lsInfoItr->gradient = gradient;
-
-
-                PiercedVector<SurfaceInfo>::iterator infoItr = m_surfaceInfo.emplace(neighId);
-                infoItr->support = segmentId;
-                infoItr->normal = normal;
-
-            } else {
-                assert(false && "Should not pass here");
-            }
-
         }
+    }
+
+
+    // Clean up unused memory positions
+    if(purge){
+
+        auto levelsetInfoItr = m_ls.begin();
+        while( levelsetInfoItr != m_ls.end() ){
+
+            long cellId = levelsetInfoItr.getId();
+
+            if(computed.find(cellId)==computed.end()){
+                levelsetInfoItr = m_ls.erase(cellId,true);
+            } else {
+                ++levelsetInfoItr;
+            }
+        }
+        m_ls.flush();
+
+        auto surfaceInfoItr = m_surfaceInfo.begin();
+        while( surfaceInfoItr != m_surfaceInfo.end() ){
+
+            long cellId = surfaceInfoItr.getId();
+
+            if(computed.find(cellId)==computed.end()){
+                surfaceInfoItr = m_surfaceInfo.erase(cellId,true);
+            } else {
+                ++surfaceInfoItr;
+            }
+        }
+        m_surfaceInfo.flush();
+
     }
 }
 

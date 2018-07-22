@@ -128,8 +128,8 @@ class LevelSetSegmentation : public LevelSetCachedObject {
     void                                        getBoundingBox( std::array<double,3> &, std::array<double,3> &) const override;
     bool                                        seedNarrowBand( LevelSetCartesian *, std::vector<std::array<double,3>> &, double, std::vector<long> &);
 
-    void                                        computeLSInNarrowBand( LevelSetCartesian *, bool);
-    void                                        computeLSInNarrowBand( LevelSetOctree *, bool);
+    void                                        computeLSInNarrowBand( LevelSetCartesian *, bool signd, bool purge=false);
+    void                                        computeLSInNarrowBand( LevelSetOctree *, bool signd, bool purge=false);
     void                                        updateLSInNarrowBand(LevelSetOctree *, const std::vector<adaption::Info> &, bool);
 
     public:
