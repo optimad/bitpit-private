@@ -153,21 +153,24 @@ void SegmentationKernel::setSurface( const SurfUnstructured *surface, double fea
  * @param[in] id segmment's id
  * @param[out] coords on output will contain coordinates of the vertices
  */
-void SegmentationKernel::getSegmentVertexCoords( long id, std::vector<std::array<double,3>> *coords ) const {
+std::vector<std::array<double,3>> SegmentationKernel::getSegmentVertexCoords(long id) const {
 
     const Cell &segment = m_surface->getCell(id) ;
     int nVertices = segment.getVertexCount() ;
+
+    std::vector<std::array<double,3>> coords(nVertices);
     const long *segmentConnect = segment.getConnect();
 
-    coords->resize(nVertices);
     for (int n = 0; n < nVertices; ++n) {
         long vertexId = segmentConnect[n] ;
-        (*coords)[n] = m_surface->getVertexCoords(vertexId);
+        coords[n] = m_surface->getVertexCoords(vertexId);
     }
 
     if ( nVertices > 3 ) {
         log::cout() << "levelset: only segments and triangles supported in LevelSetSegmentation !!" << std::endl ;
     }
+
+    return coords;
 }
 
 /*!
@@ -640,40 +643,38 @@ void LevelSetSegmentation::updateLSInNarrowBand( const std::vector<adaption::Inf
 void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bool signd){
 
     VolCartesian &mesh = *(visitee->getCartesianMesh() ) ;
-    double searchRadius = m_narrowBand;
+    const SurfUnstructured &m_surface = m_segmentation->getSurface();
 
+    // Determine search radius in order to
+    // guarantee levelset values in narrow band
+    double searchRadius = m_narrowBand;
     if(searchRadius<0.){
         for( int d=0; d < mesh.getDimension(); ++d){
             searchRadius = std::max( searchRadius, mesh.getSpacing(d) ) ;
         }
     }
 
-    std::vector<std::array<double,3>>       VS(3);
+    // The flag conatins the id of the last segment
+    // that has been controlled by the cell
+    std::vector<long> flag( mesh.getCellCount(), -1);
 
-    const SurfUnstructured                  &m_surface = m_segmentation->getSurface();
 
-    std::vector<long>                       stack, temp, neighs, flag( mesh.getCellCount(), -1);
-
-    std::vector< std::array<double,3> >     cloud ;
-    std::vector<double>                     cloudDistance;
-
-    double distance;
-    std::array<double,3>  gradient, normal;
-
-    stack.reserve(128) ;
-    temp.reserve(128) ;
 
     log::cout() << " Compute levelset on cartesian mesh"  << std::endl;
 
     for (const Cell &segment : m_surface.getCells()) {
+
+        // Get segment id, type and vertices
         long segmentId = segment.getId();
+        ElementType segmentType = segment.getType();
+        std::vector<std::array<double,3>> VS = m_segmentation->getSegmentVertexCoords(segmentId);
 
         // compute initial seeds, ie the cells where the vertices
         // of the surface element fall in and add them to stack
-        m_segmentation->getSegmentVertexCoords( segmentId, &VS ) ;
+        std::vector<long> stack, temp;
+        stack.reserve(128);
+        temp.reserve(128);
         seedNarrowBand( visitee, VS, searchRadius, stack );
-
-        ElementType segmentType = segment.getType();
 
 
         // propagate from seed
@@ -682,8 +683,8 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
 
             // put the cell centroids of the stack into a vector
             // and calculate the distances to the cloud
-            cloud.resize(stackSize) ;
-            cloudDistance.resize(stackSize);
+            std::vector< std::array<double,3> > cloud(stackSize);
+            std::vector<double> cloudDistance(stackSize);
 
             for( size_t k = 0; k < stackSize; ++k) {
                 long cell = stack[k];
@@ -739,6 +740,9 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
                     if( cellDistance < std::abs(lsInfoItr->value) ){
 
                         // compute all necessary information and store them
+                        double distance;
+                        std::array<double,3> gradient;
+                        std::array<double,3> normal;
                         m_segmentation->getSegmentInfo(cloud[k], segmentId, signd, distance, gradient, normal);
 
                         lsInfoItr->value    = distance;
@@ -756,7 +760,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
                     // the new stack is composed of all neighbours
                     // of the old stack. Attention must be paid in 
                     // order not to evaluate the same cell twice
-                    neighs.clear();
+                    std::vector<long> neighs;
                     mesh.findCellFaceNeighs(cellId, &neighs) ;
                     for( const auto &  neigh : neighs){
                         if( flag[neigh] != segmentId) {
@@ -775,7 +779,6 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
         } //end while
     }
 
-    return;
 }
 
 /*!
