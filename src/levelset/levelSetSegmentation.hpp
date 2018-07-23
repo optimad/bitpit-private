@@ -53,8 +53,8 @@ class SegmentationKernel {
 
 public:
     SegmentationKernel();
-    SegmentationKernel(const SurfUnstructured *surface, double featureAngle);
-    SegmentationKernel(std::unique_ptr<const SurfUnstructured> &&surface, double featureAngle);
+    SegmentationKernel(SurfUnstructured *surface, double featureAngle);
+    SegmentationKernel(std::unique_ptr<SurfUnstructured> &&surface, double featureAngle);
 
     const SurfUnstructured & getSurface() const;
     double getFeatureAngle() const;
@@ -68,14 +68,14 @@ public:
     std::unique_ptr<SurfaceSkdTree> m_searchTreeUPtr;
 
 private:
-    const SurfUnstructured *m_surface;
-    std::shared_ptr<const SurfUnstructured> m_ownedSurface;
+    SurfUnstructured *m_surface;
+    std::shared_ptr<SurfUnstructured> m_ownedSurface;
     double m_featureAngle;
 
     std::unordered_map<long, std::vector< std::array<double,3>>> m_vertexNormals;
     std::unordered_map<long, std::vector< std::array<double,3>>> m_vertexGradients;
 
-    void setSurface( const SurfUnstructured *surface, double featureAngle);
+    void setSurface(SurfUnstructured *surface, double featureAngle);
 
 };
 
@@ -107,7 +107,7 @@ class LevelSetSegmentation : public LevelSetCachedObject {
         SurfaceInfo(long, std::array<double,3>);
     };
 
-    std::shared_ptr<const SegmentationKernel> m_segmentation;
+    std::shared_ptr<SegmentationKernel> m_segmentation;
     PiercedVector<SurfaceInfo>                         m_surfaceInfo;                      /**< cell support information  */
 
     double                                      getSegmentSize( long ) const;
@@ -135,13 +135,13 @@ class LevelSetSegmentation : public LevelSetCachedObject {
     public:
     virtual ~LevelSetSegmentation();
     LevelSetSegmentation(int);
-    LevelSetSegmentation(int, std::unique_ptr<const SurfUnstructured> &&, double featureAngle = 2. * BITPIT_PI);
-    LevelSetSegmentation(int, const SurfUnstructured*, double featureAngle = 2. * BITPIT_PI);
+    LevelSetSegmentation(int, std::unique_ptr<SurfUnstructured> &&, double featureAngle = 2. * BITPIT_PI);
+    LevelSetSegmentation(int, SurfUnstructured*, double featureAngle = 2. * BITPIT_PI);
 
     LevelSetSegmentation*                       clone() const override ;
 
-    void                                        setSegmentation(std::unique_ptr<const SurfUnstructured> &&patch, double featureAngle = 2. * BITPIT_PI) ;
-    void                                        setSegmentation(const SurfUnstructured *patch, double featureAngle = 2. * BITPIT_PI) ;
+    void                                        setSegmentation(std::unique_ptr<SurfUnstructured> &&patch, double featureAngle = 2. * BITPIT_PI) ;
+    void                                        setSegmentation(SurfUnstructured *patch, double featureAngle = 2. * BITPIT_PI) ;
     const SegmentationKernel &                  getSegmentation() const ;
 
     virtual int                                 getPart(const long &) const override;

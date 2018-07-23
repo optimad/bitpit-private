@@ -58,9 +58,9 @@ SegmentationKernel::SegmentationKernel( ) : m_surface(nullptr), m_featureAngle(0
  * @param[in,out] surface pointer to surface
  * @param[in] featureAngle feature angle. If the angle between two segments is bigger than this angle, the enclosed edge is considered as a sharp edge
  */
-SegmentationKernel::SegmentationKernel( std::unique_ptr<const SurfUnstructured> &&surface, double featureAngle ) {
+SegmentationKernel::SegmentationKernel( std::unique_ptr<SurfUnstructured> &&surface, double featureAngle ) {
 
-    m_ownedSurface = std::shared_ptr<const SurfUnstructured>(surface.release());
+    m_ownedSurface = std::shared_ptr<SurfUnstructured>(surface.release());
 
     setSurface(m_ownedSurface.get(), featureAngle);
 }
@@ -71,7 +71,7 @@ SegmentationKernel::SegmentationKernel( std::unique_ptr<const SurfUnstructured> 
  * @param[in] surface pointer to surface
  * @param[in] featureAngle feature angle. If the angle between two segments is bigger than this angle, the enclosed edge is considered as a sharp edge
  */
-SegmentationKernel::SegmentationKernel( const SurfUnstructured *surface, double featureAngle ) {
+SegmentationKernel::SegmentationKernel(SurfUnstructured *surface, double featureAngle ) {
 
     setSurface(surface, featureAngle);
 }
@@ -113,7 +113,7 @@ const SurfUnstructured & SegmentationKernel::getSurface() const {
  * @param[in] surface pointer to surface
  * @param[in] featureAngle feature angle. If the angle between two segments is bigger than this angle, the enclosed edge is considered as a sharp edge
  */
-void SegmentationKernel::setSurface( const SurfUnstructured *surface, double featureAngle){
+void SegmentationKernel::setSurface(SurfUnstructured *surface, double featureAngle){
 
     std::vector<std::array<double,3>> vertexNormal ;
     std::vector<std::array<double,3>> vertexGradient ;
@@ -346,7 +346,7 @@ LevelSetSegmentation::LevelSetSegmentation(int id) : LevelSetCachedObject(id), m
  * @param[in] STL unique pointer to surface mesh
  * @param[in] featureAngle feature angle. If the angle between two segments is bigger than this angle, the enclosed edge is considered as a sharp edge
  */
-LevelSetSegmentation::LevelSetSegmentation( int id, std::unique_ptr<const SurfUnstructured> &&STL, double featureAngle) :LevelSetSegmentation(id) {
+LevelSetSegmentation::LevelSetSegmentation( int id, std::unique_ptr<SurfUnstructured> &&STL, double featureAngle) :LevelSetSegmentation(id) {
     setSegmentation( std::move(STL), featureAngle );
 }
 
@@ -356,7 +356,7 @@ LevelSetSegmentation::LevelSetSegmentation( int id, std::unique_ptr<const SurfUn
  * @param[in] STL pointer to surface mesh
  * @param[in] featureAngle feature angle; if the angle between two segments is bigger than this angle, the enclosed edge is considered as a sharp edge.
  */
-LevelSetSegmentation::LevelSetSegmentation( int id, const SurfUnstructured *STL, double featureAngle) :LevelSetSegmentation(id) {
+LevelSetSegmentation::LevelSetSegmentation(int id, SurfUnstructured *STL, double featureAngle) :LevelSetSegmentation(id) {
     setSegmentation( STL, featureAngle );
 }
 
@@ -373,9 +373,9 @@ LevelSetSegmentation* LevelSetSegmentation::clone() const {
  * @param[in] surface pointer to surface
  * @param[in] featureAngle feature angle. If the angle between two segments is bigger than this angle, the enclosed edge is considered as a sharp edge
  */
-void LevelSetSegmentation::setSegmentation( const SurfUnstructured *surface, double featureAngle){
+void LevelSetSegmentation::setSegmentation(SurfUnstructured *surface, double featureAngle){
 
-    m_segmentation = std::make_shared<const SegmentationKernel>(surface, featureAngle);
+    m_segmentation = std::make_shared<SegmentationKernel>(surface, featureAngle);
 }
 
 /*!
@@ -383,9 +383,9 @@ void LevelSetSegmentation::setSegmentation( const SurfUnstructured *surface, dou
  * @param[in,out] surface pointer to surface
  * @param[in] featureAngle feature angle. If the angle between two segments is bigger than this angle, the enclosed edge is considered as a sharp edge
  */
-void LevelSetSegmentation::setSegmentation( std::unique_ptr<const SurfUnstructured> &&surface, double featureAngle){
+void LevelSetSegmentation::setSegmentation(std::unique_ptr<SurfUnstructured> &&surface, double featureAngle){
 
-    m_segmentation = std::make_shared<const SegmentationKernel>(std::move(surface), featureAngle);
+    m_segmentation = std::make_shared<SegmentationKernel>(std::move(surface), featureAngle);
 }
 
 /*!
