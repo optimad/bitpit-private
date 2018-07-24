@@ -220,6 +220,15 @@ bool LevelSetKernel::isPointInCell(long id, const std::array<double,3> &pointCoo
 }
 
 /*!
+ * Finds the cell that containes a giveb point
+ * @param[in] pointCoords are the point coordinates
+ * @return the cell undez
+ */
+long LevelSetKernel::locatePoint(const std::array<double,3> &pointCoords){
+    return getMesh()->locatePoint(pointCoords);
+}
+
+/*!
  * Checks if the specified cell is inside the given bounding box
  * @param[in] id is the id of the cell
  * @param[in] minPoint is the lower left point of the boungind box
