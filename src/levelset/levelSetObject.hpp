@@ -61,7 +61,6 @@ class LevelSetObject : public VTKBaseStreamer{
 
     void                                        clear();
 
-    void                                        setSizeNarrowBand(double) ;
 
     virtual void                                computeLSInNarrowBand();
     virtual void                                updateLSInNarrowBand(const std::vector<adaption::Info> &);
@@ -81,6 +80,7 @@ class LevelSetObject : public VTKBaseStreamer{
 
 
     LevelSetKernel*                             m_kernelPtr;    /**< pointer to kernel */
+    bool                                        m_userDefinedNarrowBand; /**< true if user has defined the size of the narrow band */
     double                                      m_narrowBand;   /**< Size of narrow band */
     bool                                        m_signedDistanceFunction; /**< true if the signed distance function should be calculated */
     bool                                        m_propagateSign; /**< true if the sign should be propagated from the narrow band to the far field */
@@ -109,6 +109,11 @@ class LevelSetObject : public VTKBaseStreamer{
     bool                                        getSignedDistanceFunction();
     void                                        setPropagateSign(bool sign);
     bool                                        getPropagateSign();
+
+    bool                                        userDefinedNarrowBand();
+    void                                        setSizeNarrowBand(double size);
+    void                                        resetSizeNarrowBand();
+    double                                      getSizeNarrowBand();
 
     virtual bool                                isPrimary() const ;
 

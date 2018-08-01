@@ -58,6 +58,7 @@ LevelSetObject::~LevelSetObject( ){
 LevelSetObject::LevelSetObject(int id){
     m_id=id;
     m_kernelPtr=nullptr;
+    m_userDefinedNarrowBand=false;
     m_narrowBand=-std::numeric_limits<double>::max();
     m_signedDistanceFunction=true;
     m_propagateSign=false;
@@ -123,6 +124,38 @@ bool LevelSetObject::getPropagateSign(){
  */
 void LevelSetObject::setPropagateSign(bool propagate){
     m_propagateSign = propagate;
+}
+
+/*!
+ * Get if user has set the size of the narrow band
+ */
+bool LevelSetObject::userDefinedNarrowBand(){
+    return m_userDefinedNarrowBand;
+}
+
+/*!
+ * Set the size of the narrow band
+ * \param[in] size the size of the narrow band
+ */
+void LevelSetObject::setSizeNarrowBand(double size){
+    m_userDefinedNarrowBand = true;
+    m_narrowBand = size;
+}
+
+/*!
+ * Resets the size of the narrow band
+ */
+void LevelSetObject::resetSizeNarrowBand(){
+    m_userDefinedNarrowBand = false;
+    m_narrowBand = -std::numeric_limits<double>::max();
+}
+
+/*!
+ * Get the size of the narrow band
+ * \return the size of the narrow band
+ */
+double LevelSetObject::getSizeNarrowBand(){
+    return m_narrowBand;
 }
 
 /*!
@@ -199,14 +232,6 @@ bool LevelSetObject::isInNarrowBand(const long &i)const{
  */
 double LevelSetObject::getSizeNarrowBand()const{
     return m_narrowBand;
-}
-
-/*!
- * Manually set the size of the narrow band.
- * @param[in] r size of the narrow band.
- */
-void LevelSetObject::setSizeNarrowBand(double r){
-    m_narrowBand = r;
 }
 
 /*!
@@ -385,6 +410,7 @@ void LevelSetObject::_clear( ){
  */
 void LevelSetObject::dump( std::ostream &stream ){
     utils::binary::write(stream, m_id) ;
+    utils::binary::write(stream, m_userDefinedNarrowBand);
     utils::binary::write(stream, m_narrowBand);
     utils::binary::write(stream, m_signedDistanceFunction);
     utils::binary::write(stream, m_propagateSign);
@@ -405,6 +431,7 @@ void LevelSetObject::_dump( std::ostream &stream ){
  */
 void LevelSetObject::restore( std::istream &stream ){
     utils::binary::read(stream, m_id) ;
+    utils::binary::read(stream, m_userDefinedNarrowBand);
     utils::binary::read(stream, m_narrowBand);
     utils::binary::read(stream, m_signedDistanceFunction);
     utils::binary::read(stream, m_propagateSign);

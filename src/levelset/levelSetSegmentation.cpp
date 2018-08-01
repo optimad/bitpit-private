@@ -642,8 +642,11 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
 
     // Determine search radius in order to
     // guarantee levelset values in narrow band
-    double searchRadius = m_narrowBand;
-    if(searchRadius<0.){
+    double searchRadius(0);
+    if(m_userDefinedNarrowBand){
+        searchRadius = m_narrowBand;
+
+    } else {
         for( int d=0; d < mesh.getDimension(); ++d){
             searchRadius = std::max( searchRadius, mesh.getSpacing(d) ) ;
         }
@@ -814,8 +817,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
 
     VolumeKernel &mesh = *(visitee->getMesh()) ;
 
-    bool adaptiveSearch(m_narrowBand<0);
-    double searchRadius = m_narrowBand;
+    double searchRadius(m_narrowBand);
     double factor = 0.5 *sqrt( (double) mesh.getDimension() );
 
     long segmentId;
@@ -831,7 +833,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
 
         centroid = visitee->computeCellCentroid(cellId);
 
-        if(adaptiveSearch){
+        if(!m_userDefinedNarrowBand){
             double cellSize = mesh.evalCellSize(cellId);
             searchRadius = factor *cellSize;
         }
@@ -871,8 +873,8 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
              
     }
 
-    if(adaptiveSearch){
-    
+    if(!m_userDefinedNarrowBand){
+
         std::unordered_set<long> intersects;
         std::swap(computed,intersects);
 

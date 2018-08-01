@@ -55,7 +55,6 @@ class LevelSet{
     std::unordered_map<int,std::unique_ptr<LevelSetObject>>     m_objects ;              /**< Objects defining the boundaries */
 
     std::vector<int>        m_order ;               /**< Processing order of objects */
-    bool                    m_useNarrowBand;        /**< Flag if user has set size of narrow band (default=false)  */
 
     int                     registerObject( std::unique_ptr<LevelSetObject> && ) ;
     void                    addProcessingOrder(int) ;
@@ -99,7 +98,6 @@ class LevelSet{
     int                     getObjectCount( ) const ;
     std::vector<int>        getObjectIds( ) const ;
 
-    void                    setSizeNarrowBand(double) ;
 
 
     void                    dump( std::ostream &);

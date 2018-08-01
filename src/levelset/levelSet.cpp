@@ -56,7 +56,7 @@ namespace bitpit {
  * LevelSet will calculate the exact distance with respect the objects within a narrow band.
  * Outside this narrow band an approximate value will be calculated.
  *
- * The user may set the size of the narrow band explicitly.
+ * The user may set the size of the narrow band explicitly for each of the LevelSetObjects.
  * Alternatively LevelSet will guarantee a least on cell center with exact levelset values across the zero-levelset iso-surface.
  *
  * LevelSet will test if the underlying mesh can provide a MPI communicator.
@@ -67,12 +67,7 @@ namespace bitpit {
  * Default constructor
  */
 LevelSet::LevelSet() {
-
     m_objects.clear() ;
-
-    m_useNarrowBand = false ;
-
-
 }
 
 /*!
@@ -481,17 +476,6 @@ void LevelSet::clear(){
 }
 
 /*!
- * Manually set the physical size of the narrow band.
- * @param[in] r Size of the narrow band.
- */
-void LevelSet::setSizeNarrowBand(double r){
-    m_useNarrowBand = true ;
-    for( auto &object :m_objects){
-        object.second->setSizeNarrowBand(r) ;
-    }
-}
-
-/*!
  * Computes levelset on given mesh with respect to the objects.
  * This routines needs to be called at least once.
  * Each object should compute the levelset and associated
@@ -589,7 +573,6 @@ void LevelSet::partition( const std::vector<adaption::Info> &mapper ){
 void LevelSet::dump( std::ostream &stream ){
 
     utils::binary::write(stream, m_order);
-    utils::binary::write(stream, m_useNarrowBand);
 
     for( const auto &object : m_objects ){
         object.second->dump( stream ) ;
@@ -603,7 +586,6 @@ void LevelSet::dump( std::ostream &stream ){
 void LevelSet::restore( std::istream &stream ){
 
     utils::binary::read(stream, m_order);
-    utils::binary::read(stream, m_useNarrowBand);
 
     for( const auto &object : m_objects ){
         object.second->restore( stream ) ;
