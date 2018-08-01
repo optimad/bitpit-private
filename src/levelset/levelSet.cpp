@@ -448,27 +448,5 @@ void LevelSet::partition( const std::vector<adaption::Info> &mapper ){
 }
 #endif
 
-/*! 
- * Writes LevelSetKernel to stream in binary format
- * @param[in] stream output stream
- */
-void LevelSet::dump( std::ostream &stream ){
-
-    for( const auto &object : m_objects ){
-        object.second->dump( stream ) ;
-    }
-}
-
-/*! 
- * Reads LevelSetKernel from stream in binary format
- * @param[in] stream output stream
- */
-void LevelSet::restore( std::istream &stream ){
-
-    for( const auto &object : m_objects ){
-        object.second->restore( stream ) ;
-    }
-}
-
 }
 

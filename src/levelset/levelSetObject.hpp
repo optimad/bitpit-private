@@ -68,8 +68,6 @@ class LevelSetObject : public VTKBaseStreamer{
 
     virtual void                                propagateSign() ;
 
-    void                                        dump(std::ostream &);
-    void                                        restore(std::istream &);
 
 # if BITPIT_ENABLE_MPI
     void                                        exchangeGhosts() ;
@@ -144,6 +142,8 @@ class LevelSetObject : public VTKBaseStreamer{
     void                                        compute();
     void                                        update(const std::vector<adaption::Info> &);
 
+    void                                        dump(std::ostream &);
+    void                                        restore(std::istream &);
 };
 
 }

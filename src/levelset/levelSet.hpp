@@ -94,11 +94,6 @@ class LevelSet{
     int                     getObjectCount( ) const ;
     std::vector<int>        getObjectIds( ) const ;
 
-
-
-    void                    dump( std::ostream &);
-    void                    restore( std::istream &);
-
 # if BITPIT_ENABLE_MPI
     void                    partition( const std::vector<adaption::Info> & );
 # endif
