@@ -72,7 +72,6 @@ LevelSet::LevelSet() {
 
     m_useNarrowBand = false ;
 
-    m_signedDF    = true ;
     m_propagateS  = false;
 
 }
@@ -483,15 +482,6 @@ void LevelSet::clear(){
 }
 
 /*!
- * Set if the signed or unsigned levelset function should be computed.
- * @param[in] flag true/false for signed /unsigned Level-Set function .
- */
-void LevelSet::setSign(bool flag){
-    m_signedDF = flag;
-
-}
-
-/*!
  * Set if the levelset sign has to be propagated from the narrow band to the whole domain.
  * @param[in] flag True/false to active/disable the propagation .
  */
@@ -522,7 +512,7 @@ void LevelSet::compute(){
 
     for( int objectId : m_order){
         auto &visitor = *(m_objects.at(objectId)) ;
-        visitor.computeLSInNarrowBand(m_signedDF) ;
+        visitor.computeLSInNarrowBand() ;
 #if BITPIT_ENABLE_MPI
         visitor.exchangeGhosts();
 #endif
@@ -548,7 +538,7 @@ void LevelSet::update( const std::vector<adaption::Info> &mapper ){
     for( int objectId : m_order){
         auto &visitor = *(m_objects.at(objectId)) ;
         visitor.clearAfterMeshAdaption(mapper) ;
-        visitor.updateLSInNarrowBand( mapper, m_signedDF ) ;
+        visitor.updateLSInNarrowBand(mapper) ;
 #if BITPIT_ENABLE_MPI
         visitor.exchangeGhosts();
 #endif
@@ -611,7 +601,6 @@ void LevelSet::dump( std::ostream &stream ){
 
     utils::binary::write(stream, m_order);
     utils::binary::write(stream, m_useNarrowBand);
-    utils::binary::write(stream, m_signedDF);
     utils::binary::write(stream, m_propagateS);
 
     for( const auto &object : m_objects ){
@@ -627,7 +616,6 @@ void LevelSet::restore( std::istream &stream ){
 
     utils::binary::read(stream, m_order);
     utils::binary::read(stream, m_useNarrowBand);
-    utils::binary::read(stream, m_signedDF);
     utils::binary::read(stream, m_propagateS);
 
     for( const auto &object : m_objects ){

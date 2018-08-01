@@ -589,17 +589,16 @@ void LevelSetSegmentation::__clear( ){
 
 /*!
  * Computes the levelset function within the narrow band
- * @param[in] signd if signed- or unsigned- distance function should be calculated
  */
-void LevelSetSegmentation::computeLSInNarrowBand(bool signd){
+void LevelSetSegmentation::computeLSInNarrowBand(){
 
     log::cout() << "Computing levelset within the narrow band... " << std::endl;
 
     if( LevelSetCartesian* lsCartesian = dynamic_cast<LevelSetCartesian*>(m_kernelPtr) ){
-        computeLSInNarrowBand(lsCartesian, signd, false) ;
+        computeLSInNarrowBand(lsCartesian, false) ;
 
     } else if ( LevelSetOctree* lsOctree = dynamic_cast<LevelSetOctree*>(m_kernelPtr) ){
-        computeLSInNarrowBand(lsOctree, signd, false) ;
+        computeLSInNarrowBand(lsOctree, false) ;
 
     }
 }
@@ -607,24 +606,20 @@ void LevelSetSegmentation::computeLSInNarrowBand(bool signd){
 /*!
  * Updates the levelset function within the narrow band after mesh adaptation.
  * @param[in] mapper information concerning mesh adaption 
- * @param[in] signd if signed- or unsigned- distance function should be calculated
  */
-void LevelSetSegmentation::updateLSInNarrowBand( const std::vector<adaption::Info> &mapper, bool signd){
+void LevelSetSegmentation::updateLSInNarrowBand( const std::vector<adaption::Info> &mapper){
 
     log::cout() << "Updating levelset within the narrow band... " << std::endl;
     if( LevelSetCartesian* lsCartesian= dynamic_cast<LevelSetCartesian*>(m_kernelPtr) ){
 
         // Update is not implemented for Cartesian patches
         clear();
-        computeLSInNarrowBand(lsCartesian, signd, false) ;
-        return;
-    }
+        computeLSInNarrowBand(lsCartesian, false) ;
 
-    if( LevelSetOctree* lsOctree = dynamic_cast<LevelSetOctree*>(m_kernelPtr) ){
-        updateLSInNarrowBand( lsOctree, mapper, signd ) ;
-        return;
-    }
+    } else if( LevelSetOctree* lsOctree = dynamic_cast<LevelSetOctree*>(m_kernelPtr) ){
+        updateLSInNarrowBand(lsOctree, mapper) ;
 
+    }
 
 }
 
@@ -638,10 +633,9 @@ void LevelSetSegmentation::updateLSInNarrowBand( const std::vector<adaption::Inf
  * the method will calculate the levelset within a band
  * containing one cell on each side of the surface.
  * @param[in] visitee the octree LevelSetKernel
- * @param[in] signd whether signed distance should be calculated
  * \param[in] purge whether entries outside the narrow band should be deleted
  */
-void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bool signd, bool purge){
+void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bool purge){
 
     VolCartesian &mesh = *(visitee->getCartesianMesh() ) ;
     const SurfUnstructured &m_surface = m_segmentation->getSurface();
@@ -754,7 +748,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
                         double distance;
                         std::array<double,3> gradient;
                         std::array<double,3> normal;
-                        m_segmentation->getSegmentInfo(cloud[k], segmentId, signd, distance, gradient, normal);
+                        m_segmentation->getSegmentInfo(cloud[k], segmentId, m_signedDistanceFunction, distance, gradient, normal);
 
                         lsInfoItr->value    = distance;
                         lsInfoItr->gradient = gradient;
@@ -814,10 +808,9 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetCartesian *visitee, bo
  * the method will calculate the levelset within the cells
  * that intersect the surface and within their first neighbours,
  * \param[in] visitee the octree LevelSetKernel
- * \param[in] signd whether signed distance should be calculated
  * \param[in] purge whether entries outside the narrow band should be deleted
  */
-void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool signd, bool purge){
+void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool purge){
 
     VolumeKernel &mesh = *(visitee->getMesh()) ;
 
@@ -847,7 +840,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
 
         if(segmentId>=0){
 
-            m_segmentation->getSegmentInfo(centroid, segmentId, signd, distance, gradient, normal);
+            m_segmentation->getSegmentInfo(centroid, segmentId, m_signedDistanceFunction, distance, gradient, normal);
 
             PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.find(cellId);
             if(lsInfoItr==m_ls.end()){
@@ -919,7 +912,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
 
                 if(segmentId>=0){
 
-                    m_segmentation->getSegmentInfo(centroid, segmentId, signd, distance, gradient, normal);
+                    m_segmentation->getSegmentInfo(centroid, segmentId, m_signedDistanceFunction, distance, gradient, normal);
 
                     PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.find(neighId);
                     if(lsInfoItr==m_ls.end()){
@@ -995,9 +988,8 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
  * that intersect the surface and within their first neighbours,
  * @param[in] visitee the octree LevelSetKernel
  * @param[in] mapper the adaption mapper
- * @param[in] signd whether signed distance should be calculated
  */
-void LevelSetSegmentation::updateLSInNarrowBand( LevelSetOctree *visitee, const std::vector<adaption::Info> &mapper, bool signd){
+void LevelSetSegmentation::updateLSInNarrowBand( LevelSetOctree *visitee, const std::vector<adaption::Info> &mapper){
 
     VolumeKernel &mesh = *(visitee->getMesh()) ;
 
@@ -1031,7 +1023,7 @@ void LevelSetSegmentation::updateLSInNarrowBand( LevelSetOctree *visitee, const 
 
             if(segmentId>=0){
 
-                m_segmentation->getSegmentInfo(centroid, segmentId, signd, distance, gradient, normal);
+                m_segmentation->getSegmentInfo(centroid, segmentId, m_signedDistanceFunction, distance, gradient, normal);
 
                 PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.emplace(cellId) ;
                 lsInfoItr->value    = distance;
@@ -1077,7 +1069,7 @@ void LevelSetSegmentation::updateLSInNarrowBand( LevelSetOctree *visitee, const 
 
                     if(segmentId>=0){
 
-                        m_segmentation->getSegmentInfo(centroid, segmentId, signd, distance, gradient, normal);
+                        m_segmentation->getSegmentInfo(centroid, segmentId, m_signedDistanceFunction, distance, gradient, normal);
 
                         PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.emplace(cellId) ;
                         lsInfoItr->value    = distance;

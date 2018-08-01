@@ -128,9 +128,9 @@ class LevelSetSegmentation : public LevelSetCachedObject {
     void                                        getBoundingBox( std::array<double,3> &, std::array<double,3> &) const override;
     bool                                        seedNarrowBand( LevelSetCartesian *, std::vector<std::array<double,3>> &, double, std::vector<long> &);
 
-    void                                        computeLSInNarrowBand( LevelSetCartesian *, bool signd, bool purge=false);
-    void                                        computeLSInNarrowBand( LevelSetOctree *, bool signd, bool purge=false);
-    void                                        updateLSInNarrowBand(LevelSetOctree *, const std::vector<adaption::Info> &, bool);
+    void                                        computeLSInNarrowBand( LevelSetCartesian *, bool purge=false);
+    void                                        computeLSInNarrowBand( LevelSetOctree *, bool purge=false);
+    void                                        updateLSInNarrowBand(LevelSetOctree *, const std::vector<adaption::Info> &);
 
     public:
     virtual ~LevelSetSegmentation();
@@ -152,8 +152,9 @@ class LevelSetSegmentation : public LevelSetCachedObject {
     double                                      getMinSurfaceFeatureSize() const override;
     double                                      getMaxSurfaceFeatureSize() const override;
 
-    void                                        computeLSInNarrowBand(bool) override;
-    void                                        updateLSInNarrowBand(const std::vector<adaption::Info> &, bool) override;
+    void                                        computeLSInNarrowBand() override;
+    void                                        updateLSInNarrowBand(const std::vector<adaption::Info> &) override;
+
 };
 
 }

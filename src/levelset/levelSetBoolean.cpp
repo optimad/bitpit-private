@@ -169,21 +169,17 @@ int LevelSetBoolean::getPart( const long &id ) const{
 
 /*!
  * Computes the levelset function within the narrow band
- * @param[in] signd if signed- or unsigned- distance function should be calculated
  */
-void LevelSetBoolean::computeLSInNarrowBand(bool signd){
-    BITPIT_UNUSED(signd) ;
+void LevelSetBoolean::computeLSInNarrowBand(){
     log::cout() << "Computing levelset within the narrow band... " << std::endl;
 }
 
 /*!
  * Updates the levelset function within the narrow band after mesh adaptation.
  * @param[in] mapper information concerning mesh adaption 
- * @param[in] signd if signed- or unsigned- distance function should be calculated
  */
-void LevelSetBoolean::updateLSInNarrowBand( const std::vector<adaption::Info> &mapper, bool signd){
+void LevelSetBoolean::updateLSInNarrowBand( const std::vector<adaption::Info> &mapper){
     BITPIT_UNUSED(mapper);
-    BITPIT_UNUSED(signd);
     log::cout() << "Updating levelset within the narrow band... " << std::endl;
 }
 

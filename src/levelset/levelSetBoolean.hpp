@@ -72,8 +72,8 @@ class LevelSetBoolean: public LevelSetMetaObject {
     double                                      getMinSurfaceFeatureSize() const override;
     double                                      getMaxSurfaceFeatureSize() const override;
 
-    void                                        computeLSInNarrowBand(bool) override;
-    void                                        updateLSInNarrowBand(const std::vector<adaption::Info> &, bool) override;
+    void                                        computeLSInNarrowBand() override;
+    void                                        updateLSInNarrowBand(const std::vector<adaption::Info> &) override;
 
     int                                         getPrimaryObjectId(const long &) const override;
 

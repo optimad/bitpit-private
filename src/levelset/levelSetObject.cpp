@@ -55,7 +55,11 @@ LevelSetObject::~LevelSetObject( ){
  * Constructor
  * @param[in] id id assigned to object
  */
-LevelSetObject::LevelSetObject(int id) : m_id(id), m_kernelPtr(nullptr), m_narrowBand(-10.) {
+LevelSetObject::LevelSetObject(int id){
+    m_id=id;
+    m_kernelPtr=nullptr;
+    m_narrowBand=-std::numeric_limits<double>::max();
+    m_signedDistanceFunction=true;
 }
 
 /*!
@@ -88,6 +92,21 @@ const LevelSetKernel * LevelSetObject::getKernel() const {
  */
 int LevelSetObject::getId( ) const {
     return m_id ;
+}
+
+/*!
+ * Set if signed distance function should be computed
+ * \param[in] signd true if signed distances should be computed
+ */
+void LevelSetObject::setSignedDistanceFunction(bool signd){
+    m_signedDistanceFunction = signd;
+}
+
+/*!
+ * Get if signed distance function should are computed
+ */
+bool LevelSetObject::getSignedDistanceFunction(){
+    return m_signedDistanceFunction;
 }
 
 /*!
@@ -303,20 +322,16 @@ double LevelSetObject::getMaxSurfaceFeatureSize() const{
 
 /*!
  * Calculates the value and gradient of the levelset function within the narrow band
- * @param[in] signd if signed distances should be calculted
  */
-void LevelSetObject::computeLSInNarrowBand(bool signd){
-    BITPIT_UNUSED(signd);
+void LevelSetObject::computeLSInNarrowBand(){
 }
 
 /*!
  * Updates the value and gradient of the levelset function within the narrow band
  * @param[in] mapper information regarding mesh adaption
- * @param[in] signd if signed distances should be calculted
  */
-void LevelSetObject::updateLSInNarrowBand(const std::vector<adaption::Info> &mapper, bool signd){
+void LevelSetObject::updateLSInNarrowBand(const std::vector<adaption::Info> &mapper){
     BITPIT_UNUSED(mapper);
-    BITPIT_UNUSED(signd);
 }
 
 /*! 
@@ -355,6 +370,7 @@ void LevelSetObject::_clear( ){
 void LevelSetObject::dump( std::ostream &stream ){
     utils::binary::write(stream, m_id) ;
     utils::binary::write(stream, m_narrowBand);
+    utils::binary::write(stream, m_signedDistanceFunction);
     _dump(stream) ;
 }
 
@@ -373,6 +389,7 @@ void LevelSetObject::_dump( std::ostream &stream ){
 void LevelSetObject::restore( std::istream &stream ){
     utils::binary::read(stream, m_id) ;
     utils::binary::read(stream, m_narrowBand);
+    utils::binary::read(stream, m_signedDistanceFunction);
     _restore(stream) ;
 }
 

@@ -173,6 +173,10 @@ void LevelSetCachedObject::__clear( ){
  */
 void LevelSetCachedObject::propagateSign() {
 
+    if(!m_signedDistanceFunction){
+        return;
+    }
+
     VolumeKernel const &mesh = *(m_kernelPtr->getMesh()) ;
     const PiercedVector<Cell> &cells = mesh.getCells();
 
