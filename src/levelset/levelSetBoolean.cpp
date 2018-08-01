@@ -365,4 +365,17 @@ void LevelSetBoolean::displaceSurface(std::unordered_map<long,std::array<double,
     }
 }
 
+/*!
+ * Moves the zero-levelset according to a rigid roto-translation
+ * @param[in] translation the translation vector
+ * @param[in] centre the centre of rotation
+ * @param[in] axis the rotation axis
+ * @param[in] angle the rotation angle in radiants
+ */
+void LevelSetBoolean::displaceSurface(const std::array<double,3> &translation, const std::array<double,3> &centre, const std::array<double,3> &axis, double angle){
+    for( LevelSetObject *objectPtr : m_objPtr){
+        objectPtr->displaceSurface(translation, centre, axis, angle);
+    }
+}
+
 }

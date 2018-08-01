@@ -66,6 +66,7 @@ public:
     const std::unordered_map<long, std::vector< std::array<double,3>>> & getVertexGradients() const;
 
     void displaceSurface(const std::unordered_map<long,std::array<double,3>> &vertexDisplacements);
+    void displaceSurface(const std::array<double,3> &translation, const std::array<double,3> &centre, const std::array<double,3> &axis, double angle);
 
     std::unique_ptr<SurfaceSkdTree> m_searchTreeUPtr;
 
@@ -159,6 +160,7 @@ class LevelSetSegmentation : public LevelSetCachedObject {
     void                                        updateLSInNarrowBand(const std::vector<adaption::Info> &) override;
 
     void                                        displaceSurface(std::unordered_map<long,std::array<double,3>> &cellDisplacemts) override;
+    void                                        displaceSurface(const std::array<double,3> &translation, const std::array<double,3> &centre, const std::array<double,3> &axis, double angle) override;
 };
 
 }

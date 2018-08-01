@@ -618,6 +618,23 @@ void LevelSetObject::displaceSurface(std::unordered_map<long,std::array<double,3
     throw std::runtime_error("Object does not support displace Surface ");
 }
 
+/*!
+ * Moves the zero-levelset according to a rigid rot-translation
+ * @param[in] translation the translation vector
+ * @param[in] centre the centre of rotation
+ * @param[in] axis the rotation axis
+ * @param[in] angle the rotation angle in radiants
+ */
+void LevelSetObject::displaceSurface(const std::array<double,3> &translation, const std::array<double,3> &centre, const std::array<double,3> &axis, double angle){
+    BITPIT_UNUSED(translation);
+    BITPIT_UNUSED(centre);
+    BITPIT_UNUSED(axis);
+    BITPIT_UNUSED(angle);
+    
+    throw std::runtime_error("Object does not support displace Surface ");
+
+}
+
 #if BITPIT_ENABLE_MPI
 
 /*!

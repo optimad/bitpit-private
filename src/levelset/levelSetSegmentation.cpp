@@ -210,6 +210,48 @@ void SegmentationKernel::displaceSurface(const std::unordered_map<long,std::arra
 }
 
 /*!
+ * Displaces the vertex coordinates of the surface according
+ * to a rigid roto-translation. The algorithm applies first the
+ * rotation around the centre (!!!) and than the translation.
+ * @param[in] translation the translation vector
+ * @param[in] centre the centre of rotation
+ * @param[in] axis the rotation axis
+ * @param[in] angle the rotation angle
+ */
+void SegmentationKernel::displaceSurface(const std::array<double,3> &translation, const std::array<double,3> &centre, const std::array<double,3> &axis, double angle){
+
+    // Move vertices
+    for( Vertex &vertex : m_surface->getVertices() ){
+        std::array<double,3> vertexCoords = vertex.getCoords();
+        vertexCoords = bitpit::CGElem::rotateVector(vertexCoords-centre, axis, angle) +centre;
+        vertexCoords += translation;
+        vertex.setCoords(vertexCoords);
+    }
+
+    // Rotate gradients
+    for( std::pair<const long, std::vector<std::array<double,3>>> &entry : m_vertexGradients ){
+
+        for( std::array<double,3> &vertexGradient : entry.second){
+            vertexGradient = bitpit::CGElem::rotateVector(vertexGradient, axis, angle);
+        }
+    }
+
+    // Rotate normals
+    for( std::pair<const long, std::vector<std::array<double,3>>> &entry : m_vertexNormals ){
+
+        for( std::array<double,3> &vertexNormal : entry.second){
+            vertexNormal = bitpit::CGElem::rotateVector(vertexNormal, axis, angle);
+        }
+    }
+
+    m_surface->updateBoundingBox(true);
+
+    // Update search tree
+    m_searchTreeUPtr->clear(false);
+    m_searchTreeUPtr->build();
+}
+
+/*!
  * Get the coordinates of the specified segment's vertices.
  * @param[in] id segmment's id
  * @param[out] coords on output will contain coordinates of the vertices
@@ -716,6 +758,31 @@ void LevelSetSegmentation::displaceSurface(std::unordered_map<long,std::array<do
     }
 
     m_segmentation->displaceSurface(vertexDisplacements);
+
+    if( LevelSetCartesian* lsCartesian = dynamic_cast<LevelSetCartesian*>(m_kernelPtr) ){
+        computeLSInNarrowBand(lsCartesian, true) ;
+
+    } else if ( LevelSetOctree* lsOctree = dynamic_cast<LevelSetOctree*>(m_kernelPtr) ){
+        computeLSInNarrowBand(lsOctree, true) ;
+
+    }
+
+    // Propgate sign from narrow band to far-field if requested
+    if(m_propagateSign){
+        propagateSign();
+    }
+}
+
+/*!
+ * Moves the vertices of the segmentation according to a rigid roto-translation
+ * @param[in] translation the translation vector
+ * @param[in] centre the centre of rotation
+ * @param[in] axis the rotation axis
+ * @param[in] angle the rotation angle in radiants
+ */
+void LevelSetSegmentation::displaceSurface(const std::array<double,3> &translation, const std::array<double,3> &centre, const std::array<double,3> &axis, double angle){
+
+    m_segmentation->displaceSurface(translation, centre, axis, angle);
 
     if( LevelSetCartesian* lsCartesian = dynamic_cast<LevelSetCartesian*>(m_kernelPtr) ){
         computeLSInNarrowBand(lsCartesian, true) ;
