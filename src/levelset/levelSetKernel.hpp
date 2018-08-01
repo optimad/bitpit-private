@@ -47,7 +47,6 @@ class LevelSetObject ;
 class LevelSetKernel{
 
     private:
-    std::unordered_map<long, std::array<double,3>> m_cellCentroids; /**< Cached cell center coordinates*/
 
     protected:
     VolumeKernel*                               m_mesh;        /**< Pointer to underlying mesh*/
@@ -68,10 +67,7 @@ class LevelSetKernel{
     bool                                        isPointInCell(long, const std::array<double,3> &);
     long                                        locatePoint(const std::array<double,3> &coordinates);
 
-    void                                        clearGeometryCache();
-    void                                        updateGeometryCache(const std::vector<adaption::Info> &);
-
-    const std::array<double,3> &                computeCellCentroid(long);
+    std::array<double,3>                        computeCellCentroid(long);
     double                                      isCellInsideBoundingBox(long, std::array<double,3> , std::array<double,3> );
 
 # if BITPIT_ENABLE_MPI

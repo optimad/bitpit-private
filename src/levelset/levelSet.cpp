@@ -505,8 +505,6 @@ void LevelSet::update( const std::vector<adaption::Info> &mapper ){
 
     assert(m_kernel && "LevelSet::setMesh() must be called prior to LevelSet::update()");
 
-    // Udate the cache of the kernel
-    m_kernel->updateGeometryCache( mapper ) ;
 
     // Update ls in narrow band
     for( int objectId : m_order){
@@ -532,9 +530,6 @@ void LevelSet::partition( const std::vector<adaption::Info> &mapper ){
     if (!m_kernel->isCommunicatorSet()) {
         m_kernel->initializeCommunicator();
     }
-
-    // Udate the cache of the kernel
-    m_kernel->updateGeometryCache( mapper ) ;
 
     // Compile send and receive lists
     std::unordered_map<int,std::vector<long>> sendList, recvList ;
