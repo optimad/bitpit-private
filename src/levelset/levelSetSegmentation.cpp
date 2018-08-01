@@ -990,28 +990,25 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
     double searchRadius(m_narrowBand);
     double factor = 0.5 *sqrt( (double) mesh.getDimension() );
 
-    long segmentId;
-    double distance;
-    std::array<double,3> gradient, normal;
-    std::array<double,3> centroid, root;
-
     std::unordered_set<long> computed;
 
     for( const Cell &cell : mesh.getCells() ){
 
         long cellId = cell.getId();
-
-        centroid = visitee->computeCellCentroid(cellId);
+        std::array<double,3> centroid  = visitee->computeCellCentroid(cellId);
 
         if(!m_userDefinedNarrowBand){
             double cellSize = mesh.evalCellSize(cellId);
             searchRadius = factor *cellSize;
         }
 
+        long segmentId;
+        double distance;
         m_segmentation->m_searchTreeUPtr->findPointClosestCell(centroid, searchRadius, &segmentId, &distance);
 
         if(segmentId>=0){
 
+            std::array<double,3> gradient, normal;
             m_segmentation->getSegmentInfo(centroid, segmentId, m_signedDistanceFunction, distance, gradient, normal);
 
             PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.find(cellId);
@@ -1057,8 +1054,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
             computed.insert(cellId);
 
             Cell const &cell = mesh.getCell(cellId);
-            
-            root = computeProjectionPoint(cellId);
+            std::array<double,3> root = computeProjectionPoint(cellId);
 
             const long *neighbours = cell.getAdjacencies() ;
             int nNeighbours = cell.getAdjacencyCount() ;
@@ -1078,12 +1074,16 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
                     computed.insert(neighId);
                 }
 
-                centroid = visitee->computeCellCentroid(neighId);
+                std::array<double,3> centroid = visitee->computeCellCentroid(neighId);
                 searchRadius =  1.05 *norm2(centroid-root);
+
+                long segmentId;
+                double distance;
                 m_segmentation->m_searchTreeUPtr->findPointClosestCell(centroid, searchRadius, &segmentId, &distance);
 
                 if(segmentId>=0){
 
+                    std::array<double,3> gradient, normal;
                     m_segmentation->getSegmentInfo(centroid, segmentId, m_signedDistanceFunction, distance, gradient, normal);
 
                     PiercedVector<LevelSetInfo>::iterator lsInfoItr = m_ls.find(neighId);
