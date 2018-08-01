@@ -119,26 +119,23 @@ int subtest_001(int rank)
     bitpit::LevelSet levelset;
 
     std::vector<bitpit::adaption::Info> mapper ;
-    int id0, id1, id2 ;
-    std::vector<int> ids;
-
     levelset.setMesh(&mesh) ;
-    id0 = levelset.addObject(std::move(STL0),BITPIT_PI) ;
-    id1 = levelset.addObject(std::move(STL1),BITPIT_PI) ;
-    id2 = levelset.addObject(bitpit::LevelSetBooleanOperation::INTERSECTION,id0,id1) ;
-    ids.push_back(id0);
-    ids.push_back(id1);
-    ids.push_back(id2);
 
+    int id0 = levelset.addObject(std::move(STL0),BITPIT_PI) ;
     bitpit::LevelSetObject &object0 = levelset.getObject(id0) ;
-    bitpit::LevelSetObject &object1 = levelset.getObject(id1) ;
-    bitpit::LevelSetObject &object2 = levelset.getObject(id2) ;
-
+    object0.setPropagateSign(true);
     object0.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+
+    int id1 = levelset.addObject(std::move(STL1),BITPIT_PI) ;
+    bitpit::LevelSetObject &object1 = levelset.getObject(id1) ;
+    object1.setPropagateSign(true);
     object1.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+
+    int id2 = levelset.addObject(bitpit::LevelSetBooleanOperation::INTERSECTION,id0,id1) ;
+    bitpit::LevelSetObject &object2 = levelset.getObject(id2) ;
+    object2.setPropagateSign(true);
     object2.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
 
-    levelset.setPropagateSign(true);
 
     // Compute levelset in narrow band
     start = std::chrono::system_clock::now();

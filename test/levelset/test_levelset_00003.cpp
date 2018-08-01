@@ -124,45 +124,52 @@ int subtest_001()
     bitpit::VolOctree mesh(dimensions, meshMin, h, dh );
     mesh.update() ;
 
-
-    // Set levelset configuration
     std::chrono::time_point<std::chrono::system_clock> start, end;
     int elapsed_init, elapsed_refi(0);
-
+    // Configure levelset
     bitpit::LevelSet levelset;
-    
     std::vector<bitpit::adaption::Info> mapper ;
-    int id0, id1, id2, id3, id4, id5;
-
     levelset.setMesh(&mesh) ;
-    id0 = levelset.addObject(std::move(STL0),BITPIT_PI) ;
-    id1 = levelset.addObject(std::move(STL1),BITPIT_PI) ;
-    id2 = levelset.addObject(std::move(STL2),BITPIT_PI/10.) ;
 
-    id3 = levelset.addObject(bitpit::LevelSetBooleanOperation::UNION,id0,id1) ;
-    id4 = levelset.addObject(bitpit::LevelSetBooleanOperation::SUBTRACTION,id3,id2) ;
+    int id0 = levelset.addObject(std::move(STL0),BITPIT_PI) ;
+    bitpit::LevelSetObject &object0 = levelset.getObject(id0);
+    object0.setPropagateSign(true);
+    object0.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+
+    int id1 = levelset.addObject(std::move(STL1),BITPIT_PI) ;
+    bitpit::LevelSetObject &object1 = levelset.getObject(id1);
+    object1.setPropagateSign(true);
+    object1.enableVTKOutput(bitpit::LevelSetWriteField::DEFAULT);
+
+    int id2 = levelset.addObject(std::move(STL2),BITPIT_PI/10.) ;
+    bitpit::LevelSetObject &object2 = levelset.getObject(id2);
+    object2.setPropagateSign(true);
+    object2.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+
+    int id3 = levelset.addObject(bitpit::LevelSetBooleanOperation::UNION,id0,id1) ;
+    bitpit::LevelSetObject &object3 = levelset.getObject(id3);
+    object3.setPropagateSign(true);
+    object3.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+
+    int id4 = levelset.addObject(bitpit::LevelSetBooleanOperation::SUBTRACTION,id3,id2) ;
+    bitpit::LevelSetObject &object4 = levelset.getObject(id4);
+    object4.setPropagateSign(true);
+    object4.enableVTKOutput(bitpit::LevelSetWriteField::DEFAULT);
 
     std::vector<int> ids;
     ids.push_back(id0);
     ids.push_back(id1);
     ids.push_back(id2);
-    id5 = levelset.addObject(bitpit::LevelSetBooleanOperation::UNION,ids) ;
+    int id5 = levelset.addObject(bitpit::LevelSetBooleanOperation::UNION,ids) ;
+    bitpit::LevelSetObject &object5 = levelset.getObject(id5);
+    object5.setPropagateSign(true);
+    object5.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
 
     ids.push_back(id3);
     ids.push_back(id4);
     ids.push_back(id5);
 
-    levelset.getObject(id0).enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
-    levelset.getObject(id1).enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
-    levelset.getObject(id2).enableVTKOutput(bitpit::LevelSetWriteField::DEFAULT);
-    levelset.getObject(id3).enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
-    levelset.getObject(id4).enableVTKOutput(bitpit::LevelSetWriteField::DEFAULT);
-    levelset.getObject(id5).enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
 
-    mesh.getVTK().setName("levelset_003") ;
-    mesh.getVTK().setCounter() ;
-
-    levelset.setPropagateSign(true);
 
     // Compute and write level set on initial mesh
     start = std::chrono::system_clock::now();
@@ -175,9 +182,6 @@ int subtest_001()
     mesh.write() ;
 
     // Refine mesh, update levelset and write data
-    const bitpit::LevelSetObject &object0 = levelset.getObject(id0);
-    const bitpit::LevelSetObject &object1 = levelset.getObject(id1);
-    const bitpit::LevelSetObject &object2 = levelset.getObject(id2);
 
     for( int i=0; i<10; ++i){
 

@@ -102,10 +102,12 @@ int subtest_001(int rank)
     bitpit::LevelSet levelset;
 
     std::vector<bitpit::adaption::Info> mapper;
-
     levelset.setMesh(&mesh);
-    levelset.setPropagateSign(true);
+
     int id0 = levelset.addObject(std::move(STL),BITPIT_PI);
+    bitpit::LevelSetObject &object0 = levelset.getObject(id0);
+    object0.setPropagateSign(true);
+    object0.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
 
 
     start = std::chrono::system_clock::now();
@@ -123,12 +125,11 @@ int subtest_001(int rank)
     mesh.write();
 
     // Refinement
-    const bitpit::LevelSetObject &object = levelset.getObject(id0);
     for (int i=0; i<3; ++i){
 
         for (auto & cell : mesh.getCells() ){
             const long &id = cell.getId();
-            if( std::abs(object.getLS(id)) < 100. ){
+            if( std::abs(object0.getLS(id)) < 100. ){
                 mesh.markCellForRefinement(id);
             }
         }

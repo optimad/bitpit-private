@@ -862,7 +862,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
 
             }
 
-            if(!m_userDefinedNarrowBand || purge){
+            if(adaptiveSearch || purge){
                 computed.insert(cellId);
             }
 

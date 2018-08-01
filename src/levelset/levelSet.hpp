@@ -56,7 +56,6 @@ class LevelSet{
 
     std::vector<int>        m_order ;               /**< Processing order of objects */
     bool                    m_useNarrowBand;        /**< Flag if user has set size of narrow band (default=false)  */
-    bool                    m_propagateS;           /**< Flag for sign propagation from narrow band (default = false) */
 
     int                     registerObject( std::unique_ptr<LevelSetObject> && ) ;
     void                    addProcessingOrder(int) ;
@@ -102,7 +101,6 @@ class LevelSet{
 
     void                    setSizeNarrowBand(double) ;
 
-    void                    setPropagateSign(bool) ;
 
     void                    dump( std::ostream &);
     void                    restore( std::istream &);

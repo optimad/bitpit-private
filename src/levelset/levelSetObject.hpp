@@ -83,6 +83,7 @@ class LevelSetObject : public VTKBaseStreamer{
     LevelSetKernel*                             m_kernelPtr;    /**< pointer to kernel */
     double                                      m_narrowBand;   /**< Size of narrow band */
     bool                                        m_signedDistanceFunction; /**< true if the signed distance function should be calculated */
+    bool                                        m_propagateSign; /**< true if the sign should be propagated from the narrow band to the far field */
 
     virtual void                                _clear();
     virtual void                                _clearAfterMeshAdaption(const std::vector<adaption::Info>&) ;
@@ -106,6 +107,9 @@ class LevelSetObject : public VTKBaseStreamer{
     int                                         getId() const ;
     void                                        setSignedDistanceFunction(bool sign);
     bool                                        getSignedDistanceFunction();
+    void                                        setPropagateSign(bool sign);
+    bool                                        getPropagateSign();
+
     virtual bool                                isPrimary() const ;
 
     virtual LevelSetInfo                        getLevelSetInfo(const long &) const =0;

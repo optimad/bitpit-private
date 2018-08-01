@@ -88,7 +88,6 @@ int subtest_001(int rank)
 
     // Configure levelset
     bitpit::LevelSet levelset;
-    int id0;
 
     std::chrono::time_point<std::chrono::system_clock>    start, end;
     int elapsed_init, elapsed_part, elapsed_refi(0);
@@ -96,10 +95,11 @@ int subtest_001(int rank)
     std::vector<bitpit::adaption::Info> mapper ;
 
     levelset.setMesh(&mesh) ;
-    levelset.setPropagateSign(true);
 
-    id0 = levelset.addObject(std::move(STL),BITPIT_PI) ;
-    levelset.getObject(id0).enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+    int id0 = levelset.addObject(std::move(STL),BITPIT_PI) ;
+    bitpit::LevelSetObject &object0 = levelset.getObject(id0);
+    object0.setPropagateSign(true);
+    object0.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
 
     // Compute levelset in narrowband in serial
     start = std::chrono::system_clock::now();
@@ -108,11 +108,8 @@ int subtest_001(int rank)
 
     elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
 
-    if (rank == 0) {
-        bitpit::log::cout() << " - Exporting serial levelset" << std::endl;
-        mesh.getVTK().setName("levelset_parallel_001_serial") ;
-        mesh.write() ;
-    }
+    mesh.getVTK().setName("levelset_parallel_001_serial") ;
+    mesh.write() ;
 
     // Partition the mesh over available processes
     start = std::chrono::system_clock::now();
@@ -123,11 +120,6 @@ int subtest_001(int rank)
     end = std::chrono::system_clock::now();
     elapsed_part = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
 
-    const bitpit::LevelSetObject &object0 = levelset.getObject(id0);
-
-    if (rank == 0) {
-        bitpit::log::cout() << " - Exporting partitioned levelset" << std::endl;
-    }
 
     mesh.getVTK().setName("levelset_parallel_001_partitioned") ;
     mesh.write() ;

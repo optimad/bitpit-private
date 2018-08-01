@@ -83,8 +83,11 @@ int subtest_001()
 
     levelset.setMesh(&mesh) ;
     int id0 = levelset.addObject( std::move(STL), BITPIT_PI/3. ) ;
+    bitpit::LevelSetObject &object = levelset.getObject(id0);
 
-    levelset.setPropagateSign(true) ;
+    object.setPropagateSign(true) ;
+    object.enableVTKOutput( bitpit::LevelSetWriteField::ALL);
+
     start = std::chrono::system_clock::now();
     levelset.compute( ) ;
     end = std::chrono::system_clock::now();
@@ -94,9 +97,7 @@ int subtest_001()
 
     bitpit::log::cout()<< " - Exporting data" << std::endl;
     mesh.getVTK().setName("levelset_002") ;
-    bitpit::LevelSetObject &object = levelset.getObject(id0);
 
-    object.enableVTKOutput( bitpit::LevelSetWriteField::ALL);
 
     mesh.write() ;
 

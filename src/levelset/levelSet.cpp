@@ -72,7 +72,6 @@ LevelSet::LevelSet() {
 
     m_useNarrowBand = false ;
 
-    m_propagateS  = false;
 
 }
 
@@ -482,14 +481,6 @@ void LevelSet::clear(){
 }
 
 /*!
- * Set if the levelset sign has to be propagated from the narrow band to the whole domain.
- * @param[in] flag True/false to active/disable the propagation .
- */
-void LevelSet::setPropagateSign(bool flag){
-    m_propagateS = flag;
-}
-
-/*!
  * Manually set the physical size of the narrow band.
  * @param[in] r Size of the narrow band.
  */
@@ -516,7 +507,6 @@ void LevelSet::compute(){
 #if BITPIT_ENABLE_MPI
         visitor.exchangeGhosts();
 #endif
-        if(m_propagateS) visitor.propagateSign() ;
     }
 }
 
@@ -542,7 +532,6 @@ void LevelSet::update( const std::vector<adaption::Info> &mapper ){
 #if BITPIT_ENABLE_MPI
         visitor.exchangeGhosts();
 #endif
-        if(m_propagateS) visitor.propagateSign() ;
     }
 }
 
@@ -601,7 +590,6 @@ void LevelSet::dump( std::ostream &stream ){
 
     utils::binary::write(stream, m_order);
     utils::binary::write(stream, m_useNarrowBand);
-    utils::binary::write(stream, m_propagateS);
 
     for( const auto &object : m_objects ){
         object.second->dump( stream ) ;
@@ -616,7 +604,6 @@ void LevelSet::restore( std::istream &stream ){
 
     utils::binary::read(stream, m_order);
     utils::binary::read(stream, m_useNarrowBand);
-    utils::binary::read(stream, m_propagateS);
 
     for( const auto &object : m_objects ){
         object.second->restore( stream ) ;

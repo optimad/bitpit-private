@@ -60,6 +60,7 @@ LevelSetObject::LevelSetObject(int id){
     m_kernelPtr=nullptr;
     m_narrowBand=-std::numeric_limits<double>::max();
     m_signedDistanceFunction=true;
+    m_propagateSign=false;
 }
 
 /*!
@@ -107,6 +108,21 @@ void LevelSetObject::setSignedDistanceFunction(bool signd){
  */
 bool LevelSetObject::getSignedDistanceFunction(){
     return m_signedDistanceFunction;
+}
+
+/*!
+ * Get if the sign should be propagated from the narrow band to the far-field
+ */
+bool LevelSetObject::getPropagateSign(){
+    return m_propagateSign;
+}
+
+/*!
+ * Set if the sign should be propagated from the narrow band to the far-field
+ * \param[in] propagate true if signed distances should be computed
+ */
+void LevelSetObject::setPropagateSign(bool propagate){
+    m_propagateSign = propagate;
 }
 
 /*!
@@ -371,6 +387,7 @@ void LevelSetObject::dump( std::ostream &stream ){
     utils::binary::write(stream, m_id) ;
     utils::binary::write(stream, m_narrowBand);
     utils::binary::write(stream, m_signedDistanceFunction);
+    utils::binary::write(stream, m_propagateSign);
     _dump(stream) ;
 }
 
@@ -390,6 +407,7 @@ void LevelSetObject::restore( std::istream &stream ){
     utils::binary::read(stream, m_id) ;
     utils::binary::read(stream, m_narrowBand);
     utils::binary::read(stream, m_signedDistanceFunction);
+    utils::binary::read(stream, m_propagateSign);
     _restore(stream) ;
 }
 
