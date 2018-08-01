@@ -149,6 +149,67 @@ void SegmentationKernel::setSurface(SurfUnstructured *surface, double featureAng
 }
 
 /*!
+ * Displaces the vertex coordinates of the surface
+ * @param[in] vertexDisplacements contains the displcement vectors of the vertices
+ */
+void SegmentationKernel::displaceSurface(const std::unordered_map<long,std::array<double,3>> &vertexDisplacements){
+
+    // Move vertices
+    for( Vertex &vertex : m_surface->getVertices() ){
+        long vertexId = vertex.getId() ;
+
+        auto itr = vertexDisplacements.find(vertexId);
+        if(itr!=vertexDisplacements.end()) {
+            vertex.translate(itr->second);
+        }
+    }
+   
+    // update normals 
+    std::vector<std::array<double,3>> vertexNormal ;
+    std::vector<std::array<double,3>> vertexGradient ;
+
+    double tol = m_surface->getTol() ;
+    for( const Cell &segment : m_surface->getCells() ){
+        long segmentId = segment.getId() ;
+        int nVertices  = segment.getVertexCount() ;
+
+        vertexNormal.resize(nVertices) ;
+        vertexGradient.resize(nVertices) ;
+
+        double misalignment = 0. ;
+        for( int i = 0; i < nVertices; ++i ){
+            vertexGradient[i] = m_surface->evalVertexNormal(segmentId, i) ;
+            vertexNormal[i]   = m_surface->evalLimitedVertexNormal(segmentId, i, m_featureAngle) ;
+
+            misalignment += norm2(vertexGradient[i] - vertexNormal[i]) ;
+        }
+
+        m_vertexGradients[segmentId] = vertexGradient;
+
+        auto itr = m_vertexNormals.find(segmentId);
+
+        if( misalignment >= tol ){
+            if(itr==m_vertexNormals.end()){
+                m_vertexNormals.insert({{segmentId,vertexNormal}});
+            } else { 
+                itr->second = vertexNormal;
+            }
+
+        } else {
+            if(itr!=m_vertexNormals.end()){
+                m_vertexNormals.erase(itr);
+            }
+        }
+    }
+
+    m_surface->updateBoundingBox(true);
+
+    // Update search tree
+    m_searchTreeUPtr->clear(false);
+    m_searchTreeUPtr->build();
+}
+
+/*!
  * Get the coordinates of the specified segment's vertices.
  * @param[in] id segmment's id
  * @param[out] coords on output will contain coordinates of the vertices
@@ -624,6 +685,48 @@ void LevelSetSegmentation::updateLSInNarrowBand( const std::vector<adaption::Inf
 }
 
 /*!
+ * Moves the vertices of the segmentation by the displacements
+ * and updates the levelset values
+ * @param[in] cellDisplacements holds the displacements mapped on the background mesh
+ */
+void LevelSetSegmentation::displaceSurface(std::unordered_map<long,std::array<double,3>> &cellDisplacements){
+
+    std::unordered_map<long,std::array<double,3>> vertexDisplacements;
+
+    const SurfUnstructured &surface = m_segmentation->getSurface();
+    for( const Vertex &vertex : surface.getVertices() ){
+        long vertexId = vertex.getId();
+
+        const std::array<double,3> &vertexCoords = vertex.getCoords();
+        long cellId = m_kernelPtr->locatePoint(vertexCoords);
+
+        // Skip if cell is outside patch
+        if(cellId==bitpit::Element::NULL_ID){
+            continue;
+        }
+
+        // Skip if no velocity has been provided for cell
+        std::unordered_map<long,std::array<double,3>>::iterator cdItr = cellDisplacements.find(cellId);
+        if(cdItr!=cellDisplacements.end()){
+            continue;
+        }
+
+        vertexDisplacements.emplace(vertexId,cdItr->second);
+
+    }
+
+    m_segmentation->displaceSurface(vertexDisplacements);
+
+    if( LevelSetCartesian* lsCartesian = dynamic_cast<LevelSetCartesian*>(m_kernelPtr) ){
+        computeLSInNarrowBand(lsCartesian, true) ;
+
+    } else if ( LevelSetOctree* lsOctree = dynamic_cast<LevelSetOctree*>(m_kernelPtr) ){
+        computeLSInNarrowBand(lsOctree, true) ;
+
+    }
+}
+
+/*!
  * Computes the levelset within the narrow band on an
  * cartesian grid.
  * If the size of the narrow band has been set, the
@@ -864,7 +967,7 @@ void LevelSetSegmentation::computeLSInNarrowBand( LevelSetOctree *visitee, bool 
 
             }
 
-            if(adaptiveSearch || purge){
+            if(!m_userDefinedNarrowBand || purge){
                 computed.insert(cellId);
             }
 

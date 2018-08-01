@@ -354,4 +354,15 @@ int LevelSetBoolean::getPrimaryObjectId(const long &cellId) const{
     
 }
 
+/*!
+ * Moves the zero-levelset according to the displacement fields defined on the
+ * cells and updates the levelset values
+ * @param[in] cellDisplacements holds the displacements mapped on the background mesh
+ */
+void LevelSetBoolean::displaceSurface(std::unordered_map<long,std::array<double,3>> &cellDisplacements){
+    for( LevelSetObject *objectPtr : m_objPtr){
+        objectPtr->displaceSurface(cellDisplacements);
+    }
+}
+
 }

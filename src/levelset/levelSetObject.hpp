@@ -138,6 +138,7 @@ class LevelSetObject : public VTKBaseStreamer{
     void                                        enableVTKOutput(LevelSetWriteField field, bool enable=true);
     void                                        flushData(std::fstream &, const std::string &, VTKFormat) override;
 
+    virtual void                                displaceSurface(std::unordered_map<long,std::array<double,3>> &cellDisplacemts);
 
 };
 

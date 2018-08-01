@@ -609,6 +609,15 @@ void LevelSetObject::_restore( std::istream &stream ){
     BITPIT_UNUSED(stream);
 }
 
+/*!
+ * Moves the the zero-levelset according the displacement vectors
+ * @param[in] cellDisplacements holds the displacements mapped on the background mesh
+ */
+void LevelSetObject::displaceSurface(std::unordered_map<long,std::array<double,3>> &cellDisplacements){
+    BITPIT_UNUSED(cellDisplacements);
+    throw std::runtime_error("Object does not support displace Surface ");
+}
+
 #if BITPIT_ENABLE_MPI
 
 /*!

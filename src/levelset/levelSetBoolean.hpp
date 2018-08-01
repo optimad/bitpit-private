@@ -75,6 +75,7 @@ class LevelSetBoolean: public LevelSetMetaObject {
     void                                        computeLSInNarrowBand() override;
     void                                        updateLSInNarrowBand(const std::vector<adaption::Info> &) override;
 
+    void                                        displaceSurface(std::unordered_map<long,std::array<double,3>> &cellDisplacements) override;
     int                                         getPrimaryObjectId(const long &) const override;
 
 };
