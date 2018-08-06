@@ -47,15 +47,18 @@
 */
 int subtest_001(int rank)
 {
+
+    // 2D test case
     uint8_t dimensions(2);
 
+    // Used for timing
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+
     // First Input geometry
+    bitpit::log::cout() << " - Loading stl geometry" << std::endl;
     std::unique_ptr<bitpit::SurfUnstructured> STL0( new bitpit::SurfUnstructured (1,dimensions) );
 
-    bitpit::log::cout() << " - Loading stl geometry" << std::endl;
-
     STL0->importDGF("./data/naca0012.dgf");
-
     STL0->deleteCoincidentVertices() ;
     STL0->buildAdjacencies() ;
 
@@ -69,12 +72,10 @@ int subtest_001(int rank)
 
 
     // Second Input geometry
+    bitpit::log::cout() << " - Loading stl geometry" << std::endl;
     std::unique_ptr<bitpit::SurfUnstructured> STL1( new bitpit::SurfUnstructured (1,dimensions) );
 
-    bitpit::log::cout() << " - Loading stl geometry" << std::endl;
-
     STL1->importDGF("./data/square.dgf");
-
     STL1->deleteCoincidentVertices() ;
     STL1->buildAdjacencies() ;
 
@@ -90,35 +91,28 @@ int subtest_001(int rank)
     bitpit::log::cout() << " - Setting mesh" << std::endl;
     std::array<double,3> meshMin0, meshMax0;
     std::array<double,3> meshMin1, meshMax1;
-    std::array<double,3> meshMin, meshMax, delta ;
-    double h(0), dh ;
+    std::array<double,3> meshMin, meshMax;
 
     STL0->getBoundingBox( meshMin0, meshMax0 ) ;
     STL1->getBoundingBox( meshMin1, meshMax1 ) ;
     bitpit::CGElem::unionAABB( meshMin0, meshMax0, meshMin1, meshMax1, meshMin, meshMax ) ;
 
-    delta = meshMax -meshMin ;
+    std::array<double,3> delta = meshMax -meshMin ;
     meshMin -=  0.1*delta ;
     meshMax +=  0.1*delta ;
-
     delta = meshMax -meshMin ;
 
+    double h(0);
     for( int i=0; i<3; ++i){
         h = std::max( h, meshMax[i]-meshMin[i] ) ;
     };
 
-    dh = h / 16. ;
+    double dh = h / 16. ;
     bitpit::VolOctree    mesh(dimensions, meshMin, h, dh );
     mesh.update() ;
 
-
     // Configure levelset
-    std::chrono::time_point<std::chrono::system_clock> start, end;
-    int elapsed_init, elapsed_part, elapsed_refi(0);
-
     bitpit::LevelSet levelset;
-
-    std::vector<bitpit::adaption::Info> mapper ;
     levelset.setMesh(&mesh) ;
 
     int id0 = levelset.addObject(std::move(STL0),BITPIT_PI) ;
@@ -143,7 +137,7 @@ int subtest_001(int rank)
     object1.compute();
     end = std::chrono::system_clock::now();
 
-    elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    int elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
 
     if(rank==0){
         mesh.getVTK().setName("levelset_parallel_002_serial");
@@ -152,13 +146,14 @@ int subtest_001(int rank)
 
 
     // Mesh Partitioning
+    std::vector<bitpit::adaption::Info> mapper ;
     mapper = mesh.partition(MPI_COMM_WORLD, true) ;
 
     start = std::chrono::system_clock::now();
     levelset.partition(mapper) ;
     end = std::chrono::system_clock::now();
 
-    elapsed_part = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    int elapsed_part = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
 
     mesh.getVTK().setName("levelset_parallel_002_partitioned");
     mesh.write() ;
@@ -166,6 +161,7 @@ int subtest_001(int rank)
     // Refinement
     mesh.getVTK().setCounter() ;
     mesh.getVTK().setName("levelset_parallel_002_refinement");
+    int elapsed_refi(0);
     for( int i=0; i<10; ++i){
 
         for( auto & cell : mesh.getCells() ){

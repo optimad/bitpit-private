@@ -93,9 +93,8 @@ int subtest_001()
     int dimensions(2) ;
 
     // Input geometry
-    std::unique_ptr<bitpit::SurfUnstructured> STL( new bitpit::SurfUnstructured(0,1,dimensions) );
-
     bitpit::log::cout() << " - Loading dgf geometry" << std::endl;
+    std::unique_ptr<bitpit::SurfUnstructured> STL( new bitpit::SurfUnstructured(0,1,dimensions) );
 
     Generate2DSurfMesh( *(STL.get()) ) ;
 
@@ -107,21 +106,32 @@ int subtest_001()
 
     // create cartesian mesh around geometry 
     bitpit::log::cout() << " - Setting mesh" << std::endl;
-    std::array<double,3> meshMin, meshMax, delta ;
     std::array<int,3> nc = {{64, 64, 0}} ;
 
-    STL->getBoundingBox( meshMin, meshMax ) ;
+    std::array<double,3> meshMin, meshMax;
+    STL->getBoundingBox( meshMin, meshMax );
 
-    delta = meshMax -meshMin ;
-    meshMin -=  0.1*delta ;
-    meshMax +=  0.1*delta ;
+    std::array<double,3> delta = meshMax -meshMin;
+    meshMin -=  0.1*delta;
+    meshMax +=  0.1*delta;
 
-    delta = meshMax -meshMin ;
+    delta = meshMax -meshMin;
 
     bitpit::VolCartesian mesh( 1, dimensions, meshMin, delta, nc);
     mesh.update() ;
+    mesh.getVTK().setName("levelset_001") ;
 
-    // mark cells within R=0.5
+
+    // Configure levelset
+    bitpit::LevelSet levelset ;
+    levelset.setMesh(&mesh) ;
+
+    // Object 0 from STL
+    int id0 = levelset.addObject(std::move(STL),BITPIT_PI) ;
+    bitpit::LevelSetObject &object0 = levelset.getObject(id0);
+    object0.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+
+    // Object 1 is the envelope of all cells within R=0.5
     std::unordered_set<long> mask;
     for( auto & cell : mesh.getCells() ){
         const long &id = cell.getId() ;
@@ -132,13 +142,6 @@ int subtest_001()
         }
     }
 
-    bitpit::LevelSet levelset ;
-    levelset.setMesh(&mesh) ;
-
-    int id0 = levelset.addObject(std::move(STL),BITPIT_PI) ;
-    bitpit::LevelSetObject &object0 = levelset.getObject(id0);
-    object0.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
-
     int id1 = levelset.addObject(mask);
     bitpit::LevelSetObject &object1 = levelset.getObject(id1);
     object1.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
@@ -148,20 +151,11 @@ int subtest_001()
     object1.compute();
     std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
 
-    std::vector<int> ids;
-    ids.push_back(id0);
-    ids.push_back(id1);
-
-
     int elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
     bitpit::log::cout() << "elapsed time: " << elapsed_seconds << " ms" << std::endl;
 
     bitpit::log::cout() << " - Exporting data" << std::endl;
-
-    mesh.getVTK().setName("levelset_001") ;
     mesh.write() ;
-
-    bitpit::log::cout() << " - Exported data" << std::endl;
 
     return 0;
 }

@@ -48,16 +48,14 @@ int subtest_001()
     // 2D test case
     uint8_t dimensions(2);
 
-    // Variables needed for timing
+    // used for timing
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
     // First Input geometry
+    bitpit::log::cout()<< " - Loading NACA0012" << std::endl;
     std::unique_ptr<bitpit::SurfUnstructured> STL0( new bitpit::SurfUnstructured (0,1,dimensions) );
 
-    bitpit::log::cout()<< " - Loading stl geometry" << std::endl;
-
     STL0->importDGF("./data/naca0012.dgf");
-
     STL0->deleteCoincidentVertices() ;
     STL0->buildAdjacencies() ;
 
@@ -69,12 +67,10 @@ int subtest_001()
 
 
     // Second Input geometry
+    bitpit::log::cout()<< " - Loading SQUARE" << std::endl;
     std::unique_ptr<bitpit::SurfUnstructured> STL1( new bitpit::SurfUnstructured (1,dimensions) );
 
-    bitpit::log::cout()<< " - Loading stl geometry" << std::endl;
-
     STL1->importDGF("./data/square.dgf");
-
     STL1->deleteCoincidentVertices() ;
     STL1->buildAdjacencies() ;
 
@@ -85,12 +81,10 @@ int subtest_001()
     bitpit::log::cout()<< "n. simplex: " << STL1->getCellCount() << std::endl;
 
     // Third Input geometry
+    bitpit::log::cout()<< " - Loading RECTANGLE" << std::endl;
     std::unique_ptr<bitpit::SurfUnstructured> STL2( new bitpit::SurfUnstructured (1,dimensions) );
 
-    bitpit::log::cout()<< " - Loading stl geometry" << std::endl;
-
     STL2->importDGF("./data/rectangle.dgf");
-
     STL2->deleteCoincidentVertices() ;
     STL2->buildAdjacencies() ;
 
@@ -101,32 +95,35 @@ int subtest_001()
     bitpit::log::cout()<< "n. simplex: " << STL2->getCellCount() << std::endl;
 
     // Create initial octree mesh
-    bitpit::log::cout()<< " - Setting mesh" << std::endl;
-    std::array<double,3>    mesh0, mesh1;
-    std::array<double,3>    meshMin, meshMax, delta ;
-    double h(0), dh ;
+    bitpit::log::cout()<< " - Create initial mesh" << std::endl;
 
-    STL0->getBoundingBox( meshMin, meshMax ) ;
+    std::array<double,3> min0, max0;
+    std::array<double,3> min1, max1;
+    std::array<double,3> min2, max2;
 
-    STL1->getBoundingBox( mesh0, mesh1 ) ;
-    bitpit::CGElem::unionAABB( meshMin, meshMax, mesh0, mesh1, meshMin, meshMax ) ;
+    STL0->getBoundingBox( min0, max0 ) ;
+    STL1->getBoundingBox( min1, max1 ) ;
+    STL2->getBoundingBox( min2, max2 ) ;
 
-    STL2->getBoundingBox( mesh0, mesh1 ) ;
-    bitpit::CGElem::unionAABB( meshMin, meshMax, mesh0, mesh1, meshMin, meshMax ) ;
+    std::array<double,3> meshMin(min0), meshMax(max0);
+    bitpit::CGElem::unionAABB( meshMin, meshMax, min1, max1, meshMin, meshMax ) ;
+    bitpit::CGElem::unionAABB( meshMin, meshMax, min2, max2, meshMin, meshMax ) ;
 
-    delta = meshMax -meshMin ;
+    std::array<double,3> delta = meshMax -meshMin ;
     meshMin -=  0.1*delta ;
     meshMax +=  0.1*delta ;
-
     delta = meshMax -meshMin ;
 
+    double h(0);
     for( int i=0; i<3; ++i){
         h = std::max( h, meshMax[i]-meshMin[i] ) ;
-    };
+    }
+    double dh = h / 16.;
 
-    dh = h / 16. ;
     bitpit::VolOctree mesh(dimensions, meshMin, h, dh );
     mesh.update() ;
+    mesh.getVTK().setName("levelset_003") ;
+    mesh.getVTK().setCounter() ;
 
     // Configure levelset
     bitpit::LevelSet levelset;
@@ -167,24 +164,23 @@ int subtest_001()
     object5.setPropagateSign(true);
     object5.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
 
-    ids.push_back(id3);
-    ids.push_back(id4);
-    ids.push_back(id5);
-
-
 
     // Compute and write level set on initial mesh
+    // The is no need to compute the levelset of boolean objects
+    bitpit::log::cout() << " - Compute initial levelset" << std::endl;
     start = std::chrono::system_clock::now();
     object0.compute();
     object1.compute();
     object2.compute();
     end = std::chrono::system_clock::now();
+
     int elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
 
     bitpit::log::cout() << " - Exporting data" << std::endl;
     mesh.write() ;
 
     // Refine mesh, update levelset and write data
+    bitpit::log::cout() << " - Refine grid and update levelset" << std::endl;
     int elapsed_refi(0);
     for( int i=0; i<10; ++i){
 

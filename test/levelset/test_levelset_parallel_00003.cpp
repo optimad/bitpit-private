@@ -42,18 +42,21 @@
 */
 int subtest_001(int rank)
 {
+
+    // 3D test case
     int dimensions = 3;
+
+    // used for timing
+    std::chrono::time_point<std::chrono::system_clock> start, end;
 
     // Info
     bitpit::log::cout() << "Testing creating a levelset from an existing tree" << std::endl;
 
     // Input geometry
+    bitpit::log::cout() << " - Loading stl geometry" << std::endl;
     std::unique_ptr<bitpit::SurfUnstructured> STL( new bitpit::SurfUnstructured(2, dimensions) );
 
-    bitpit::log::cout() << " - Loading stl geometry" << std::endl;
-
     STL->importSTL("./data/cube.stl", true);
-
     STL->deleteCoincidentVertices();
     STL->buildAdjacencies();
 
@@ -94,14 +97,11 @@ int subtest_001(int rank)
 
     bitpit::VolOctree mesh(std::move(octree));
     mesh.update();
+    mesh.getVTK().setName("levelset_parallel_003");
+    mesh.getVTK().setCounter();
 
-    // Compute level set in narrow band
-    std::chrono::time_point<std::chrono::system_clock>    start, end;
-    int elapsed_init, elapsed_refi(0);
-
+    // Confiigure levelset
     bitpit::LevelSet levelset;
-
-    std::vector<bitpit::adaption::Info> mapper;
     levelset.setMesh(&mesh);
 
     int id0 = levelset.addObject(std::move(STL),BITPIT_PI);
@@ -110,21 +110,19 @@ int subtest_001(int rank)
     object0.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
 
 
+    // Compute level set in narrow band
     start = std::chrono::system_clock::now();
     object0.compute( );
     end = std::chrono::system_clock::now();
 
-    elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    int elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
 
-    // Write mesh
-    bitpit::log::cout() << " - Exporting data" << std::endl;
-
-    levelset.getObject(id0).enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
-    mesh.getVTK().setCounter();
-    mesh.getVTK().setName("levelset_parallel_003");
+    bitpit::log::cout() << " - Exporting initial levelset " << std::endl;
     mesh.write();
 
     // Refinement
+    std::vector<bitpit::adaption::Info> mapper;
+    int elapsed_refi(0);
     for (int i=0; i<3; ++i){
 
         for (auto & cell : mesh.getCells() ){
@@ -140,6 +138,8 @@ int subtest_001(int rank)
         end = std::chrono::system_clock::now();
 
         elapsed_refi += std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+
+        bitpit::log::cout() << " - Exporting refined levelset " << std::endl;
         mesh.write();
     }
 
