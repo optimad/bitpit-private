@@ -89,7 +89,7 @@ int subtest_001()
     object.enableVTKOutput( bitpit::LevelSetWriteField::ALL);
 
     start = std::chrono::system_clock::now();
-    levelset.compute( ) ;
+    object.compute( ) ;
     end = std::chrono::system_clock::now();
 
     int elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();

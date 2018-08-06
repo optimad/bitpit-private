@@ -45,7 +45,11 @@
 */
 int subtest_001()
 {
+    // 2D test case
     uint8_t dimensions(2);
+
+    // Variables needed for timing
+    std::chrono::time_point<std::chrono::system_clock> start, end;
 
     // First Input geometry
     std::unique_ptr<bitpit::SurfUnstructured> STL0( new bitpit::SurfUnstructured (0,1,dimensions) );
@@ -124,8 +128,6 @@ int subtest_001()
     bitpit::VolOctree mesh(dimensions, meshMin, h, dh );
     mesh.update() ;
 
-    std::chrono::time_point<std::chrono::system_clock> start, end;
-    int elapsed_init, elapsed_refi(0);
     // Configure levelset
     bitpit::LevelSet levelset;
     std::vector<bitpit::adaption::Info> mapper ;
@@ -173,16 +175,17 @@ int subtest_001()
 
     // Compute and write level set on initial mesh
     start = std::chrono::system_clock::now();
-    levelset.compute( );
+    object0.compute();
+    object1.compute();
+    object2.compute();
     end = std::chrono::system_clock::now();
-
-    elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    int elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
 
     bitpit::log::cout() << " - Exporting data" << std::endl;
     mesh.write() ;
 
     // Refine mesh, update levelset and write data
-
+    int elapsed_refi(0);
     for( int i=0; i<10; ++i){
 
         for( auto & cell : mesh.getCells() ){
@@ -204,9 +207,11 @@ int subtest_001()
             }
         }
 
-        mapper = mesh.update(true) ;
+        std::vector<bitpit::adaption::Info> mapper = mesh.update(true) ;
         start = std::chrono::system_clock::now();
-        levelset.update(mapper) ;
+        object0.update(mapper);
+        object1.update(mapper);
+        object2.update(mapper);
         end = std::chrono::system_clock::now();
 
         elapsed_refi += std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();

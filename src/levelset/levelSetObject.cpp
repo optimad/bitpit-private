@@ -632,6 +632,40 @@ void LevelSetObject::displaceSurface(const std::array<double,3> &translation, co
     BITPIT_UNUSED(angle);
     
     throw std::runtime_error("Object does not support displace Surface ");
+}
+
+/*!
+ * Computes the the levelset of the object
+ */
+void LevelSetObject::compute(){
+
+    computeLSInNarrowBand() ;
+#if BITPIT_ENABLE_MPI
+    exchangeGhosts();
+#endif
+
+    // Propgate sign from narrow band to far-field if requested
+    if(m_propagateSign){
+        propagateSign();
+    }
+
+}
+
+/*!
+ * Computes the the levelset of the object
+ */
+void LevelSetObject::update(const std::vector<adaption::Info> &mapper){
+
+    clearAfterMeshAdaption(mapper) ;
+    updateLSInNarrowBand(mapper) ;
+#if BITPIT_ENABLE_MPI
+    exchangeGhosts();
+#endif
+
+    // Propgate sign from narrow band to far-field if requested
+    if(m_propagateSign){
+        propagateSign();
+    }
 
 }
 

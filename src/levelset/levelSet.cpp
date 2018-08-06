@@ -328,10 +328,7 @@ int LevelSet::registerObject( std::unique_ptr<LevelSetObject> &&object ) {
     }
 
     int objectId = object->getId();
-
     m_objects[objectId] = std::move(object) ;
-
-    addProcessingOrder(objectId);
 
     return objectId;
 }
@@ -341,7 +338,6 @@ int LevelSet::registerObject( std::unique_ptr<LevelSetObject> &&object ) {
  */
 void LevelSet::removeObjects() {
     m_objects.clear();
-    m_order.clear();
 }
 
 /*!
@@ -352,70 +348,10 @@ void LevelSet::removeObjects() {
 bool LevelSet::removeObject(int id) {
     if( m_objects.count(id) != 0){
         m_objects.erase(id);
-        bool found = removeProcessingOrder(id);
-        BITPIT_UNUSED(found);
-        assert(found);
         return true;
     } 
 
     return false;
-}
-
-/*!
- * Adds the object to the processing order.
- *
- * The insertion order determines the processing order 
- * but priority is given to primary objects. 
- *
- * This function must be called whan a new object is inserted into m_objectss.
- *
- * @param[in] objectId the id of the newly added object
- */
-void LevelSet::addProcessingOrder( int objectId ) {
-
-    bool primary = m_objects.at(objectId)->isPrimary() ;
-
-    if(primary){
-        std::vector<int>::iterator orderItr = m_order.begin() ;
-        bool iterate( orderItr != m_order.end()) ;
-
-        while(iterate){
-            int id = *orderItr ;
-            if( m_objects.at(id)->isPrimary() ){
-                ++orderItr ;
-                iterate = orderItr != m_order.end() ;
-            } else {
-                iterate = false;
-            }
-        }
-
-        m_order.insert(orderItr,objectId) ;
-
-    } else {
-        m_order.push_back(objectId) ;
-
-    }
-
-}
-
-/*!
- * Removes the object from the processing order.
- * This function must be called whan a object is removed fromm_objectss.
- * @param[in] objectId the id of the newly added object
- * @return true if object has been found and removed
- */
-bool LevelSet::removeProcessingOrder(int objectId){
-
-    std::vector<int>::iterator orderItr;
-
-    for(orderItr=m_order.begin(); orderItr!=m_order.end(); ++orderItr){
-        if(*orderItr==objectId){
-            m_order.erase(orderItr);
-            return true;
-        }
-    }
-    
-    return false ;
 }
 
 /*!
@@ -475,48 +411,6 @@ void LevelSet::clear(){
     removeObjects();
 }
 
-/*!
- * Computes levelset on given mesh with respect to the objects.
- * This routines needs to be called at least once.
- * Each object should compute the levelset and associated
- * information on both internal and ghost cells.
- */
-void LevelSet::compute(){
-
-    assert(m_kernel && "LevelSet::setMesh() must be called prior to LevelSet::compute()");
-
-    for( int objectId : m_order){
-        auto &visitor = *(m_objects.at(objectId)) ;
-        visitor.computeLSInNarrowBand() ;
-#if BITPIT_ENABLE_MPI
-        visitor.exchangeGhosts();
-#endif
-    }
-}
-
-/*!
- * Updates the levelset after mesh adaptation.
- * Each object should compute the levelset and associated
- * information on both internal and ghost cells.
- *
- * @param[in] mapper mapper conatining mesh modifications
- */
-void LevelSet::update( const std::vector<adaption::Info> &mapper ){
-
-    assert(m_kernel && "LevelSet::setMesh() must be called prior to LevelSet::update()");
-
-
-    // Update ls in narrow band
-    for( int objectId : m_order){
-        auto &visitor = *(m_objects.at(objectId)) ;
-        visitor.clearAfterMeshAdaption(mapper) ;
-        visitor.updateLSInNarrowBand(mapper) ;
-#if BITPIT_ENABLE_MPI
-        visitor.exchangeGhosts();
-#endif
-    }
-}
-
 #if BITPIT_ENABLE_MPI
 /*!
  * Updates the levelset after mesh partitioning.
@@ -546,16 +440,9 @@ void LevelSet::partition( const std::vector<adaption::Info> &mapper ){
     }
 
     // Communicate according to new partitioning
-    for( int objectId : m_order){
-        auto &visitor = *(m_objects.at(objectId)) ;
-
-        visitor.communicate( sendList, recvList, &mapper ) ;
-    }
-
-    for( int objectId : m_order){
-        auto &visitor = *(m_objects.at(objectId)) ;
-
-        visitor.exchangeGhosts();
+    for( auto &entry : m_objects){
+        entry.second->communicate( sendList, recvList, &mapper ) ;
+        entry.second->exchangeGhosts();
     }
 
 }
@@ -567,8 +454,6 @@ void LevelSet::partition( const std::vector<adaption::Info> &mapper ){
  */
 void LevelSet::dump( std::ostream &stream ){
 
-    utils::binary::write(stream, m_order);
-
     for( const auto &object : m_objects ){
         object.second->dump( stream ) ;
     }
@@ -579,8 +464,6 @@ void LevelSet::dump( std::ostream &stream ){
  * @param[in] stream output stream
  */
 void LevelSet::restore( std::istream &stream ){
-
-    utils::binary::read(stream, m_order);
 
     for( const auto &object : m_objects ){
         object.second->restore( stream ) ;

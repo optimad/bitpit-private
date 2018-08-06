@@ -141,6 +141,9 @@ class LevelSetObject : public VTKBaseStreamer{
     virtual void                                displaceSurface(std::unordered_map<long,std::array<double,3>> &cellDisplacemts);
     virtual void                                displaceSurface(const std::array<double,3> &translation, const std::array<double,3> &centre, const std::array<double,3> &axis, double angle);
 
+    void                                        compute();
+    void                                        update(const std::vector<adaption::Info> &);
+
 };
 
 }

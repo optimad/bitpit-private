@@ -54,11 +54,7 @@ class LevelSet{
     std::unique_ptr<LevelSetKernel>                             m_kernel ;              /**< LevelSet computational kernel */
     std::unordered_map<int,std::unique_ptr<LevelSetObject>>     m_objects ;              /**< Objects defining the boundaries */
 
-    std::vector<int>        m_order ;               /**< Processing order of objects */
-
     int                     registerObject( std::unique_ptr<LevelSetObject> && ) ;
-    void                    addProcessingOrder(int) ;
-    bool                    removeProcessingOrder(int) ;
 
     public:
     ~LevelSet() ;
@@ -103,8 +99,6 @@ class LevelSet{
     void                    dump( std::ostream &);
     void                    restore( std::istream &);
 
-    void                    compute( ) ;
-    void                    update( const std::vector<adaption::Info> & );
 # if BITPIT_ENABLE_MPI
     void                    partition( const std::vector<adaption::Info> & );
 # endif

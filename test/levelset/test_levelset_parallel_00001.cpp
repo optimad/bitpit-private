@@ -103,7 +103,7 @@ int subtest_001(int rank)
 
     // Compute levelset in narrowband in serial
     start = std::chrono::system_clock::now();
-    levelset.compute();
+    object0.compute();
     end = std::chrono::system_clock::now();
 
     elapsed_init = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
@@ -138,7 +138,7 @@ int subtest_001(int rank)
 
         mapper = mesh.update(true) ;
         start = std::chrono::system_clock::now();
-        levelset.update(mapper) ;
+        object0.update(mapper) ;
         end = std::chrono::system_clock::now();
 
         elapsed_refi += std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();

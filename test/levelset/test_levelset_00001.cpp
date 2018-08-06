@@ -132,31 +132,32 @@ int subtest_001()
         }
     }
 
-    // Compute level set in narrow band
-    std::chrono::time_point<std::chrono::system_clock> start, end;
-    int elapsed_seconds;
-
     bitpit::LevelSet levelset ;
-
     levelset.setMesh(&mesh) ;
 
     int id0 = levelset.addObject(std::move(STL),BITPIT_PI) ;
-    int id1 = levelset.addObject(mask) ;
+    bitpit::LevelSetObject &object0 = levelset.getObject(id0);
+    object0.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+
+    int id1 = levelset.addObject(mask);
+    bitpit::LevelSetObject &object1 = levelset.getObject(id1);
+    object1.enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
+
+    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
+    object0.compute();
+    object1.compute();
+    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
+
     std::vector<int> ids;
     ids.push_back(id0);
     ids.push_back(id1);
 
-    start = std::chrono::system_clock::now();
-    levelset.compute( ) ;
-    end = std::chrono::system_clock::now();
 
-    elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+    int elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
     bitpit::log::cout() << "elapsed time: " << elapsed_seconds << " ms" << std::endl;
 
     bitpit::log::cout() << " - Exporting data" << std::endl;
 
-    levelset.getObject(id0).enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
-    levelset.getObject(id1).enableVTKOutput(bitpit::LevelSetWriteField::VALUE);
     mesh.getVTK().setName("levelset_001") ;
     mesh.write() ;
 
