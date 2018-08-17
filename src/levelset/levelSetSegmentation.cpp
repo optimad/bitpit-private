@@ -791,6 +791,11 @@ void LevelSetSegmentation::displaceSurface(const std::array<double,3> &translati
         computeLSInNarrowBand(lsOctree, true) ;
 
     }
+
+    // Propgate sign from narrow band to far-field if requested
+    if(m_propagateSign){
+        propagateSign();
+    }
 }
 
 /*!
