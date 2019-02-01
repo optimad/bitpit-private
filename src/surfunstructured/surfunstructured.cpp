@@ -125,7 +125,7 @@ void SurfUnstructured::setExpert(bool expert)
  */
 int SurfUnstructured::_getDumpVersion() const
 {
-	const int DUMP_VERSION = 2;
+	const int DUMP_VERSION = 3;
 
 	return DUMP_VERSION;
 }
@@ -152,6 +152,9 @@ void SurfUnstructured::_dump(std::ostream &stream) const
 
 	// Save the cells
 	dumpCells(stream);
+
+	// Save the interfaces
+	dumpInterfaces(stream);
 }
 
 /*!
@@ -180,7 +183,7 @@ void SurfUnstructured::_restore(std::istream &stream)
 	restoreCells(stream);
 
 	// Restore the interfaces
-	restoreCells(stream);
+	restoreInterfaces(stream);
 }
 
 /*!
