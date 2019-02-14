@@ -1445,8 +1445,11 @@ std::vector<long> PatchKernel::collapseCoincidentVertices(int nBins)
 				long cellId = bin[list[j]][0];
 				Cell &cell  = m_cells[cellId];
 				long *cellConnect = cell.getConnect();
+				ElementType type = cell.getType();
 
 				long k         = bin[list[j]][1];
+				if (type == ElementType::POLYGON || type == ElementType::POLYHEDRON)
+					k++;
 				long vertexId  = cellConnect[k];
 				if (uniqueVertices.count(vertexId) != 0) {
 					continue;
