@@ -32,55 +32,55 @@ namespace bitpit {
 class SurfaceKernel : public PatchKernel {
 
 public:
-        // Static constant
-        static const unsigned short SELECT_TRIANGLE;
-        static const unsigned short SELECT_QUAD;
-        static const unsigned short SELECT_ALL;
-        static const std::map<ElementType, unsigned short>     m_selectionTypes;
+    // Static constant
+    static const unsigned short SELECT_TRIANGLE;
+    static const unsigned short SELECT_QUAD;
+    static const unsigned short SELECT_ALL;
+    static const std::map<ElementType, unsigned short>     m_selectionTypes;
 
-        // Types definitions
-        typedef double (SurfaceKernel::*eval_f_)(long, int &) const;
+    // Types definitions
+    typedef double (SurfaceKernel::*eval_f_)(long, int &) const;
 
-        void setSpaceDimension(int dimension);
-        int getSpaceDimension(void) const;
+    void setSpaceDimension(int dimension);
+    int getSpaceDimension(void) const;
 
-	virtual ~SurfaceKernel();
-        virtual double evalCellArea(long) const;
-        virtual double evalEdgeLength(long, int) const;
-        virtual double evalMinEdgeLength(long, int &) const;
-        virtual double evalMaxEdgeLength(long, int &) const;
-        virtual double evalAngleAtVertex(long, int) const;
-        virtual double evalMinAngleAtVertex(long, int &) const;
-        virtual double evalMaxAngleAtVertex(long, int &) const;
-        virtual double evalAspectRatio(long, int &) const;
-        virtual std::array<double, 3> evalFacetNormal(long) const;
-        std::array<double, 3> evalEdgeNormal(long, int) const;
-        std::array<double, 3> evalVertexNormal(long, int) const;
-        virtual std::array<double, 3> evalLimitedVertexNormal(long, int, double ) const;
-        double evalCellSize(long id) const override;
+    virtual ~SurfaceKernel();
+    virtual double evalCellArea(long) const;
+    virtual double evalEdgeLength(long, int) const;
+    virtual double evalMinEdgeLength(long, int &) const;
+    virtual double evalMaxEdgeLength(long, int &) const;
+    virtual double evalAngleAtVertex(long, int) const;
+    virtual double evalMinAngleAtVertex(long, int &) const;
+    virtual double evalMaxAngleAtVertex(long, int &) const;
+    virtual double evalAspectRatio(long, int &) const;
+    virtual std::array<double, 3> evalFacetNormal(long) const;
+    std::array<double, 3> evalEdgeNormal(long, int) const;
+    std::array<double, 3> evalVertexNormal(long, int) const;
+    virtual std::array<double, 3> evalLimitedVertexNormal(long, int, double ) const;
+    double evalCellSize(long id) const override;
 
-        bool adjustCellOrientation();
-        bool adjustCellOrientation(long id, bool invert = false);
-        void flipCellOrientation(long id);
+    bool adjustCellOrientation();
+    bool adjustCellOrientation(long id, bool invert = false);
+    void flipCellOrientation(long id);
 
-        void displayQualityStats(std::ostream&, unsigned int padding = 0) const;
-        std::vector<double> computeHistogram(eval_f_ funct_, std::vector<double> &bins, long &count, int n_intervals = 8, unsigned short mask = SELECT_ALL) const;
+    void displayQualityStats(std::ostream&, unsigned int padding = 0) const;
+    std::vector<double> computeHistogram(eval_f_ funct_, std::vector<double> &bins, long &count, int n_intervals = 8, unsigned short mask = SELECT_ALL) const;
 
 private:
-        void initialize();
+    void initialize();
 
-        bool compareSelectedTypes(unsigned short, ElementType) const;
-        void displayHistogram(long, const std::vector<double>&, const std::vector<double>&, const std::string&, std::ostream&, unsigned int padding = 0) const;
+    bool compareSelectedTypes(unsigned short, ElementType) const;
+    void displayHistogram(long, const std::vector<double>&, const std::vector<double>&, const std::string&, std::ostream&, unsigned int padding = 0) const;
 
-        bool sameOrientationAtInterface(long id);
+    bool sameOrientationAtInterface(long id);
 
 protected:
-        int                     m_spaceDim;
+    int m_spaceDim;
 
-	SurfaceKernel(bool expert);
-	SurfaceKernel(int patch_dim, int space_dim, bool expert);
-	SurfaceKernel(int id, int patch_dim, int space_dim, bool expert);
-        
+    SurfaceKernel(bool expert);
+    SurfaceKernel(int patch_dim, int space_dim, bool expert);
+    SurfaceKernel(int id, int patch_dim, int space_dim, bool expert);
+
 };
 
 }
