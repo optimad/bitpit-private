@@ -325,6 +325,11 @@ public:
 	virtual void setDimension(int dimension);
 	bool isThreeDimensional() const;
 
+	virtual int getVolumeCodimension() const = 0;
+	virtual int getSurfaceCodimension() const = 0;
+	virtual int getLineCodimension() const = 0;
+	virtual int getPointCodimension() const = 0;
+
 	virtual long getVertexCount() const;
 	PiercedVector<Vertex> &getVertices();
 	const PiercedVector<Vertex> &getVertices() const;

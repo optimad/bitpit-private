@@ -34,6 +34,11 @@ class VolumeKernel : public PatchKernel {
 public:
 	virtual ~VolumeKernel();
 
+	int getVolumeCodimension() const override;
+	int getSurfaceCodimension() const override;
+	int getLineCodimension() const override;
+	int getPointCodimension() const override;
+
 	bool isPointInside(double x, double y, double z) const;
 	virtual bool isPointInside(const std::array<double, 3> &point) const = 0;
 	bool isPointInside(long id, double x, double y, double z) const;
