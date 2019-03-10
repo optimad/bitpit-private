@@ -219,7 +219,7 @@ int subtest_002(
 string                          in_name = "./data/NACA0012.dgf";
 string                          out_name = "./NACA0012_copy.dgf";
 string                          out_name_vtu = "./NACA0012_copy";
-SurfUnstructured                mesh(2);
+SurfUnstructured                mesh(1);
 
 // Counters
 // none
@@ -284,7 +284,7 @@ SurfUnstructured                mesh(2);
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    mesh_copy(2);
+    SurfUnstructured                    mesh_copy(1);
     
     // Import mesh from stl format ------------------------------------------ //
     log::cout() << "** Re-importing mesh from : \"" << out_name << "\"" << endl;

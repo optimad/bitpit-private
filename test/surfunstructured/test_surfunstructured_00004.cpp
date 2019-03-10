@@ -82,7 +82,7 @@ int subtest_001(
 // ========================================================================== //
 
 // Local variables
-SurfUnstructured                mesh(2), edges(2);
+SurfUnstructured                mesh(2), edges(1);
 
 // Counters
 int                             nV, nE;
@@ -242,9 +242,9 @@ int                             nV, nE;
 return 0; } 
 
 // ========================================================================== //
-// SUBTEST #002 Test edge network extraction for 2D curve                     //
+// SUBTEST #002 Test edge network extraction for 1D surface mesh              //
 // ========================================================================== //
-void Generate2DSurfMesh(
+void Generate1DSurfMesh(
     SurfUnstructured                    &mesh
 ) {
 
@@ -316,7 +316,7 @@ int subtest_002(
 // ========================================================================== //
 
 // Local variables
-SurfUnstructured                mesh(2);
+SurfUnstructured                mesh(1);
 
 // Counters
 int                             nV, nS, nE;
@@ -355,7 +355,7 @@ int                             nV, nS, nE;
 
     // Generate test surface mesh ------------------------------------------- //
     log::cout() << "** Generating surface mesh" << endl;
-    Generate2DSurfMesh(mesh);
+    Generate1DSurfMesh(mesh);
     log::cout() << "** Building adjacencies" << endl;
     mesh.buildAdjacencies();
 

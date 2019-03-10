@@ -296,7 +296,7 @@ void COM_step(
 // ========================================================================== //
 
 // Local variables
-SurfUnstructured                     envelope(2);
+SurfUnstructured                     envelope(1);
 std::unordered_map<long, int>        cellRanks;
 
 // Counters
@@ -396,7 +396,7 @@ if (mesh.getRank() == 0) {
 {
     // Scope variables ------------------------------------------------------ //
     stringstream                name;
-    SurfUnstructured                envelope(2);
+    SurfUnstructured                envelope(1);
 
     // Generate dummy triangulation ----------------------------------------- //
     if (mesh.getRank() == 0) {

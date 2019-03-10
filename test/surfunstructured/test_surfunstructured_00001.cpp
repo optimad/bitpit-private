@@ -269,7 +269,7 @@ vector<long>                            cell_list;
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    envelope(2);
+    SurfUnstructured                    envelope(1);
     vector<long>                        ring1, ring1_expected{6,7,8,21,22,23,30,31,32};
 
     // Set envelope attributes ---------------------------------------------- //
@@ -340,7 +340,7 @@ vector<long>                            cell_list;
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    envelope(2);
+    SurfUnstructured                    envelope(1);
     vector<long>                        ring1, ring1_expected{6,8,21,22,23,30,31,32};
 
     // Set envelope attributes ---------------------------------------------- //
@@ -419,7 +419,7 @@ vector<long>                            cell_list;
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    envelope(2);
+    SurfUnstructured                    envelope(1);
     vector<long>                        ring1, ring1_expected{7};
     SurfUnstructured::CellIterator      it;
 
@@ -496,7 +496,7 @@ vector<long>                            cell_list;
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    envelope(2);
+    SurfUnstructured                    envelope(1);
     vector<long>                        ring1, ring1_expected{6,8,17,21,22,23,30,31,32};
 
     // Set envelope attributes ---------------------------------------------- //
