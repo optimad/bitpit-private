@@ -569,6 +569,9 @@ public:
 	void partitioningCleanup();
 
 	adaption::Info sendCells(int sendRank, int recvRank, const std::vector<long> &cellsToSend, bool squeezeStorage = false);
+
+	void setPartitioned(bool partitioned);
+
 #endif
 
 protected:
@@ -656,7 +659,6 @@ protected:
 	virtual std::size_t _getMaxHaloSize();
 	virtual void _setHaloSize(std::size_t haloSize);
 
-	void setPartitioned(bool partitioned);
 	void setPartitioningStatus(PartitioningStatus status);
 	virtual std::vector<adaption::Info> _partitioningPrepare(bool trackPartitioning);
 	virtual std::vector<adaption::Info> _partitioningAlter(bool trackPartitioning);
