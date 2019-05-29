@@ -1902,10 +1902,15 @@ adaption::Info PatchKernel::sendCells_receiver(int sendRank)
 
         long localVertexId;
         if (ghostVerticesTree.exist(&vertex, localVertexId) < 0) {
-            localVertexId = generateVertexId();
+        	//Re-use or generate the Id of the vertex
+        	if (m_vertexIdGenerator.isAssigned(vertexId)){
+        		localVertexId = generateVertexId();
+        	}
+        	else{
+        		localVertexId = vertexId;
+        	}
             addVertex(std::move(vertex), localVertexId);
         }
-
         vertexMap.insert({{vertexId, localVertexId}});
     }
 
@@ -1980,8 +1985,13 @@ adaption::Info PatchKernel::sendCells_receiver(int sendRank)
         // existing cell. This ensure that the received cell will be
         // properly connected to the received cells
         if (cellId < 0) {
-            // Generate the id of the cell
-            cellId = generateCellId();
+            // Re-use or generate the Id of the cell
+        	if (m_cellIdGenerator.isAssigned(cellOriginalId)){
+        		cellId = generateCellId();
+        	}
+        	else{
+        		cellId = cellOriginalId;
+        	}
 
             // Reset the interfaces of the cell, they will be recreated later
             if (getInterfacesBuildStrategy() == INTERFACES_AUTOMATIC) {
