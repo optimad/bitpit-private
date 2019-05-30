@@ -1252,6 +1252,9 @@ PatchKernel::VertexIterator PatchKernel::addVertex(const std::array<double, 3> &
 	// Update the bounding box
 	addPointToBoundingBox(iterator->getCoords());
 
+	// Set assigned id
+	m_vertexIdGenerator.setAssigned(id);
+
 	return iterator;
 }
 
