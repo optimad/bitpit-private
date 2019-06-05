@@ -135,6 +135,9 @@ int main(int argc, char *argv[])
 	log::manager().initialize(log::COMBINED, true, nProcs, rank);
 	log::cout().setVisibility(log::GLOBAL);
 
+	// Initialize the system solver
+	SystemSolver::initialize();
+
 	// Run the subtests
     log::cout() << "Testing basic features of parallel octree patches" << std::endl;
 
@@ -148,6 +151,9 @@ int main(int argc, char *argv[])
 		log::cout() << exception.what();
 		exit(1);
 	}
+
+	// Finalization
+	SystemSolver::finalize();
 
 	MPI_Finalize();
 }

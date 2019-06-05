@@ -118,6 +118,9 @@ int main(int argc, char *argv[])
     // Initialize the logger
     log::manager().initialize(log::COMBINED);
 
+    // Initialize the system solver
+    SystemSolver::initialize(true);
+
     // Run the subtests
     log::cout() << "Testing soltion of linear systems" << std::endl;
 
@@ -131,6 +134,9 @@ int main(int argc, char *argv[])
         log::cout() << exception.what();
         exit(1);
     }
+
+    // Finalization
+    SystemSolver::finalize();
 
 #if BITPIT_ENABLE_MPI==1
     MPI_Finalize();

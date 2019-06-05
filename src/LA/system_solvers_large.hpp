@@ -76,10 +76,18 @@ public:
         PIVOT_MD     // Quotient Minimum Degree
     };
 
-    static void addInitOption(const std::string &option);
-    static void addInitOptions(const std::vector<std::string> &options);
+    static void initialize(const std::vector<std::string> &options = std::vector<std::string>());
+    static void initialize(bool debug, const std::vector<std::string> &options = std::vector<std::string>());
+    static void initialize(int argc, char **argv);
+    static void initialize(bool debug, int argc, char **argv);
+    static bool initialized();
+    static void finalize();
+    static bool finalized();
 
-    SystemSolver(bool debug = false);
+    static void insertOptions(const std::string &options);
+    static void insertDebugOptions();
+
+    SystemSolver();
 
     virtual ~SystemSolver();
 
@@ -144,8 +152,10 @@ protected:
 #endif
 
 private:
-    static int m_nInstances;
-    static std::vector<std::string> m_options;
+    static bool m_initialized;
+    static bool m_finalized;
+
+    static bool m_userInitializedPETSc;
 
     bool m_assembled;
     PivotType m_pivotType;

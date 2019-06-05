@@ -39,7 +39,7 @@ namespace bitpit {
 class StencilScalarSolver : public SystemSolver {
 
 public:
-    StencilScalarSolver(bool debug = false);
+    StencilScalarSolver();
 
     void clear(bool release = false);
     void assembly(const std::vector<StencilScalar> &stencils);

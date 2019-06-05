@@ -32,42 +32,201 @@
 
 namespace bitpit {
 
-int SystemSolver::m_nInstances = 0;
-std::vector<std::string> SystemSolver::m_options = std::vector<std::string>(1, "bitpit");
+bool SystemSolver::m_initialized = false;
+bool SystemSolver::m_finalized   = false;
+
+bool SystemSolver::m_userInitializedPETSc = false;
 
 /*!
- * Set initialization option
+ * Initialize system solver.
+ *
+ * This function calls PetscInitialize() if that has yet to be called, so this
+ * routine should always be called near the beginning of your program.
+ *
+ * \param options are the options that will be passed to PETSc
  */
-void SystemSolver::addInitOption(const std::string &option)
+void SystemSolver::initialize(const std::vector<std::string> &options)
 {
-    if (m_nInstances != 0) {
-        throw std::runtime_error("Initialization opions can be set only before initializing the solver.");
-    }
-
-    m_options.push_back(option);
+    initialize(false, options);
 }
 
 /*!
- * Set initialization options
+ * Initialize system solver.
+ *
+ * This function calls PetscInitialize() if that has yet to be called, so this
+ * routine should always be called near the beginning of your program.
+ *
+ * \param debug if set to true, debug options will be inserted
+ * \param options are the options that will be passed to PETSc
  */
-void SystemSolver::addInitOptions(const std::vector<std::string> &options)
+void SystemSolver::initialize(bool debug, const std::vector<std::string> &options)
 {
-    if (m_nInstances != 0) {
-        throw std::runtime_error("Initialization opions can be set only before initializing the solver.");
+    // Generate arguments
+    int nOptions = options.size();
+
+    int argc = nOptions + 1;
+    char **argv = new char*[argc];
+    argv[0] = (char*) std::string("bitpit").c_str();
+    for (int i = 0; i < nOptions; ++i) {
+        argv[i + 1] = (char *) options[i].c_str();
     }
 
-    // The first option is the executable name and we set it to a dummy value.
-    for (std::string option : options) {
-        m_options.push_back(option);
+    // Initialization
+    initialize(debug, argc, argv);
+
+    // Cleanup
+    delete[] argv;
+}
+
+/*!
+ * Initialize system solver.
+ *
+ * This function calls PetscInitialize() if that has yet to be called, so this
+ * routine should always be called near the beginning of your program.
+ *
+ * \param argc number of command line arguments
+ * \param argv array of command line arguments
+ */
+void SystemSolver::initialize(int argc, char **argv)
+{
+    initialize(false, argc, argv);
+}
+
+/*!
+ * Initialize system solver.
+ *
+ * This function calls PetscInitialize() if that has yet to be called, so this
+ * routine should always be called near the beginning of your program.
+ *
+ * \param debug if set to true, debug options will be inserted
+ * \param argc number of command line arguments
+ * \param argv array of command line arguments
+ */
+void SystemSolver::initialize(bool debug, int argc, char **argv)
+{
+    if (m_initialized) {
+        throw std::runtime_error("Solver initialization can be called only once.");
+    }
+
+    if (m_finalized) {
+        throw std::runtime_error("Solver cannot be re-initialization after its finialization.");
+    }
+
+    // Initialize PETSc
+    PetscBool petscInitialized;
+    PetscInitialized(&petscInitialized);
+    m_userInitializedPETSc = petscInitialized;
+
+    if (!m_userInitializedPETSc) {
+        const char help[] = "None";
+        PetscInitialize(&argc, &argv, 0, help);
+    }
+
+    // System solver has been initialized
+    m_initialized = true;
+
+    // Insert debug options
+    if (debug) {
+        insertDebugOptions();
+    }
+
+    // Insert user options
+    if (m_userInitializedPETSc) {
+        for (int k = 1; k < argc; ++k) {
+            insertOptions(argv[k]);
+        }
+    }
+}
+
+/*!
+ * Determine whether the solver is initialized.
+ *
+ * \result Return true if the solver is initialized, false otherwise.
+ */
+bool SystemSolver::initialized()
+{
+    return m_initialized;
+}
+
+/*!
+ * Finalize system solver.
+ *
+ * PetscInitialize() is called only if the user had not called PetscInitialize()
+ * before calling initialize().
+ */
+void SystemSolver::finalize()
+{
+    if (!m_initialized) {
+        throw std::runtime_error("Solver is yet to be initialized.");
+    }
+
+    if (m_finalized) {
+        throw std::runtime_error("Solver finalization can be called only once.");
+    }
+
+    // Finlaize PETSc
+    if (!m_userInitializedPETSc) {
+        PetscFinalize();
+    }
+
+}
+
+/*!
+ * Determine whether the solver has been finalized.
+ *
+ * \result Return true if the solver has been finalized, false otherwise.
+ */
+bool SystemSolver::finalized()
+{
+    return m_finalized;
+}
+
+/*!
+ * Insert the specified options.
+ *
+ * Not Collective, but only processes that call this routine will set the
+ * options included in the string.
+ *
+ * \param options are the options (separated by blanks) that will be inserted
+ */
+void SystemSolver::insertOptions(const std::string &options)
+{
+    if (!m_initialized) {
+        throw std::runtime_error("Options can be inserted only after initializing the solver.");
+    }
+
+    if (m_finalized) {
+        throw std::runtime_error("No operations are allowed on the solver afterits finalization.");
+    }
+
+    PetscOptionsInsertString(nullptr, options.c_str());
+}
+
+/*!
+ * Insert debug options.
+ *
+ * Not Collective, but only processes that call this routine will set the
+ * options included in the string.
+ */
+void SystemSolver::insertDebugOptions()
+{
+    insertOptions("-ksp_monitor_true_residual");
+    insertOptions("-ksp_converged_reason");
+    insertOptions("-ksp_monitor_singular_value");
+
+    if (!m_userInitializedPETSc) {
+        PetscLogDefaultBegin();
+
+        insertOptions("-log_view");
+    } else {
+        log::cout() << "Summary of the logging is only available if PETSc was initialized by the solver" << std::endl;
     }
 }
 
 /*!
  * Constuctor
- *
- * \param debug if set to true, debug information will be printed
  */
-SystemSolver::SystemSolver(bool debug)
+SystemSolver::SystemSolver()
     : m_assembled(false), m_pivotType(PIVOT_NONE),
 #if BITPIT_ENABLE_MPI==1
       m_communicator(MPI_COMM_SELF), m_partitioned(false),
@@ -76,31 +235,6 @@ SystemSolver::SystemSolver(bool debug)
       m_A(nullptr), m_rhs(nullptr), m_solution(nullptr),
       m_rpivot(nullptr), m_cpivot(nullptr), m_KSP(nullptr)
 {
-    // Add debug options
-    if (debug) {
-        addInitOption("-log_view");
-        addInitOption("-ksp_monitor_true_residual");
-        addInitOption("-ksp_converged_reason");
-        addInitOption("-ksp_monitor_singular_value");
-    }
-
-    // Initialize Petsc
-    if (m_nInstances == 0) {
-        const char help[] = "None";
-
-        int argc = m_options.size();
-        char **argv = new char*[argc];
-        for (int i = 0; i < argc; ++i) {
-            argv[i] = (char*) m_options[i].c_str();
-        }
-
-        PetscInitialize(&argc, &argv, 0, help);
-
-        delete[] argv;
-    }
-
-    // Increase the number of instances
-    ++m_nInstances;
 }
 
 /*!
@@ -110,14 +244,6 @@ SystemSolver::~SystemSolver()
 {
     // Clear the patch
     clear();
-
-    // Decrease the number of instances
-    --m_nInstances;
-
-    // Finalize petsc
-    if (m_nInstances == 0) {
-        PetscFinalize();
-    }
 }
 
 /*!

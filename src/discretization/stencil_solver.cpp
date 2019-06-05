@@ -36,12 +36,9 @@ namespace bitpit {
 
 /*!
 * Constuctor
-*
-* \param debug if this parameter is set to true, debug informations will be
-* printed when solving the system
 */
-StencilScalarSolver::StencilScalarSolver(bool debug)
-    : SystemSolver(debug)
+StencilScalarSolver::StencilScalarSolver()
+    : SystemSolver()
 {
 }
 
