@@ -569,6 +569,36 @@ if (d > 0) {
 
 return; };
 
+/*!
+    Given a input array, x, returns the sum of its elements, i.e.:
+    s = sum (x[i]) over all i = 0, ..., n-1
+    where n = x.size().
+
+    Parameters template can be of any type with the following requirements:
+    1. operator += must be defined for type T
+    2. type T1 must be a scalar type
+    (for instance, T = std::array<double, e>, T1 = double)
+
+    \param[in] x input array
+    \return s sum of element in x.
+*/
+template <class T, size_t d>
+T sum( const std::array<T,d> &x)
+{
+
+    T s, value;
+    
+    if (d > 0) {
+        sum(x[0], s);
+        for (size_t i = 1; i < d; i++) {
+            sum(x[i], value);
+            s += value;
+        } //next i
+    }
+    
+    return s; 
+}
+
 // Operator "abs" =================================================================== //
 
 // ---------------------------------------------------------------------------------- //

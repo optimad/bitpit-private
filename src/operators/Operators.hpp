@@ -347,6 +347,9 @@ void sum(                                                                       
         T1                                      &                                     // (input/output) sum of std::vector's element
         );
 
+template <class T>
+T sum( const std::vector<T> &);
+
 // Operator "abs" ------------------------------------------------------------------- //
 template <class T>
 std::vector<T> abs(                                                                   // RETURNS THE ABSOLUTE VALUE OF A VECTOR
@@ -706,6 +709,9 @@ void sum(                                                                       
         const std::array<T, d>                  &,                                    // (input) input std::array
         T1                                      &                                     // (input/output) sum of std::array's elements
         );
+
+template <class T, size_t d>
+T sum( const std::array<T,d> &);                                                                             // RETURNS THE SUM OF ARRAY ELEMENTS
 
 // Operator "abs" ------------------------------------------------------------------- //
 template <class T, size_t d>

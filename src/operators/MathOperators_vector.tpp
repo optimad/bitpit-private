@@ -726,6 +726,37 @@ if (n > 0) {
 
 return; };
 
+/*!
+    Given a input vector, x, returns the sum of its elements, i.e.:
+    s = sum (x[i]) over all i = 0, ..., n-1
+    where n = x.size().
+
+    Parameters template can be of any type with the following requirements:
+    1. operator += must be defined for type T
+    2. type T1 must be a scalar type
+    (for instance, T = std::vector<double>, T1 = double)
+
+    \param[in] x input vector
+    \return sum of element in x.
+*/
+template <class T>
+T sum( const std::vector<T> &x)
+{
+
+    size_t n = x.size();
+    T s, value;
+
+    if (n > 0) {
+        sum(x[0], s);
+        for (size_t i = 1; i < n; i++) {
+            sum(x[i], value);
+            s += value;
+        }
+    }
+    
+    return s; 
+}
+
 // Operator "abs" =================================================================== //
 
 // ---------------------------------------------------------------------------------- //
