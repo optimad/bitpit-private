@@ -27,6 +27,7 @@
  * @{
  *     @defgroup GenericIO Generic
  *     @defgroup Binary Binary
+ *     @defgroup Configuration Configuration
  *     @defgroup DuneGridFormat DuneGridFormat (DGF)
  *     @defgroup STereoLithography STereoLithography (STL)
  *     @defgroup VisualizationToolKit VisualizationToolKit (VTK)
