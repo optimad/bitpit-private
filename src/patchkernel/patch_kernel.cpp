@@ -942,7 +942,8 @@ void PatchKernel::setSpawnStatus(SpawnStatus status)
 /*!
 	Returns the current adaption status.
 
-	\param global if set to true the adaption status will be
+	\param global if set to true, the adaption status will be evaluate
+	globally across all partition
 	\return The current adaption status.
 */
 PatchKernel::AdaptionStatus PatchKernel::getAdaptionStatus(bool global) const
