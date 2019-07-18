@@ -5101,9 +5101,14 @@ void PatchKernel::resetTol()
 */
 void PatchKernel::_resetTol()
 {
+	std::array<double, 3> boxMinPoint;
+	std::array<double, 3> boxMaxPoint;
+
+	getBoundingBox(true, boxMinPoint, boxMaxPoint);
+
 	m_tolerance = 1;
 	for (int k = 0; k < 3; ++k) {
-		m_tolerance = std::max(m_boxMaxPoint[k] - m_boxMinPoint[k], m_tolerance);
+		m_tolerance = std::max(boxMinPoint[k] - boxMaxPoint[k], m_tolerance);
 	}
 	m_tolerance *= DEFAULT_TOLERANCE;
 }
