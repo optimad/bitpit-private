@@ -73,7 +73,7 @@ void VTKUnstructuredGrid::HomogeneousInfoStreamer::flushData( std::fstream &str,
             }
         
         } else if(name == "offsets" ){
-            uint8_t     n = vtk::getElementNodeCount(m_type) ;
+            uint8_t     n = utilsVTK::getElementNodeCount(m_type) ;
             uint64_t    offset(0) ;
             for( unsigned int i=0; i<m_nCells; ++i){
                 offset += n ;
@@ -89,7 +89,7 @@ void VTKUnstructuredGrid::HomogeneousInfoStreamer::flushData( std::fstream &str,
                 genericIO::flushASCII(str, type );
         
         } else if(name == "offsets" ){
-            uint8_t     n = vtk::getElementNodeCount(m_type) ;
+            uint8_t     n = utilsVTK::getElementNodeCount(m_type) ;
             uint64_t    offset(0) ;
             for( unsigned int i=0; i<m_nCells; ++i){
                 offset += n ;
@@ -223,7 +223,7 @@ void VTKUnstructuredGrid::setDimensions( uint64_t ncells, uint64_t npoints, uint
     if ( unevenConnectivity ) {
         m_nConnectivityEntries = nconn ;
     } else {
-        m_nConnectivityEntries = m_cells *vtk::getElementNodeCount( m_elementType ) ;
+        m_nConnectivityEntries = m_cells *utilsVTK::getElementNodeCount( m_elementType ) ;
     }
 
     assert( (m_cells != 0 && m_nConnectivityEntries != 0) || (m_cells == 0 && m_nConnectivityEntries == 0) );
@@ -614,7 +614,7 @@ uint64_t VTKUnstructuredGrid::calcFieldEntries( const VTKField &field ){
     std::string name( field.getName() ) ;
 
     if( name == "Points" ){
-        entries = m_points *static_cast<int>(VTKFieldType::VECTOR) ; 
+        entries = m_points *static_cast<int>(VTKFieldType::VECTOR) ;
 
     } else if( name == "offsets" ){
         entries = m_cells ;
@@ -657,7 +657,7 @@ uint64_t VTKUnstructuredGrid::calcFieldEntries( const VTKField &field ){
 
 /*!
  * Calculates the compnents of a field
- * @param[in] field field 
+ * @param[in] field field
  * @return size of the field
  */
 uint8_t VTKUnstructuredGrid::calcFieldComponents( const VTKField &field ){
@@ -666,7 +666,7 @@ uint8_t VTKUnstructuredGrid::calcFieldComponents( const VTKField &field ){
     std::string name( field.getName() ) ;
 
     if( name == "Points" ){
-        comp = static_cast<int>(VTKFieldType::VECTOR) ; 
+        comp = static_cast<int>(VTKFieldType::VECTOR) ;
 
     } else if( name == "offsets" ){
         comp = 1 ;
@@ -676,7 +676,7 @@ uint8_t VTKUnstructuredGrid::calcFieldComponents( const VTKField &field ){
 
     } else if( name == "connectivity" ){
        if( m_elementType != VTKElementType::UNDEFINED){
-            comp = vtk::getElementNodeCount( m_elementType ) ;
+            comp = utilsVTK::getElementNodeCount( m_elementType ) ;
 
        } else {
            comp = 1;

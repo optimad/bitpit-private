@@ -118,7 +118,7 @@ void VTKVectorContainer<T>::resize( std::false_type, uint64_t entries, uint8_t c
     m_ptr->resize(elements) ;
 
     for( auto & element : (*m_ptr) ){
-        vtk::allocate( element, components) ;
+        utilsVTK::allocate( element, components) ;
     }
 
 }

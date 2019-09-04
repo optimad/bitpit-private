@@ -951,7 +951,7 @@ void VTK::writeDataHeader( std::fstream &str, bool parallel ){
  */
 void VTK::writeDataArray( std::fstream &str, VTKField &field ){
 
-    str << vtk::convertDataArrayToString( field )  << std::endl ;
+    str << utilsVTK::convertDataArrayToString( field )  << std::endl ;
     str << "        </DataArray>" << std::endl ;
 
 }
@@ -963,7 +963,7 @@ void VTK::writeDataArray( std::fstream &str, VTKField &field ){
  */
 void VTK::writePDataArray( std::fstream &str, VTKField &field ){
 
-    str << vtk::convertPDataArrayToString( field ) << std::endl ;
+    str << utilsVTK::convertPDataArrayToString( field ) << std::endl ;
     str << "        </PDataArray>" << std::endl ;
 
 }
@@ -1156,7 +1156,7 @@ void VTK::readDataHeader( std::fstream &str ){
 
 
         while( read ){
-            if( vtk::convertStringToDataArray( line, temp  ) ) {
+            if( utilsVTK::convertStringToDataArray( line, temp  ) ) {
 
                 if( temp.getCodification() == VTKFormat::ASCII) {
                     pos_ = str.tellg() ;
@@ -1213,7 +1213,7 @@ bool VTK::readDataArray( std::fstream &str, VTKField &field  ){
     while( getline(str, line)  ){
 
         if( bitpit::utils::string::keywordInString( line, field.getName() ) ){
-            if( vtk::convertStringToDataArray( line, field  ) ){
+            if( utilsVTK::convertStringToDataArray( line, field  ) ){
 
                 if( field.getCodification() == VTKFormat::ASCII) {
                     field.setPosition( str.tellg() ) ;
