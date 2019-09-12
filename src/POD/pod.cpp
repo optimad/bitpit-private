@@ -1021,8 +1021,7 @@ void POD::_evalMeanMesh()
                 //Compute mapping of read mesh on pod mesh
                 _computeMapper(readf.mesh);
                 readf = pod::PODField(m_podkernel->mapPODFieldToPOD(readf, nullptr));
-                m_podkernel->getMeshMapper().clear();
-                m_podkernel->setMapperDirty(true);
+                m_podkernel->clearMapper();
             }
 
             for (const Cell &cell : m_podkernel->getMesh()->getCells()) {
@@ -1051,8 +1050,7 @@ void POD::_evalMeanMesh()
             {
                 _computeMapper(readf.mesh);
                 readf = pod::PODField(m_podkernel->mapPODFieldToPOD(readf, nullptr));
-                m_podkernel->getMeshMapper().clear();
-                m_podkernel->setMapperDirty(true);
+                m_podkernel->clearMapper();
             }
 
             for (const Cell &cell : m_podkernel->getMesh()->getCells())
@@ -1108,7 +1106,7 @@ void POD::evalCorrelation()
         if (!m_staticMesh){
             _computeMapper(snapi.mesh);
             snapi = pod::PODField(m_podkernel->mapPODFieldToPOD(snapi, nullptr));
-            m_podkernel->getMeshMapper().clear();
+            m_podkernel->clearMapper();
         }
 
         if (m_useMean)
@@ -1121,7 +1119,7 @@ void POD::evalCorrelation()
             if (!m_staticMesh){
                 _computeMapper(snapj.mesh);
                 snapj = pod::PODField(m_podkernel->mapPODFieldToPOD(snapj, nullptr));
-                m_podkernel->getMeshMapper().clear();
+                m_podkernel->clearMapper();
             }
 
             if (m_useMean)
@@ -1219,7 +1217,7 @@ void POD::evalReconstruction()
 
             // Map snapshot on pod mesh
             snapi = pod::PODField(m_podkernel->mapPODFieldToPOD(snapi, nullptr));
-            m_podkernel->getMeshMapper().clear();
+            m_podkernel->clearMapper();
 
         }
 
@@ -1817,7 +1815,7 @@ void POD::_evalModes()
         if (!m_staticMesh){
             _computeMapper(snapi.mesh);
             snapi = pod::PODField(m_podkernel->mapPODFieldToPOD(snapi, nullptr));
-            m_podkernel->getMeshMapper().clear();
+            m_podkernel->clearMapper();
         }
 
         if (m_useMean)    
