@@ -178,17 +178,11 @@ private:
 	// =================================================================================== //
 	// BASIC GET/SET METHODS
 	// =================================================================================== //
-	uint32_t	getDim() const;
-	u32array3	getCoordinates() const;
-	uint32_t	getX() const;
-	uint32_t	getY() const;
-	uint32_t	getZ() const;
-	u32array3	getCoord() const;
+public:
 	uint8_t		getLevel() const;
 	int8_t		getMarker() const;
 	bool		getBound(uint8_t face) const;
 	bool		getBound() const;
-	void		setBound(uint8_t face);
 	bool		getPbound(uint8_t face) const;
 	bool		getPbound() const;
 	bool		getIsNewR() const;
@@ -196,9 +190,16 @@ private:
 	bool		getIsGhost() const;
 	int			getGhostLayer() const;
 	bool		getBalance() const;
+	uint32_t	getDim() const;
+	u32array3	getCoordinates() const;
+	uint32_t	getX() const;
+	uint32_t	getY() const;
+	uint32_t	getZ() const;
+	u32array3	getCoord() const;
+private:
+	void		setBound(uint8_t face);
 	void		setMarker(int8_t marker);
 	void		setBalance(bool balance);
-private:
 	void		setLevel(uint8_t level);
 	void 		setPbound(uint8_t face, bool flag);
 	void		setGhostLayer(int ghostLayer);
