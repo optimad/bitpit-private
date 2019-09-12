@@ -182,7 +182,7 @@ void run()
 #endif
                 cellId = rand() % nCells * 2;
 #if BITPIT_ENABLE_MPI==1
-            MPI_Bcast(&cellId, 1, MPI::LONG, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&cellId, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
 
             if (!patch_2D->getCells().exists(cellId)) {
@@ -199,7 +199,7 @@ void run()
 #endif
                 cellId = rand() % nCells * 2;
 #if BITPIT_ENABLE_MPI==1
-            MPI_Bcast(&cellId, 1, MPI::LONG, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&cellId, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
 
             if (!patch_2D->getCells().exists(cellId)) {
