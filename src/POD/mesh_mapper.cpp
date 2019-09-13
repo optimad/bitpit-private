@@ -57,7 +57,6 @@ MeshMapper::MeshMapper()
     initializeCommunicator(comm);
     MPI_Comm_size(m_communicator, &m_nProcs);
     MPI_Comm_rank(m_communicator, &m_rank);
-#else
     m_rank = 0;
     m_nProcs = 1;
 #endif
