@@ -1391,10 +1391,8 @@ bool MapperVolOctree::_recoverPartition()
 
     //set size
     //TODO make accessible global variables in ParaTree
-    uint32_t x,y,z;
     long ID, globalID;
-    uint8_t l;
-    uint8_t octantBytes = uint8_t(sizeof(uint32_t)*3 + sizeof(uint8_t) + sizeof(long)*2);
+    uint8_t octantBytes = Octant::getBinarySize() + uint8_t(sizeof(long)*2);
     for (int reference_rank : toreference_rank[m_rank]){
 
         std::size_t buffSize = list_octant[reference_rank].size() * (std::size_t)octantBytes;
@@ -1404,16 +1402,9 @@ bool MapperVolOctree::_recoverPartition()
         SendBuffer &sendBuffer = octCommunicator.getSendBuffer(reference_rank);
         uint32_t ii = 0;
         for(Octant & octant : list_octant[reference_rank]){
-            x = octant.getX();
-            y = octant.getY();
-            z = octant.getZ();
-            l = octant.getLevel();
             ID = list_ID[reference_rank][ii];
             globalID = list_globalID[reference_rank][ii];
-            sendBuffer << x;
-            sendBuffer << y;
-            sendBuffer << z;
-            sendBuffer << l;
+        	sendBuffer << octant;
             sendBuffer << ID;
             sendBuffer << globalID;
             ii++;
@@ -1447,15 +1438,13 @@ bool MapperVolOctree::_recoverPartition()
         else
             break;
 
+        _list_rec_octantIR->resize(nof);
         for(uint32_t i = 0; i < nof; i++){
-            recvBuffer >> x;
-            recvBuffer >> y;
-            recvBuffer >> z;
-            recvBuffer >> l;
+            Octant octant;
+            recvBuffer >> octant;
             recvBuffer >> ID;
             recvBuffer >> globalID;
-            OctantIR val(Octant(dim,l,x,y,z), ID, globalID, rank);
-            _list_rec_octantIR->push_back(val);
+            _list_rec_octantIR->at(i) = OctantIR(octant, ID, globalID, rank);
         }
         for (OctantIR & octir : *_list_rec_octantIR){
             ID = octir.ID;
