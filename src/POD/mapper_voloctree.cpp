@@ -245,9 +245,9 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
     meshMapped = m_mappedMesh;
     mapperMapped = &m_invmapper;
 
-    bool checkPart = true;
     bool changedPartition = false;
 #if BITPIT_ENABLE_MPI
+    bool checkPart = true;
     checkPart = checkPartition();
     if (!checkPart)
         changedPartition = _recoverPartition();
@@ -281,9 +281,9 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
 #endif
                                 std::vector<long>::iterator it = std::find((*mapperMapped)[idp].mapped.begin(), (*mapperMapped)[idp].mapped.end(), idprevious);
                                 if (it != (*mapperMapped)[idp].mapped.end()){
-                                    int dist = std::distance((*mapperMapped)[idp].mapped.begin(), it);
                                     (*mapperMapped)[idp].mapped.erase(it);
 #if BITPIT_ENABLE_MPI
+                                    int dist = std::distance((*mapperMapped)[idp].mapped.begin(), it);
                                     (*mapperMapped)[idp].rank.erase((*mapperMapped)[idp].rank.begin()+dist);
 #endif
                                 }
@@ -372,9 +372,8 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                             uint64_t mortonmapped;
                             uint64_t mortonlastdescmapped;
                             uint8_t levelmapped;
-                            int rankmapped;
-
 #if BITPIT_ENABLE_MPI
+                            int rankmapped;
                             if (checkPart
                                     || _rankmapped[imapped] == m_rank
                             ){
@@ -556,9 +555,9 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
     meshReference = m_referenceMesh;
     mapperReference = &m_mapper;
 
-    bool checkPart = true;
     bool changedPartition = false;
 #if BITPIT_ENABLE_MPI
+    bool checkPart = true;
     checkPart = checkPartition();
     if (!checkPart)
         changedPartition = _recoverPartition();
@@ -609,9 +608,9 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
                     for (long idp : _mapped){
                         std::vector<long>::iterator it = std::find((*mapperReference)[idp].mapped.begin(), (*mapperReference)[idp].mapped.end(), idprevious);
                         if (it != (*mapperReference)[idp].mapped.end()){
-                            int dist = std::distance((*mapperReference)[idp].mapped.begin(), it);
                             (*mapperReference)[idp].mapped.erase(it);
 #if BITPIT_ENABLE_MPI
+                            int dist = std::distance((*mapperReference)[idp].mapped.begin(), it);
                             (*mapperReference)[idp].rank.erase((*mapperReference)[idp].rank.begin()+dist);
 #endif
                         }
@@ -969,11 +968,8 @@ void MapperVolOctree::_mapMeshes(bool fillInv)
     else
         clearInverseMapping();
 
-
-    bool checkPart = true;
-
 #if BITPIT_ENABLE_MPI
-
+    bool checkPart = true;
     if (!(m_referenceMesh->isPartitioned())){
 #endif
 
@@ -1023,7 +1019,9 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
     //Fill IR with meshes if list pointer is null
     std::vector<OctantIR> tempOctantsIRReference;
     std::vector<OctantIR> tempOctantsIRMapped;
+#if BITPIT_ENABLE_MPI
     bool localMapped = false;
+#endif
     if (octantsIRReference == nullptr){
         long n = meshReference->getInternalCount();
         const std::vector<Octant>* octants = meshReference->getTree().getInternalOctants();
@@ -1051,7 +1049,9 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
             tempOctantsIRMapped.push_back(val);
         }
         octantsIRMapped = &tempOctantsIRMapped;
+#if BITPIT_ENABLE_MPI
         localMapped = true;
+#endif
     }
 
     //Define a map for inverse mapper structure.
@@ -1080,7 +1080,9 @@ void MapperVolOctree::_mapMeshesSamePartition(const std::vector<OctantIR> * octa
         long idRef = octantsIRReference->at(indRef).ID;
         long idMap = octantsIRMapped->at(indMap).ID;
         long gidMap = octantsIRMapped->at(indMap).globalID;
+#if BITPIT_ENABLE_MPI
         int rank = octantsIRMapped->at(indMap).rank;
+#endif
 
         m_mapper[idRef].entity = mapping::Entity::ENTITY_CELL;
         if (fillInv){
