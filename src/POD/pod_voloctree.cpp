@@ -77,15 +77,15 @@ VolumeKernel* PODVolOctree::createMesh()
  * \param[in] mesh Pointer to input mesh.
  * \param[in] fillInv If true even the inverse mapping is computed.
  */
-void PODVolOctree::_computeMapper(VolumeKernel* mesh, pod::MapperVolOctree* & mapper, bool fillInv)
+void PODVolOctree::_computeMapper(VolumeKernel* mesh, MapperVolOctree* & mapper, bool fillInv)
 {
     VolOctree* meshPOD = static_cast<VolOctree*>(getMesh());
     VolOctree* _mesh = static_cast<VolOctree*>(mesh);
 
 #if BITPIT_ENABLE_MPI
-            mapper = new pod::MapperVolOctree(meshPOD, _mesh, getCommunicator());
+            mapper = new MapperVolOctree(meshPOD, _mesh, getCommunicator());
 #else
-            mapper = new pod::MapperVolOctree(meshPOD, _mesh);
+            mapper = new MapperVolOctree(meshPOD, _mesh);
 #endif
 
 
@@ -116,7 +116,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
     std::size_t nsf = field.scalar->getFieldCount();
     std::size_t nvf = field.vector->getFieldCount();
 
-    const PiercedStorage<pod::mapping::Info> & m_mapper = getMapper()->getMapping();
+    const PiercedStorage<mapping::Info> & m_mapper = getMapper()->getMapping();
 
     pod::PODField mappedField(nsf, nvf, getMesh(), &getMesh()->getCells());
 
@@ -131,7 +131,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
             double *datamappedS = mappedField.scalar->data(id);
             std::array<double,3> *datamappedV = mappedField.vector->data(id);
 
-            if (m_mapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_mapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 bool dataB = field.mask->at(m_mapper[id].mapped[0]);
                 mappedField.mask->set(id, dataB);
 
@@ -149,7 +149,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
                     (*datamappedVi) = (*dataVi);
                 }
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_mapper[id].type == mapping::Type::TYPE_COARSENING){
                 mappedField.mask->set(id, true);
 
                 for (std::size_t i = 0; i < nsf; i++){
@@ -186,7 +186,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
                 mappedField.mask->set(id, dataMappedB);
 
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_mapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 bool dataB = field.mask->at(m_mapper[id].mapped[0]);
                 double *dataS = field.scalar->data(m_mapper[id].mapped[0]);
                 std::array<double,3> *dataV = field.vector->data(m_mapper[id].mapped[0]);
@@ -225,7 +225,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
             double *datamappedS = mappedField.scalar->data(id);
             std::array<double,3> *datamappedV = mappedField.vector->data(id);
 
-            if (m_mapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_mapper[id].type == mapping::Type::TYPE_RENUMBERING){
 
                 int rank = m_mapper[id].rank[0];
                 if (rank != m_rank){
@@ -267,7 +267,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
                 }//end if other rank
 
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_mapper[id].type == mapping::Type::TYPE_COARSENING){
                 mappedField.mask->set(id, true);
 
                 for (std::size_t i = 0; i < nsf; i++){
@@ -316,7 +316,7 @@ pod::PODField PODVolOctree::mapPODFieldToPOD(const pod::PODField & field, const 
                 mappedField.mask->set(id, dataMappedB);
 
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_mapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 bool dataB;
                 double *dataS;
                 std::array<double,3> *dataV;
@@ -377,7 +377,7 @@ void PODVolOctree::mapPODFieldFromPOD(pod::PODField & field, const std::unordere
     std::size_t nsf = field.scalar->getFieldCount();
     std::size_t nvf = field.vector->getFieldCount();
 
-    const PiercedStorage<pod::mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
 
 #if BITPIT_ENABLE_MPI
     if ( getMapper()->checkPartition()){
@@ -388,7 +388,7 @@ void PODVolOctree::mapPODFieldFromPOD(pod::PODField & field, const std::unordere
             double *dataS = field.scalar->data(id);
             std::array<double,3> *dataV = field.vector->data(id);
 
-            if (m_invmapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 bool datamappedB = mappedField.mask->at(m_invmapper[id].mapped[0]);
                 field.mask->set(id, datamappedB);
                 double *datamappedS = mappedField.scalar->data(m_invmapper[id].mapped[0]);
@@ -404,7 +404,7 @@ void PODVolOctree::mapPODFieldFromPOD(pod::PODField & field, const std::unordere
                     (*dataVi) = (*datamappedVi);
                 }
             }
-            else if (m_invmapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_invmapper[id].type == mapping::Type::TYPE_COARSENING){
                 bool dataB = true;
                 for (std::size_t i = 0; i < nsf; i++){
                     double *dataSi = dataS + i;
@@ -438,7 +438,7 @@ void PODVolOctree::mapPODFieldFromPOD(pod::PODField & field, const std::unordere
                 }
                 field.mask->set(id, dataB);
             }
-            else if (m_invmapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 bool datamappedB = mappedField.mask->at(m_invmapper[id].mapped[0]);
                 field.mask->set(id, datamappedB);
                 double *datamappedS = mappedField.scalar->data(m_invmapper[id].mapped[0]);
@@ -474,7 +474,7 @@ void PODVolOctree::mapPODFieldFromPOD(pod::PODField & field, const std::unordere
             double *dataS = field.scalar->data(id);
             std::array<double,3> *dataV = field.vector->data(id);
 
-            if (m_invmapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 bool datamappedB;
                 double *datamappedS;
                 std::array<double,3>  *datamappedV;
@@ -502,7 +502,7 @@ void PODVolOctree::mapPODFieldFromPOD(pod::PODField & field, const std::unordere
                     (*dataVi) = (*datamappedVi);
                 }
             }
-            else if (m_invmapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_invmapper[id].type == mapping::Type::TYPE_COARSENING){
                 bool dataB = true;
                 for (std::size_t i = 0; i < nsf; i++){
                     double *dataSi = dataS + i;
@@ -548,7 +548,7 @@ void PODVolOctree::mapPODFieldFromPOD(pod::PODField & field, const std::unordere
                 }
                 field.mask->set(id, dataB);
             }
-            else if (m_invmapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 bool datamappedB;
                 double *datamappedS;
                 std::array<double,3> *datamappedV;
@@ -612,7 +612,7 @@ PiercedStorage<double> PODVolOctree::mapFieldsToPOD(const PiercedStorage<double>
     std::size_t nsf = scalarIds.size();
     std::size_t nvf = vectorIds.size();
 
-    const PiercedStorage<pod::mapping::Info> & m_mapper = getMapper()->getMapping();
+    const PiercedStorage<mapping::Info> & m_mapper = getMapper()->getMapping();
 
     PiercedStorage<double> mappedFields(fields.getFieldCount(), &getMesh()->getCells());
 
@@ -623,7 +623,7 @@ PiercedStorage<double> PODVolOctree::mapFieldsToPOD(const PiercedStorage<double>
         for (long id : *targetCells){
             std::size_t rawIndex = m_meshPOD->getCells().getRawIndex(id);
             double *datamapped = mappedFields.data(id);
-            if (m_mapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_mapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 const double *data = fields.data(m_mapper[id].mapped[0]);
                 for (std::size_t i = 0; i < nsf; i++){
                     const double *datai = data + scalarIds[i];
@@ -638,7 +638,7 @@ PiercedStorage<double> PODVolOctree::mapFieldsToPOD(const PiercedStorage<double>
                     }
                 }
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_mapper[id].type == mapping::Type::TYPE_COARSENING){
                 for (std::size_t i = 0; i < nsf; i++){
                     double *datamappedi = datamapped + scalarIds[i];
                     (*datamappedi) = 0.0;
@@ -668,7 +668,7 @@ PiercedStorage<double> PODVolOctree::mapFieldsToPOD(const PiercedStorage<double>
                     }
                 }
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_mapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 const double *data = fields.data(m_mapper[id].mapped[0]);
                 for (std::size_t i = 0; i < nsf; i++){
                     const double *datai = data + scalarIds[i];
@@ -699,7 +699,7 @@ PiercedStorage<double> PODVolOctree::mapFieldsToPOD(const PiercedStorage<double>
 
         for (long id : *targetCells){
             double *datamapped = mappedFields.data(id);
-            if (m_mapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_mapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 const double *data;
                 int rank = m_mapper[id].rank[0];
                 if (rank != m_rank){
@@ -722,7 +722,7 @@ PiercedStorage<double> PODVolOctree::mapFieldsToPOD(const PiercedStorage<double>
                     }
                 }
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_mapper[id].type == mapping::Type::TYPE_COARSENING){
                 for (std::size_t i = 0; i < nsf; i++){
                     double *datamappedi = datamapped + scalarIds[i];
                     (*datamappedi) = 0.0;
@@ -763,7 +763,7 @@ PiercedStorage<double> PODVolOctree::mapFieldsToPOD(const PiercedStorage<double>
                     ii++;
                 }
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_mapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 const double* data;
                 int rank = m_mapper[id].rank[0];
                 if (rank != m_rank){
@@ -822,7 +822,7 @@ void PODVolOctree::mapFieldsFromPOD(PiercedStorage<double> & fields, const Volum
     std::size_t nsf = scalarIds.size();
     std::size_t nvf = vectorIds.size();
 
-    const PiercedStorage<pod::mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
 
 #if BITPIT_ENABLE_MPI
     if ( getMapper()->checkPartition()){
@@ -830,7 +830,7 @@ void PODVolOctree::mapFieldsFromPOD(PiercedStorage<double> & fields, const Volum
 
     for (long id : *targetCells){
         double *data = fields.data(id);
-        if (m_invmapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+        if (m_invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
             const double *datamapped = mappedFields.data(m_invmapper[id].mapped[0]);
             for (std::size_t i = 0; i < nsf; i++){
                 double *datai = data + scalarIds[i];
@@ -845,7 +845,7 @@ void PODVolOctree::mapFieldsFromPOD(PiercedStorage<double> & fields, const Volum
                 }
             }
         }
-        else if (m_invmapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+        else if (m_invmapper[id].type == mapping::Type::TYPE_COARSENING){
             for (std::size_t i = 0; i < nsf; i++){
                 double *datai = data + scalarIds[i];
                 (*datai) = 0.0;
@@ -876,7 +876,7 @@ void PODVolOctree::mapFieldsFromPOD(PiercedStorage<double> & fields, const Volum
                 }
             }
         }
-        else if (m_invmapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+        else if (m_invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
             const double *datamapped = mappedFields.data(m_invmapper[id].mapped[0]);
             for (std::size_t i = 0; i < nsf; i++){
                 double *datai = data + scalarIds[i];
@@ -907,7 +907,7 @@ void PODVolOctree::mapFieldsFromPOD(PiercedStorage<double> & fields, const Volum
 
         for (long id : *targetCells){
             double *data = fields.data(id);
-            if (m_invmapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 const double *datamapped;
                 int rank = m_invmapper[id].rank[0];
                 if (rank != m_rank){
@@ -930,7 +930,7 @@ void PODVolOctree::mapFieldsFromPOD(PiercedStorage<double> & fields, const Volum
                     }
                 }
             }
-            else if (m_invmapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_invmapper[id].type == mapping::Type::TYPE_COARSENING){
                 for (std::size_t i = 0; i < nsf; i++){
                     double *datai = data + scalarIds[i];
                     (*datai) = 0.0;
@@ -971,7 +971,7 @@ void PODVolOctree::mapFieldsFromPOD(PiercedStorage<double> & fields, const Volum
                     ii++;
                 }
             }
-            else if (m_invmapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 const double *datamapped;
                 int rank = m_invmapper[id].rank[0];
                 if (rank != m_rank){
@@ -1045,7 +1045,7 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
     }
 
     // Map bool field (number of fields = 1) on pod mesh
-    const PiercedStorage<pod::mapping::Info> & m_mapper = getMapper()->getMapping();
+    const PiercedStorage<mapping::Info> & m_mapper = getMapper()->getMapping();
 
     mappedField.setStaticKernel(&getMesh()->getCells());
     mappedField.fill(false);
@@ -1055,11 +1055,11 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
 #endif
 
         for (long id : *targetCells){
-            if (m_mapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_mapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 bool dataB = field.at(m_mapper[id].mapped[0]);
                 mappedField.set(id, dataB);
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_mapper[id].type == mapping::Type::TYPE_COARSENING){
                 mappedField.set(id, false);
                 bool dataB, dataMappedB = true;
                 for (long idd : m_mapper[id].mapped){
@@ -1068,7 +1068,7 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
                 }
                 mappedField.set(id, dataMappedB);
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_mapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 bool dataB = field.at(m_mapper[id].mapped[0]);
                 mappedField.set(id, dataB);
             }
@@ -1086,7 +1086,7 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
 
         for (long id : *targetCells){
 
-            if (m_mapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_mapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 bool dataB;
                 int rank = m_mapper[id].rank[0];
                 if (rank != m_rank){
@@ -1097,7 +1097,7 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
                 }//end if other rank
                 mappedField.set(id, dataB);
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            else if (m_mapper[id].type == mapping::Type::TYPE_COARSENING){
                 mappedField.set(id, true);
                 bool dataB, dataMappedB = true;
                 int ii = 0;
@@ -1115,7 +1115,7 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
                 mappedField.set(id, dataMappedB);
 
             }
-            else if (m_mapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            else if (m_mapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 bool dataB;
                 int rank = m_mapper[id].rank[0];
                 if (rank != m_rank){
@@ -1142,20 +1142,20 @@ void PODVolOctree::mapBoolFieldToPOD(const PiercedStorage<bool> & field, const V
 std::unordered_set<long> PODVolOctree::mapCellsToPOD(const std::unordered_set<long> * targetCells)
 {
     std::unordered_set<long> mappedCells;
-    const PiercedStorage<pod::mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
+    const PiercedStorage<mapping::Info> & m_invmapper = getMapper()->getInverseMapping();
 
 #if BITPIT_ENABLE_MPI
     if ( getMapper()->checkPartition()){
 #endif
 
     for (const long & id : *targetCells){
-        if (m_invmapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+        if (m_invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
             mappedCells.insert(m_invmapper[id].mapped[0]);
         }
-        if (m_invmapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+        if (m_invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
             mappedCells.insert(m_invmapper[id].mapped[0]);
         }
-        if (m_invmapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+        if (m_invmapper[id].type == mapping::Type::TYPE_COARSENING){
             for (long idd : m_invmapper[id].mapped)
                 mappedCells.insert(idd);
         }
@@ -1171,7 +1171,7 @@ std::unordered_set<long> PODVolOctree::mapCellsToPOD(const std::unordered_set<lo
         std::map<int, std::unordered_set<long> > sendPODcells;
 
         for (const long & id : *targetCells){
-            if (m_invmapper[id].type == pod::mapping::Type::TYPE_RENUMBERING){
+            if (m_invmapper[id].type == mapping::Type::TYPE_RENUMBERING){
                 int rank = m_invmapper[id].rank[0];
                 if (rank != m_rank){
                     sendPODcells[rank].insert(m_invmapper[id].mapped[0]);
@@ -1180,7 +1180,7 @@ std::unordered_set<long> PODVolOctree::mapCellsToPOD(const std::unordered_set<lo
                     mappedCells.insert(m_invmapper[id].mapped[0]);
                 }
             }
-            if (m_invmapper[id].type == pod::mapping::Type::TYPE_REFINEMENT){
+            if (m_invmapper[id].type == mapping::Type::TYPE_REFINEMENT){
                 int rank = m_invmapper[id].rank[0];
                 if (rank != m_rank){
                     sendPODcells[rank].insert(m_invmapper[id].mapped[0]);
@@ -1189,7 +1189,7 @@ std::unordered_set<long> PODVolOctree::mapCellsToPOD(const std::unordered_set<lo
                     mappedCells.insert(m_invmapper[id].mapped[0]);
                 }
             }
-            if (m_invmapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            if (m_invmapper[id].type == mapping::Type::TYPE_COARSENING){
                 int ii=0;
                 for (long idd : m_invmapper[id].mapped){
                     int rank = m_invmapper[id].rank[ii];
@@ -1261,11 +1261,11 @@ void PODVolOctree::adaptMeshToMesh(VolumeKernel* meshToAdapt, VolumeKernel * mes
 
         adapt = false;
 
-        const PiercedStorage<pod::mapping::Info> & m_mapper = getMapper()->getMapping();
+        const PiercedStorage<mapping::Info> & m_mapper = getMapper()->getMapping();
 
         for (Cell & cell : getMesh()->getCells()){
             long id = cell.getId();
-            if (m_mapper[id].type == pod::mapping::Type::TYPE_COARSENING){
+            if (m_mapper[id].type == mapping::Type::TYPE_COARSENING){
                 getMesh()->markCellForRefinement(id);
                 adapt = true;
             }

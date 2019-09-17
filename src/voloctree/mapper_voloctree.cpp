@@ -26,8 +26,6 @@
 
 namespace bitpit {
 
-namespace pod {
-
 /**
  * \class MapperVolOctree
  * \ingroup Ref
@@ -387,7 +385,7 @@ void MapperVolOctree::_mappingAdaptionReferenceUpdate(const std::vector<adaption
                                 rankmapped = _rankmapped[imapped];
                             }
                             else{
-                                OctantIR* poct = m_partitionIR.map_rank_rec_octantIR[_rankmapped[imapped]][idpmapped];
+                                OctantIR* poct = &m_partitionIR.map_rank_rec_octantIR[_rankmapped[imapped]][idpmapped];
                                 octm = &poct->octant;
                                 mortonmapped = meshMapped->getTree().getMorton(&poct->octant);
                                 mortonlastdescmapped = meshMapped->getTree().getLastDescMorton(&poct->octant);
@@ -727,7 +725,7 @@ void MapperVolOctree::_mappingAdaptionMappedUpdate(const std::vector<adaption::I
 #if BITPIT_ENABLE_MPI
                                 }
                                 else{
-                                    OctantIR* poct = m_partitionIR.map_rank_rec_octantIR[info.rank][id];
+                                    OctantIR* poct = &m_partitionIR.map_rank_rec_octantIR[info.rank][id];
                                     level = poct->octant.getLevel();
                                     morton = meshAdapted->getTree().getMorton(&poct->octant);
                                     mortonlastdesc = meshAdapted->getTree().getLastDescMorton(&poct->octant);
@@ -1277,7 +1275,7 @@ void MapperVolOctree::_mapMeshPartitioned(bool fillInv)
     for (long i = 0; i < n; i++){
         VolOctree::OctantInfo octinfoRef(i, true);
         long idRef = static_cast<VolOctree*>(m_referenceMesh)->getOctantId(octinfoRef);
-        OctantIR val(octants->at(i), idRef, m_rank);
+        OctantIR val(octants->at(i), idRef, idRef, m_rank);
         octantsIRReference.push_back(val);
     }
     _mapMeshesSamePartition(&octantsIRReference, &m_partitionIR.list_rec_octantIR_before, fillInv, indRef);
@@ -1315,7 +1313,7 @@ bool MapperVolOctree::_recoverPartition()
             m_partitionIR.partitionLDReference.clear();
             m_partitionIR.partitionFDMapped.clear();
             m_partitionIR.partitionLDMapped.clear();
-            return false;
+            return true;
         }
     }
 
@@ -1422,6 +1420,9 @@ bool MapperVolOctree::_recoverPartition()
     std::vector<OctantIR> & list_rec_octantIR_after = m_partitionIR.list_rec_octantIR_after;
     std::vector<OctantIR>* _list_rec_octantIR;
 
+    list_rec_octantIR_before.clear();
+	list_rec_octantIR_after.clear();
+
     for(int rank : recvRanks){
 
         octCommunicator.waitRecv(rank);
@@ -1429,26 +1430,28 @@ bool MapperVolOctree::_recoverPartition()
         RecvBuffer & recvBuffer = octCommunicator.getRecvBuffer(rank);
         long bufferSize = recvBuffer.getSize();
         uint32_t nof = (uint32_t)(bufferSize / (uint32_t)octantBytes);
-        if (rank < m_rank){
-            _list_rec_octantIR = &list_rec_octantIR_before;
-        }
-        else if (rank > m_rank){
-            _list_rec_octantIR = &list_rec_octantIR_after;
-        }
-        else
-            break;
 
-        _list_rec_octantIR->resize(nof);
+    	if (rank < m_rank){
+    		_list_rec_octantIR = &list_rec_octantIR_before;
+    	}
+    	else if (rank > m_rank){
+    		_list_rec_octantIR = &list_rec_octantIR_after;
+    	}
+    	else
+    		break;
+
         for(uint32_t i = 0; i < nof; i++){
             Octant octant;
             recvBuffer >> octant;
             recvBuffer >> ID;
             recvBuffer >> globalID;
-            _list_rec_octantIR->at(i) = OctantIR(octant, ID, globalID, rank);
+            _list_rec_octantIR->push_back(OctantIR(octant, ID, globalID, rank));
         }
-        for (OctantIR & octir : *_list_rec_octantIR){
+
+        for (OctantIR octir : *_list_rec_octantIR){
             ID = octir.ID;
-            m_partitionIR.map_rank_rec_octantIR[rank][ID] = &octir;
+            //Currently there is another copy of the octant (check if it can be simplified)
+            m_partitionIR.map_rank_rec_octantIR[rank][ID] = octir;
         }
     }
 
@@ -1830,7 +1833,5 @@ void MapperVolOctree::_communicateMappedAdaptionInfo(const std::vector<adaption:
 }
 
 #endif
-
-}
 
 }

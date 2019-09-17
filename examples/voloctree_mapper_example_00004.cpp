@@ -76,6 +76,9 @@ void runReferenceAdaptation()
     /** Create the original patch */
     VolOctree *patch_2D_original = new VolOctree(std::move(treePointer), &treePointer);
 
+    patch_2D_original->buildAdjacencies();
+    patch_2D_original->buildInterfaces();
+
     patch_2D_original->update();
 
 #if BITPIT_ENABLE_MPI==1
@@ -209,6 +212,9 @@ void runReferenceAdaptation()
 
         log::cout() << std::endl;
         log::cout() << ">> Initial number of cells... " << nCells << std::endl;
+
+        patch_2D->buildAdjacencies();
+        patch_2D->buildInterfaces();
 
         patch_2D->update(true);
 
@@ -719,6 +725,9 @@ void runMappedAdaptation()
     /** Create the original patch */
     VolOctree *patch_2D_original = new VolOctree(std::move(treePointer), &treePointer);
 
+    patch_2D_original->buildAdjacencies();
+    patch_2D_original->buildInterfaces();
+
     patch_2D_original->update();
 
 #if BITPIT_ENABLE_MPI==1
@@ -852,6 +861,9 @@ void runMappedAdaptation()
 
         log::cout() << std::endl;
         log::cout() << ">> Initial number of cells... " << nCells << std::endl;
+
+        patch_2D->buildAdjacencies();
+        patch_2D->buildInterfaces();
 
         patch_2D->update(true);
 
@@ -1133,7 +1145,8 @@ void runMappedAdaptation()
             }
 
             //build send buffers
-            MPI_Comm comm = MPI_COMM_WORLD;
+            MPI_Comm comm;
+            MPI_Comm_dup(MPI_COMM_WORLD, &comm);
             DataCommunicator dataCommunicator(comm);
             MPI_Barrier(comm);
             std::size_t bytes = uint8_t(2*sizeof(double) + sizeof(long));
@@ -1262,7 +1275,8 @@ void runMappedAdaptation()
             std::map<int, std::vector<long> > rankIDsend = mapobject.getSentMappedID();
 
             //build send buffers
-            MPI_Comm comm = MPI_COMM_WORLD;
+            MPI_Comm comm;
+            MPI_Comm_dup(MPI_COMM_WORLD, &comm);
             DataCommunicator dataCommunicator(comm);
             MPI_Barrier(comm);
             std::size_t bytes = uint8_t(2*sizeof(double));

@@ -105,8 +105,8 @@ protected:
     int                     m_nProcs;       /**< Number of processes. */
 #endif
 
-    VolumeKernel* m_referenceMesh;
-    VolumeKernel* m_mappedMesh;
+    VolumeKernel* m_referenceMesh;		/**< Reference mesh. */
+    VolumeKernel* m_mappedMesh;			/**< Mapped mesh. */
 
     PiercedStorage<mapping::Info> m_mapper;  /**< Mapping info for each cell of reference mesh.
                                                                   The mapping info is treated as a set of adaption info related to
@@ -114,7 +114,7 @@ protected:
     PiercedStorage<mapping::Info> m_invmapper;  /**< Inverse mapping info for each cell of mapped mesh. */
 
 
-    std::unordered_map<long, mapping::Info> m_previousmapper;
+    std::unordered_map<long, mapping::Info> m_previousmapper; /**< Temporary inverse mapper used during a mesh adaptation. */
 
 
     void _mapMeshes(bitpit::VolOctree * meshReference, bitpit::VolOctree * meshMapped, bool fillInv);

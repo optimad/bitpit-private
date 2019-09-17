@@ -60,7 +60,7 @@ private:
 
     VolumeKernel* createMesh() override;
 
-    void _computeMapper(VolumeKernel * mesh, pod::MapperVolOctree* & mapper, bool fillInv) override;
+    void _computeMapper(VolumeKernel * mesh, MapperVolOctree* & mapper, bool fillInv) override;
 
     bitpit::PiercedStorage<bitpit::adaption::Info> mapMesh(bitpit::VolOctree * mesh);
     void mapMeshSamePartition(bitpit::VolOctree * mesh, bitpit::PiercedStorage<bitpit::adaption::Info> & mapper);

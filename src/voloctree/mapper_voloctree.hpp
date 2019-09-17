@@ -36,8 +36,6 @@
 
 namespace bitpit {
 
-namespace pod {
-
 /*!
     \ingroup mapping
     \brief The namespace 'mapping' contains structures for working with the MapperVolOctree class.
@@ -178,7 +176,7 @@ private:
         std::vector<OctantIR> list_rec_octantIR_before; /**< List of received Octants from lower rank processes. */
         std::vector<OctantIR> list_rec_octantIR_after;  /**< List of received Octants from higher rank processes. */
 
-        std::unordered_map<int, std::unordered_map<long, OctantIR*> > map_rank_rec_octantIR;        /**< List of received Octants from other processes. */
+        std::unordered_map<int, std::unordered_map<long, OctantIR> > map_rank_rec_octantIR;        /**< List of received Octants from other processes. */
         std::unordered_map<int, std::unordered_map<long, mapping::Info> > map_rank_invmapper;      /**< Inverse mapper terms related to processes different from the local rank. */
         std::unordered_map<int, std::unordered_map<long, mapping::Info> > map_rank_previousmapper; /**< Temporary inverse mapper for each processes used during a mesh adaptation. */
 
@@ -269,8 +267,6 @@ private:
 #endif
 
 };
-
-}
 
 }
 #endif

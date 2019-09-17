@@ -75,6 +75,9 @@ void run()
     /** Create the original patch */
     VolOctree *patch_2D_original = new VolOctree(std::move(treePointer), &treePointer);
 
+    patch_2D_original->buildAdjacencies();
+    patch_2D_original->buildInterfaces();
+
     patch_2D_original->update();
 
 #if BITPIT_ENABLE_MPI==1
@@ -214,6 +217,9 @@ void run()
 
         log::cout() << std::endl;
         log::cout() << ">> Initial number of cells... " << nCells << std::endl;
+
+        patch_2D->buildAdjacencies();
+        patch_2D->buildInterfaces();
 
         patch_2D->update(true);
 

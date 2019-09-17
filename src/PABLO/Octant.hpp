@@ -191,12 +191,12 @@ public:
 	int			getGhostLayer() const;
 	bool		getBalance() const;
 	uint32_t	getDim() const;
+private:
 	u32array3	getCoordinates() const;
 	uint32_t	getX() const;
 	uint32_t	getY() const;
 	uint32_t	getZ() const;
 	u32array3	getCoord() const;
-private:
 	void		setBound(uint8_t face);
 	void		setMarker(int8_t marker);
 	void		setBalance(bool balance);
@@ -227,9 +227,9 @@ public:
 	// OTHER METHODS												    			   //
 	// =================================================================================== //
 	Octant					buildLastDesc() const;
-private:
 	Octant					buildFather() const;
 	std::vector< Octant >	buildChildren() const;
+private:
 	void computeHalfSizeMortons(uint8_t iface, uint32_t *nMortons, std::vector<uint64_t> *mortons) const;
 	void computeMinSizeMortons(uint8_t iface, uint8_t maxdepth, uint32_t *nMortons, std::vector<uint64_t> *mortons) const;
 	void computeFaceVirtualMortons(uint8_t iface, uint8_t maxdepth, uint32_t *nMortons, std::vector<uint64_t> *mortons) const;
