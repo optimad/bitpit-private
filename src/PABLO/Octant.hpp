@@ -164,21 +164,17 @@ public:
 	// =================================================================================== //
 	// STATIC METHODS
 	// =================================================================================== //
-public:
 	static unsigned int getBinarySize();
 
-private:
 	// =================================================================================== //
 	// METHODS
 	// =================================================================================== //
-
 	void initialize();
 	void initialize(uint8_t dim, uint8_t level, bool bound);
 
 	// =================================================================================== //
 	// BASIC GET/SET METHODS
 	// =================================================================================== //
-public:
 	uint8_t		getLevel() const;
 	int8_t		getMarker() const;
 	bool		getBound(uint8_t face) const;
@@ -191,12 +187,12 @@ public:
 	int			getGhostLayer() const;
 	bool		getBalance() const;
 	uint32_t	getDim() const;
-private:
-	u32array3	getCoordinates() const;
-	uint32_t	getX() const;
-	uint32_t	getY() const;
-	uint32_t	getZ() const;
-	u32array3	getCoord() const;
+	u32array3	getLogicalCoordinates() const;
+	uint32_t	getLogicalX() const;
+	uint32_t	getLogicalY() const;
+	uint32_t	getLogicalZ() const;
+	u32array3	getLogicalCoord() const;
+protected:
 	void		setBound(uint8_t face);
 	void		setMarker(int8_t marker);
 	void		setBalance(bool balance);
@@ -207,18 +203,18 @@ private:
 	// =================================================================================== //
 	// OTHER GET/SET METHODS
 	// =================================================================================== //
-	uint32_t		getSize() const;
-	uint64_t		getArea() const;
-	uint64_t		getVolume() const;
-	darray3			getCenter() const;
-	darray3			getFaceCenter(uint8_t iface) const;
-	darray3			getEdgeCenter(uint8_t iedge) const;
-	void			getNodes(u32arr3vector & nodes) const;
-	u32arr3vector	getNodes() const;
-	void			getNode(u32array3 & node, uint8_t inode) const;
-	u32array3		getNode(uint8_t inode) const;
-	void			getNormal(uint8_t iface, i8array3 & normal, const int8_t (&normals)[6][3]) const;
 public:
+	uint32_t		getLogicalSize() const;
+	uint64_t		getLogicalArea() const;
+	uint64_t		getLogicalVolume() const;
+	darray3			getLogicalCenter() const;
+	darray3			getLogicalFaceCenter(uint8_t iface) const;
+	darray3			getLogicalEdgeCenter(uint8_t iedge) const;
+	void			getLogicalNodes(u32arr3vector & nodes) const;
+	u32arr3vector	getLogicalNodes() const;
+	void			getLogicalNode(u32array3 & node, uint8_t inode) const;
+	u32array3		getLogicalNode(uint8_t inode) const;
+	void			getNormal(uint8_t iface, i8array3 & normal, const int8_t (&normals)[6][3]) const;
 	uint64_t		computeMorton() const;
 	uint64_t		computeNodeMorton(uint8_t inode) const;
 	uint64_t		computeNodeMorton(const u32array3 &node) const;
@@ -229,7 +225,7 @@ public:
 	Octant					buildLastDesc() const;
 	Octant					buildFather() const;
 	std::vector< Octant >	buildChildren() const;
-private:
+protected:
 	void computeHalfSizeMortons(uint8_t iface, uint32_t *nMortons, std::vector<uint64_t> *mortons) const;
 	void computeMinSizeMortons(uint8_t iface, uint8_t maxdepth, uint32_t *nMortons, std::vector<uint64_t> *mortons) const;
 	void computeFaceVirtualMortons(uint8_t iface, uint8_t maxdepth, uint32_t *nMortons, std::vector<uint64_t> *mortons) const;

@@ -487,9 +487,9 @@ namespace bitpit {
             const Octant &octant = m_octree.m_octants[i];
 
             utils::binary::write(stream, octant.getLevel());
-            utils::binary::write(stream, octant.getX());
-            utils::binary::write(stream, octant.getY());
-            utils::binary::write(stream, octant.getZ());
+            utils::binary::write(stream, octant.getLogicalX());
+            utils::binary::write(stream, octant.getLogicalY());
+            utils::binary::write(stream, octant.getLogicalZ());
             utils::binary::write(stream, octant.getGhostLayer());
 
             for (size_t k = 0; k < Octant::INFO_ITEM_COUNT; ++k) {
@@ -1250,7 +1250,7 @@ namespace bitpit {
      */
     darray3
     ParaTree::getCoordinates(uint32_t idx) const {
-        return m_trans.mapCoordinates(m_octree.m_octants[idx].getCoordinates());
+        return m_trans.mapCoordinates(m_octree.m_octants[idx].getLogicalCoordinates());
     }
 
     /*! Get the coordinates of an octant, i.e. the coordinates of its node 0.
@@ -1259,7 +1259,7 @@ namespace bitpit {
      */
     double
     ParaTree::getX(uint32_t idx) const {
-        return m_trans.mapX(m_octree.m_octants[idx].getX());
+        return m_trans.mapX(m_octree.m_octants[idx].getLogicalX());
     }
 
     /*! Get the coordinates of an octant, i.e. the coordinates of its node 0.
@@ -1268,7 +1268,7 @@ namespace bitpit {
      */
     double
     ParaTree::getY(uint32_t idx) const {
-        return m_trans.mapY(m_octree.m_octants[idx].getY());
+        return m_trans.mapY(m_octree.m_octants[idx].getLogicalY());
     }
 
     /*! Get the coordinates of an octant, i.e. the coordinates of its node 0.
@@ -1277,7 +1277,7 @@ namespace bitpit {
      */
     double
     ParaTree::getZ(uint32_t idx) const {
-        return m_trans.mapZ(m_octree.m_octants[idx].getZ());
+        return m_trans.mapZ(m_octree.m_octants[idx].getLogicalZ());
     }
 
     /*! Get the size of an octant, i.e. the side length.
@@ -1286,7 +1286,7 @@ namespace bitpit {
      */
     double
     ParaTree::getSize(uint32_t idx) const {
-        return m_trans.mapSize(m_octree.m_octants[idx].getSize());
+        return m_trans.mapSize(m_octree.m_octants[idx].getLogicalSize());
     }
 
     /*! Get the area of an octant (for 2D case the same value of getSize).
@@ -1295,7 +1295,7 @@ namespace bitpit {
      */
     double
     ParaTree::getArea(uint32_t idx) const {
-        return m_trans.mapArea(m_octree.m_octants[idx].getArea());
+        return m_trans.mapArea(m_octree.m_octants[idx].getLogicalArea());
     }
 
     /*! Get the volume of an octant.
@@ -1304,7 +1304,7 @@ namespace bitpit {
      */
     double
     ParaTree::getVolume(uint32_t idx) const {
-        return m_trans.mapVolume(m_octree.m_octants[idx].getVolume());
+        return m_trans.mapVolume(m_octree.m_octants[idx].getLogicalVolume());
     }
 
     /*! Get the coordinates of the center of an octant.
@@ -1313,7 +1313,7 @@ namespace bitpit {
      */
     void
     ParaTree::getCenter(uint32_t idx, darray3& center) const {
-        darray3 center_ = m_octree.m_octants[idx].getCenter();
+        darray3 center_ = m_octree.m_octants[idx].getLogicalCenter();
         m_trans.mapCenter(center_, center);
     }
 
@@ -1324,7 +1324,7 @@ namespace bitpit {
     darray3
     ParaTree::getCenter(uint32_t idx) const {
         darray3 center;
-        darray3 center_ = m_octree.m_octants[idx].getCenter();
+        darray3 center_ = m_octree.m_octants[idx].getLogicalCenter();
         m_trans.mapCenter(center_, center);
         return center;
     }
@@ -1337,7 +1337,7 @@ namespace bitpit {
     darray3
     ParaTree::getFaceCenter(uint32_t idx, uint8_t iface) const {
         darray3 center;
-        darray3 center_ = m_octree.m_octants[idx].getFaceCenter(iface);
+        darray3 center_ = m_octree.m_octants[idx].getLogicalFaceCenter(iface);
         m_trans.mapCenter(center_, center);
         return center;
     }
@@ -1349,7 +1349,7 @@ namespace bitpit {
      */
     void
     ParaTree::getFaceCenter(uint32_t idx, uint8_t iface, darray3& center) const {
-        darray3 center_ = m_octree.m_octants[idx].getFaceCenter(iface);
+        darray3 center_ = m_octree.m_octants[idx].getLogicalFaceCenter(iface);
         m_trans.mapCenter(center_, center);
     }
 
@@ -1361,7 +1361,7 @@ namespace bitpit {
     darray3
     ParaTree::getNode(uint32_t idx, uint8_t inode) const {
         darray3 node;
-        u32array3 node_ = m_octree.m_octants[idx].getNode(inode);
+        u32array3 node_ = m_octree.m_octants[idx].getLogicalNode(inode);
         m_trans.mapNode(node_, node);
         return node;
     }
@@ -1373,7 +1373,7 @@ namespace bitpit {
      */
     void
     ParaTree::getNode(uint32_t idx, uint8_t inode, darray3& node) const {
-        u32array3 node_ = m_octree.m_octants[idx].getNode(inode);
+        u32array3 node_ = m_octree.m_octants[idx].getLogicalNode(inode);
         m_trans.mapNode(node_, node);
     }
 
@@ -1384,7 +1384,7 @@ namespace bitpit {
     void
     ParaTree::getNodes(uint32_t idx, darr3vector & nodes) const {
         u32arr3vector nodes_;
-        m_octree.m_octants[idx].getNodes(nodes_);
+        m_octree.m_octants[idx].getLogicalNodes(nodes_);
         m_trans.mapNodes(nodes_, nodes);
     }
 
@@ -1396,7 +1396,7 @@ namespace bitpit {
     ParaTree::getNodes(uint32_t idx) const{
         darr3vector nodes;
         u32arr3vector nodes_;
-        m_octree.m_octants[idx].getNodes(nodes_);
+        m_octree.m_octants[idx].getLogicalNodes(nodes_);
         m_trans.mapNodes(nodes_, nodes);
         return nodes;
     }
@@ -1700,7 +1700,7 @@ namespace bitpit {
      */
     darray3
     ParaTree::getCoordinates(const Octant* oct) const {
-        return m_trans.mapCoordinates(oct->getCoordinates());
+        return m_trans.mapCoordinates(oct->getLogicalCoordinates());
     }
 
     /*! Get the coordinates of an octant, i.e. the coordinates of its node 0.
@@ -1709,7 +1709,7 @@ namespace bitpit {
      */
     double
     ParaTree::getX(const Octant* oct) const {
-        return m_trans.mapX(oct->getX());
+        return m_trans.mapX(oct->getLogicalX());
     }
 
     /*! Get the coordinates of an octant, i.e. the coordinates of its node 0.
@@ -1718,7 +1718,7 @@ namespace bitpit {
      */
     double
     ParaTree::getY(const Octant* oct) const {
-        return m_trans.mapY(oct->getY());
+        return m_trans.mapY(oct->getLogicalY());
     }
 
     /*! Get the coordinates of an octant, i.e. the coordinates of its node 0.
@@ -1727,7 +1727,7 @@ namespace bitpit {
      */
     double
     ParaTree::getZ(const Octant* oct) const {
-        return m_trans.mapZ(oct->getZ());
+        return m_trans.mapZ(oct->getLogicalZ());
     }
 
     /*! Get the size of an octant, i.e. the side length.
@@ -1736,7 +1736,7 @@ namespace bitpit {
      */
     double
     ParaTree::getSize(const Octant* oct) const {
-        return m_trans.mapSize(oct->getSize());
+        return m_trans.mapSize(oct->getLogicalSize());
     }
 
     /*! Get the area of an octant (for 2D case the same value of getSize).
@@ -1745,7 +1745,7 @@ namespace bitpit {
      */
     double
     ParaTree::getArea(const Octant* oct) const {
-        return m_trans.mapArea(oct->getArea());
+        return m_trans.mapArea(oct->getLogicalArea());
     }
 
     /*! Get the volume of an octant.
@@ -1754,7 +1754,7 @@ namespace bitpit {
      */
     double
     ParaTree::getVolume(const Octant* oct) const {
-        return m_trans.mapVolume(oct->getVolume());
+        return m_trans.mapVolume(oct->getLogicalVolume());
     }
 
     /*! Get the coordinates of the center of an octant.
@@ -1763,7 +1763,7 @@ namespace bitpit {
      */
     void
     ParaTree::getCenter(const Octant* oct, darray3& center) const {
-        darray3 center_ = oct->getCenter();
+        darray3 center_ = oct->getLogicalCenter();
         m_trans.mapCenter(center_, center);
     }
 
@@ -1774,7 +1774,7 @@ namespace bitpit {
     darray3
     ParaTree::getCenter(const Octant* oct) const {
         darray3 center;
-        darray3 center_ = oct->getCenter();
+        darray3 center_ = oct->getLogicalCenter();
         m_trans.mapCenter(center_, center);
         return center;
     }
@@ -1787,7 +1787,7 @@ namespace bitpit {
     darray3
     ParaTree::getFaceCenter(const Octant* oct, uint8_t iface) const {
         darray3 center;
-        darray3 center_ = oct->getFaceCenter(iface);
+        darray3 center_ = oct->getLogicalFaceCenter(iface);
         m_trans.mapCenter(center_, center);
         return center;
     }
@@ -1799,7 +1799,7 @@ namespace bitpit {
      */
     void
     ParaTree::getFaceCenter(const Octant* oct, uint8_t iface, darray3& center) const {
-        darray3 center_ = oct->getFaceCenter(iface);
+        darray3 center_ = oct->getLogicalFaceCenter(iface);
         m_trans.mapCenter(center_, center);
     }
 
@@ -1811,7 +1811,7 @@ namespace bitpit {
     darray3
     ParaTree::getNode(const Octant* oct, uint8_t inode) const {
         darray3 node;
-        u32array3 node_ = oct->getNode(inode);
+        u32array3 node_ = oct->getLogicalNode(inode);
         m_trans.mapNode(node_, node);
         return node;
     }
@@ -1823,7 +1823,7 @@ namespace bitpit {
      */
     void
     ParaTree::getNode(const Octant* oct, uint8_t inode, darray3& node) const {
-        u32array3 node_ = oct->getNode(inode);
+        u32array3 node_ = oct->getLogicalNode(inode);
         m_trans.mapNode(node_, node);
     }
 
@@ -1834,7 +1834,7 @@ namespace bitpit {
     void
     ParaTree::getNodes(const Octant* oct, darr3vector & nodes) const {
         u32arr3vector nodes_;
-        oct->getNodes(nodes_);
+        oct->getLogicalNodes(nodes_);
         m_trans.mapNodes(nodes_, nodes);
     }
 
@@ -1846,7 +1846,7 @@ namespace bitpit {
     ParaTree::getNodes(const Octant* oct) const {
         darr3vector nodes;
         u32arr3vector nodes_;
-        oct->getNodes(nodes_);
+        oct->getLogicalNodes(nodes_);
         m_trans.mapNodes(nodes_, nodes);
         return nodes;
     }
@@ -2354,9 +2354,9 @@ const octvector*
     ParaTree::getSize(const Intersection* inter) const {
         uint32_t Size;
         if(inter->m_finer && inter->m_isghost)
-            Size = m_octree.extractGhostOctant(inter->m_owners[inter->m_finer]).getSize();
+            Size = m_octree.extractGhostOctant(inter->m_owners[inter->m_finer]).getLogicalSize();
         else
-            Size = m_octree.extractOctant(inter->m_owners[inter->m_finer]).getSize();
+            Size = m_octree.extractOctant(inter->m_owners[inter->m_finer]).getLogicalSize();
         return m_trans.mapSize(Size);
     }
 
@@ -2368,9 +2368,9 @@ const octvector*
     ParaTree::getArea(const Intersection* inter) const {
         uint64_t Area;
         if(inter->m_finer && inter->m_isghost)
-            Area = m_octree.extractGhostOctant(inter->m_owners[1]).getArea();
+            Area = m_octree.extractGhostOctant(inter->m_owners[1]).getLogicalArea();
         else
-            Area = m_octree.extractOctant(inter->m_owners[inter->m_finer]).getArea();
+            Area = m_octree.extractOctant(inter->m_owners[inter->m_finer]).getLogicalArea();
         return m_trans.mapArea(Area);
     }
 
@@ -2386,9 +2386,9 @@ const octvector*
             oct = m_octree.extractGhostOctant(inter->m_owners[inter->m_finer]);
         else
             oct = m_octree.extractOctant(inter->m_owners[inter->m_finer]);
-        darray3  center_ = oct.getCenter();
+        darray3  center_ = oct.getLogicalCenter();
         int sign = ( int(2*((inter->m_iface)%2)) - 1);
-        double deplace = double (sign * int(oct.getSize())) / 2;
+        double deplace = double (sign * int(oct.getLogicalSize())) / 2;
         center_[inter->m_iface/2] = uint32_t(int(center_[inter->m_iface/2]) + deplace);
         m_trans.mapCenter(center_, center);
         return center;
@@ -2408,7 +2408,7 @@ const octvector*
             oct = m_octree.extractOctant(inter->m_owners[inter->m_finer]);
         uint8_t iface = inter->m_iface;
         u32arr3vector nodes_all;
-        oct.getNodes(nodes_all);
+        oct.getLogicalNodes(nodes_all);
         u32arr3vector nodes_(m_treeConstants->nNodesPerFace);
         for (int i=0; i<m_treeConstants->nNodesPerFace; i++){
             for (int j=0; j<3; j++){
@@ -3461,11 +3461,11 @@ const octvector*
         int dim = octant->getDim();
 
         // Get the coordinates of the node
-        std::array<uint32_t, 3> nodeCoords = nodeOctant->getNode(nodeIndex);
+        std::array<uint32_t, 3> nodeCoords = nodeOctant->getLogicalNode(nodeIndex);
 
         // Get minimum/maximum coordinates of the contant
-        std::array<uint32_t, 3> minOctantCoords = octant->getNode(0);
-        std::array<uint32_t, 3> maxOctantCoords = octant->getNode(3 + 4 * (dim - 2));
+        std::array<uint32_t, 3> minOctantCoords = octant->getLogicalNode(0);
+        std::array<uint32_t, 3> maxOctantCoords = octant->getLogicalNode(3 + 4 * (dim - 2));
 
         // Check if the node intersects the bounding box octant
         //
@@ -3505,12 +3505,12 @@ const octvector*
 
         // Get the coordinates of the edge
         const uint8_t (*edgeNodes)[2] = &m_treeConstants->edgeNode[edgeIndex];
-        std::array<uint32_t, 3> minEdgeCoords = edgeOctant->getNode((*edgeNodes)[0]);
-        std::array<uint32_t, 3> maxEdgeCoords = edgeOctant->getNode((*edgeNodes)[1]);
+        std::array<uint32_t, 3> minEdgeCoords = edgeOctant->getLogicalNode((*edgeNodes)[0]);
+        std::array<uint32_t, 3> maxEdgeCoords = edgeOctant->getLogicalNode((*edgeNodes)[1]);
 
         // Get minimum/maximum coordinates of the contant
-        std::array<uint32_t, 3> minOctantCoords = octant->getNode(0);
-        std::array<uint32_t, 3> maxOctantCoords = octant->getNode(7);
+        std::array<uint32_t, 3> minOctantCoords = octant->getLogicalNode(0);
+        std::array<uint32_t, 3> maxOctantCoords = octant->getLogicalNode(7);
 
         // Check if the edge intersects the bounding box octant
         //
@@ -3549,12 +3549,12 @@ const octvector*
 
         // Get minimum/maximum coordinates of the face
         const uint8_t (*faceNodes)[6][4] = &m_treeConstants->faceNode;
-        std::array<uint32_t, 3> minFaceCoords = faceOctant->getNode((*faceNodes)[faceIndex][0]);
-        std::array<uint32_t, 3> maxFaceCoords = faceOctant->getNode((*faceNodes)[faceIndex][2 * dim - 1]);
+        std::array<uint32_t, 3> minFaceCoords = faceOctant->getLogicalNode((*faceNodes)[faceIndex][0]);
+        std::array<uint32_t, 3> maxFaceCoords = faceOctant->getLogicalNode((*faceNodes)[faceIndex][2 * dim - 1]);
 
         // Get minimum/maximum coordinates of the contant
-        std::array<uint32_t, 3> minOctantCoords = octant->getNode(0);
-        std::array<uint32_t, 3> maxOctantCoords = octant->getNode(3 + 4 * (dim - 2));
+        std::array<uint32_t, 3> minOctantCoords = octant->getLogicalNode(0);
+        std::array<uint32_t, 3> maxOctantCoords = octant->getLogicalNode(3 + 4 * (dim - 2));
 
         // Check if the face intersects the bounding box octant
         for (int i = 0; i < dim; ++i) {
@@ -5248,25 +5248,25 @@ const octvector*
                     istart = sum;
 
                 i = istart;
-                rest = m_octree.m_octants[i].getX()%Dh + m_octree.m_octants[i].getY()%Dh;
+                rest = m_octree.m_octants[i].getLogicalX()%Dh + m_octree.m_octants[i].getLogicalY()%Dh;
                 while(rest!=0){
                     if (i==nocts){
                         i = istart + nocts;
                         break;
                     }
                     i++;
-                    rest = m_octree.m_octants[i].getX()%Dh + m_octree.m_octants[i].getY()%Dh;
+                    rest = m_octree.m_octants[i].getLogicalX()%Dh + m_octree.m_octants[i].getLogicalY()%Dh;
                 }
                 forw = i - istart;
                 i = istart;
-                rest = m_octree.m_octants[i].getX()%Dh + m_octree.m_octants[i].getY()%Dh;
+                rest = m_octree.m_octants[i].getLogicalX()%Dh + m_octree.m_octants[i].getLogicalY()%Dh;
                 while(rest!=0){
                     if (i==0){
                         i = istart - nocts;
                         break;
                     }
                     i--;
-                    rest = m_octree.m_octants[i].getX()%Dh + m_octree.m_octants[i].getY()%Dh;
+                    rest = m_octree.m_octants[i].getLogicalX()%Dh + m_octree.m_octants[i].getLogicalY()%Dh;
                 }
                 backw = istart - i;
                 if (forw<backw)
