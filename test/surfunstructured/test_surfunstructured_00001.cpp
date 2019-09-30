@@ -44,6 +44,7 @@
 # include "bitpit_IO.hpp"                                                     // Input/output
 # include "bitpit_operators.hpp"                                              // STL containers operators
 # include "bitpit_patchkernel.hpp"                                            // BitPit base patch
+# include "bitpit_lineunstructured.hpp"                                           // BitPit surftri patch
 # include "bitpit_surfunstructured.hpp"                                           // BitPit surftri patch
 
 // ========================================================================== //
@@ -269,7 +270,7 @@ vector<long>                            cell_list;
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    envelope(1);
+    LineUnstructured                    envelope(1);
     vector<long>                        ring1, ring1_expected{6,7,8,21,22,23,30,31,32};
 
     // Set envelope attributes ---------------------------------------------- //
@@ -340,7 +341,7 @@ vector<long>                            cell_list;
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    envelope(1);
+    LineUnstructured                    envelope(1);
     vector<long>                        ring1, ring1_expected{6,8,21,22,23,30,31,32};
 
     // Set envelope attributes ---------------------------------------------- //
@@ -419,7 +420,7 @@ vector<long>                            cell_list;
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    envelope(1);
+    LineUnstructured                    envelope(1);
     vector<long>                        ring1, ring1_expected{7};
     SurfUnstructured::CellIterator      it;
 
@@ -496,7 +497,7 @@ vector<long>                            cell_list;
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    envelope(1);
+    LineUnstructured                    envelope(1);
     vector<long>                        ring1, ring1_expected{6,8,17,21,22,23,30,31,32};
 
     // Set envelope attributes ---------------------------------------------- //
