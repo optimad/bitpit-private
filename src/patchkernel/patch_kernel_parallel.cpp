@@ -468,6 +468,11 @@ PatchKernel::CellIterator PatchKernel::addCell(ElementType type, std::unique_ptr
 PatchKernel::CellIterator PatchKernel::_addGhost(ElementType type, std::unique_ptr<long[]> &&connectStorage,
 												 int rank, long id)
 {
+	// Check element dimensions
+	if (Cell::getDimension(type) != getDimension()) {
+		throw std::runtime_error("Only cells with the same dimension of the patch are allowed.");
+	}
+
 	// Create the cell
 	//
 	// If there are internal cells, the ghost cell should be inserted
