@@ -22,30 +22,30 @@
  *
 \*---------------------------------------------------------------------------*/
 
-#ifndef __BITPIT_MODULE_PATCH_KERNEL_HPP__
-#define __BITPIT_MODULE_PATCH_KERNEL_HPP__
+#ifndef __BITPIT_LINE_KERNEL_HPP__
+#define __BITPIT_LINE_KERNEL_HPP__
 
-/*!
- * @defgroup patches Patches
- * @{
- * @defgroup patchelements Elements
- * @defgroup patchkernel Kernel
- * @defgroup linepatches Line patches
- * @defgroup surfacepatches Surface patches
- * @defgroup volumepatches Volume patches
- * @}
- */
-
-#include "bitpit_version.hpp"
-
-#include "line_kernel.hpp"
-#include "patch_info.hpp"
 #include "patch_kernel.hpp"
-#include "patch_manager.hpp"
-#include "surface_kernel.hpp"
-#include "surface_skd_tree.hpp"
-#include "volume_kernel.hpp"
-#include "volume_skd_tree.hpp"
-#include "adaption.hpp"
+
+namespace bitpit {
+
+class LineKernel : public PatchKernel {
+
+public:
+    virtual double evalCellLength(long id) const;
+    double evalCellSize(long id) const override;
+    virtual std::array<double, 3> evalCellNormal(long id, const std::array<double, 3> &orientation = {{0., 0., 1.}}) const;
+
+private:
+    void initialize();
+
+protected:
+    LineKernel(bool expert);
+    LineKernel(int dimension, bool expert);
+    LineKernel(int id, int dimension, bool expert);
+
+};
+
+}
 
 #endif
