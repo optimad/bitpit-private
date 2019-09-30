@@ -93,7 +93,7 @@ int subtest_001()
     int dimensions(2) ;
 
     // Input geometry
-    std::unique_ptr<bitpit::SurfUnstructured> STL( new bitpit::SurfUnstructured(0, dimensions - 1) );
+    std::unique_ptr<bitpit::SurfUnstructured> STL( new bitpit::SurfUnstructured(dimensions - 1) );
 
     bitpit::log::cout() << " - Loading dgf geometry" << std::endl;
 
