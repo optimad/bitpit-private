@@ -22,32 +22,30 @@
  *
 \*---------------------------------------------------------------------------*/
 
-#ifndef __BITPIT_MODULE_PATCH_KERNEL_HPP__
-#define __BITPIT_MODULE_PATCH_KERNEL_HPP__
+#ifndef __BITPIT_POINT_KERNEL_HPP__
+#define __BITPIT_POINT_KERNEL_HPP__
 
-/*!
- * @defgroup patches Patches
- * @{
- * @defgroup patchelements Elements
- * @defgroup patchkernel Kernel
- * @defgroup pointpatches Point patches
- * @defgroup linepatches Line patches
- * @defgroup surfacepatches Surface patches
- * @defgroup volumepatches Volume patches
- * @}
- */
-
-#include "bitpit_version.hpp"
-
-#include "line_kernel.hpp"
-#include "patch_info.hpp"
 #include "patch_kernel.hpp"
-#include "patch_manager.hpp"
-#include "point_kernel.hpp"
-#include "surface_kernel.hpp"
-#include "surface_skd_tree.hpp"
-#include "volume_kernel.hpp"
-#include "volume_skd_tree.hpp"
-#include "adaption.hpp"
+
+namespace bitpit {
+
+class PointKernel : public PatchKernel {
+
+public:
+    double evalCellSize(long id) const override;
+    virtual double evalPointsDistance(long id1, long id2) const;
+    virtual std::array<double, 3> evalPointsDirection(long id1, long id2) const;
+
+protected:
+    PointKernel(bool expert);
+    PointKernel(int dimension, bool expert);
+    PointKernel(int id, int dimension, bool expert);
+
+private:
+    void initialize();
+
+};
+
+}
 
 #endif
