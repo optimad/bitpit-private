@@ -53,11 +53,10 @@ SurfUnstructured::SurfUnstructured()
 /*!
 	Creates a new patch.
 
-	\param patch_dim is the dimension of the patch
-	\param space_dim is the dimension of the space
+	\param dimension is the dimension of the patch
 */
-SurfUnstructured::SurfUnstructured(int patch_dim, int space_dim)
-	: SurfaceKernel(PatchManager::AUTOMATIC_ID, patch_dim, space_dim, true)
+SurfUnstructured::SurfUnstructured(int dimension)
+	: SurfaceKernel(PatchManager::AUTOMATIC_ID, dimension, true)
 {
 #if BITPIT_ENABLE_MPI==1
 	// This patch supports partitioning
@@ -69,11 +68,10 @@ SurfUnstructured::SurfUnstructured(int patch_dim, int space_dim)
 	Creates a new patch.
 
 	\param id is the id of the patch
-	\param patch_dim is the dimension of the patch
-	\param space_dim is the dimension of the space
+	\param dimension is the dimension of the patch
 */
-SurfUnstructured::SurfUnstructured(int id, int patch_dim, int space_dim)
-	: SurfaceKernel(id, patch_dim, space_dim, true)
+SurfUnstructured::SurfUnstructured(int id, int dimension)
+	: SurfaceKernel(id, dimension, true)
 {
 #if BITPIT_ENABLE_MPI==1
 	// This patch supports partitioning
@@ -129,7 +127,7 @@ void SurfUnstructured::setExpert(bool expert)
  */
 int SurfUnstructured::_getDumpVersion() const
 {
-	const int DUMP_VERSION = 4;
+	const int DUMP_VERSION = 5;
 
 	return DUMP_VERSION;
 }
@@ -141,9 +139,6 @@ int SurfUnstructured::_getDumpVersion() const
  */
 void SurfUnstructured::_dump(std::ostream &stream) const
 {
-	// Space dimension
-	utils::binary::write(stream, getSpaceDimension());
-
 	// Save the vertices
 	dumpVertices(stream);
 
@@ -161,11 +156,6 @@ void SurfUnstructured::_dump(std::ostream &stream) const
  */
 void SurfUnstructured::_restore(std::istream &stream)
 {
-	// Space dimension
-	int spaceDimension;
-	utils::binary::read(stream, spaceDimension);
-	setSpaceDimension(spaceDimension);
-
 	// Restore the vertices
 	restoreVertices(stream);
 

@@ -87,7 +87,7 @@ string                          in_name_bin = "./data/buddha.stl";
 string                          in_name_ASCII = "./data/cube.stl";
 string                          out_name_bin = "./buddha_copy.stl";
 string                          out_name_ASCII = "./buddha_cube_copy.stl";
-SurfUnstructured                mesh(2, 3);
+SurfUnstructured                mesh(2);
 
 // Counters
 // none
@@ -219,7 +219,7 @@ int subtest_002(
 string                          in_name = "./data/NACA0012.dgf";
 string                          out_name = "./NACA0012_copy.dgf";
 string                          out_name_vtu = "./NACA0012_copy";
-SurfUnstructured                mesh(2, 3);
+SurfUnstructured                mesh(2);
 
 // Counters
 // none
@@ -284,7 +284,7 @@ SurfUnstructured                mesh(2, 3);
 // ========================================================================== //
 {
     // Scope variables ------------------------------------------------------ //
-    SurfUnstructured                    mesh_copy(2, 3);
+    SurfUnstructured                    mesh_copy(2);
     
     // Import mesh from stl format ------------------------------------------ //
     log::cout() << "** Re-importing mesh from : \"" << out_name << "\"" << endl;

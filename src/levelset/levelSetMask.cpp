@@ -152,7 +152,7 @@ std::unique_ptr<SurfUnstructured> LevelSetMask::extractCellEnvelope(const std::u
 */
 std::unique_ptr<SurfUnstructured> LevelSetMask::extractFaceEnvelope(const std::vector<long> &list, const VolumeKernel &mesh, std::unordered_map<long,long> &meshToEnvelope){
 
-    std::unique_ptr<SurfUnstructured> envelope = std::unique_ptr<SurfUnstructured>(new SurfUnstructured(mesh.getDimension()-1,mesh.getDimension()));
+    std::unique_ptr<SurfUnstructured> envelope = std::unique_ptr<SurfUnstructured>(new SurfUnstructured(mesh.getDimension() - 1));
 
 	// ====================================================================== //
 	// RESIZE DATA STRUCTURES                                                 //

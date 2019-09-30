@@ -82,7 +82,7 @@ int subtest_001(
 // ========================================================================== //
 
 // Local variables
-SurfUnstructured                mesh(2, 3), edges(2, 3);
+SurfUnstructured                mesh(2), edges(2);
 
 // Counters
 int                             nV, nE;
@@ -316,7 +316,7 @@ int subtest_002(
 // ========================================================================== //
 
 // Local variables
-SurfUnstructured                mesh(2, 3);
+SurfUnstructured                mesh(2);
 
 // Counters
 int                             nV, nS, nE;

@@ -88,7 +88,7 @@ int subtest_001(
 
 // Local variables
 long                            id;
-SurfUnstructured                mesh(2, 3);
+SurfUnstructured                mesh(2);
 
 // Counters
 // none

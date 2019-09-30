@@ -45,7 +45,7 @@ int subtest_001()
     int dimensions(3) ;
 
     // Input geometry
-    std::unique_ptr<bitpit::SurfUnstructured> STL( new bitpit::SurfUnstructured(2, 3) );
+    std::unique_ptr<bitpit::SurfUnstructured> STL( new bitpit::SurfUnstructured(dimensions - 1) );
 
     bitpit::log::cout()<< " - Loading stl geometry" << std::endl;
 

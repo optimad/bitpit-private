@@ -71,31 +71,25 @@ SurfaceKernel::SurfaceKernel(bool expert)
 /*!
 	Creates a new patch.
 
-	\param patch_dim is the dimension of the patch
-	\param space_dim is the dimension of the space
+	\param dimension is the dimension of the patch
 	\param expert if true, the expert mode will be enabled
 */
-SurfaceKernel::SurfaceKernel(int patch_dim, int space_dim, bool expert)
-	: PatchKernel(patch_dim, expert)
+SurfaceKernel::SurfaceKernel(int dimension, bool expert)
+	: PatchKernel(dimension, expert)
 {
     initialize();
-
-    // Set the sapce dimension
-    setSpaceDimension(space_dim);
 }
 
 /*!
 	Creates a new patch.
 
 	\param id is the id that will be assigned to the patch
-	\param patch_dim is the dimension of the patch
-	\param space_dim is the dimension of the space
+	\param dimension is the dimension of the patch
 	\param expert if true, the expert mode will be enabled
 */
-SurfaceKernel::SurfaceKernel(int id, int patch_dim, int space_dim, bool expert)
-	: PatchKernel(id, patch_dim, expert)
+SurfaceKernel::SurfaceKernel(int id, int dimension, bool expert)
+	: PatchKernel(id, dimension, expert)
 {
-    m_spaceDim = space_dim;
 }
 
 /*!
@@ -111,34 +105,7 @@ SurfaceKernel::~SurfaceKernel()
 */
 void SurfaceKernel::initialize()
 {
-    // Space dimension
-    m_spaceDim = -1;
-}
-
-/*!
-	Sets the dimension of the working space.
-
-	\param dimension the dimension of the working patch
-*/
-void SurfaceKernel::setSpaceDimension(int dimension)
-{
-    // If the dimension was already assigned, reset the patch
-    if (m_spaceDim > 0 && m_spaceDim != dimension) {
-        reset();
-    }
-
-    // Set the dimension
-    m_spaceDim = dimension;
-}
-
-/*!
- * Returns the number of dimensions of the working space (set at patch construction)
- *
- * \result The number of dimensions.
- */
-int SurfaceKernel::getSpaceDimension(void) const
-{
-    return(m_spaceDim);
+    // Nothing to do
 }
 
 /*!
@@ -378,10 +345,8 @@ double SurfaceKernel::evalAngleAtVertex(long id, int vertex_id) const
     // ====================================================================== //
     if ((cell_->getType() == ElementType::UNDEFINED)
      || (cell_->getType() == ElementType::VERTEX)) return 0.0;
-    if (cell_->getType() == ElementType::LINE) {
-        if (m_spaceDim - getDimension() == 1)   return BITPIT_PI;
-        else                                    return 0.0;
-    }
+
+    if (cell_->getType() == ElementType::LINE) return BITPIT_PI;
 
     int                          n_vert = cell_->getVertexCount();
     int                          prev = (n_vert + vertex_id - 1) % n_vert;

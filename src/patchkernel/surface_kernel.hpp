@@ -75,11 +75,9 @@ private:
     bool sameOrientationAtInterface(long id);
 
 protected:
-    int m_spaceDim;
-
     SurfaceKernel(bool expert);
-    SurfaceKernel(int patch_dim, int space_dim, bool expert);
-    SurfaceKernel(int id, int patch_dim, int space_dim, bool expert);
+    SurfaceKernel(int dimension, bool expert);
+    SurfaceKernel(int id, int dimension, bool expert);
 
 };
 
