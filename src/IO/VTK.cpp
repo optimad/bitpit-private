@@ -657,6 +657,10 @@ void VTK::write( VTKWriteMode writeMode ){
 
     if( m_procs > 1  && m_rank == 0)  writeCollection() ;
 
+	//Check after write if file exists
+    if (!m_fh.exists())
+    	 throw std::runtime_error("Cannot create file \"" + m_fh.getName() + "\"" + " in directory \"" + m_fh.getDirectory() + "\"");
+
     if( writeMode == VTKWriteMode::DEFAULT || writeMode == VTKWriteMode::NO_INCREMENT ){
         m_fh.incrementCounter() ;
     }
@@ -677,7 +681,6 @@ void VTK::write( VTKWriteMode writeMode ){
 void VTK::write( const std::string &name, VTKWriteMode writeMode ){
 
     std::string oldName = getName() ;
-
     setName(name) ;
     write(writeMode) ;
     setName(oldName) ;
